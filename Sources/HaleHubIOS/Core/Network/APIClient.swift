@@ -11,7 +11,14 @@ enum APIError: Error, LocalizedError {
         switch self {
         case .invalidURL: return "Invalid URL"
         case .unauthorized: return "Session expired — please log in again"
-        case .serverError(let code, let msg): return "Server error \(code): \(msg)"
+        case .serverError(let code, let body):
+            // Try to parse DRF validation errors like {"field": ["message"]}
+            if let data = body.data(using: .utf8),
+               let json = try? JSONDecoder().decode([String: [String]].self, from: data) {
+                let messages = json.values.flatMap { $0 }
+                if !messages.isEmpty { return messages.joined(separator: ". ") }
+            }
+            return "Server error (\(code))"
         case .decodingError(let e): return "Data error: \(e.localizedDescription)"
         case .networkError(let e): return e.localizedDescription
         }
@@ -56,7 +63,10 @@ actor APIClient {
     func post<Body: Encodable, Response: Decodable>(
         _ path: String, body: Body, token: String?
     ) async throws -> Response {
-        let encoded = try JSONEncoder().encode(body)
+        // Must use snake_case — Django serializers expect event_type, price_per_gallon, etc.
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let encoded = try encoder.encode(body)
         let data = try await request(path: path, method: "POST", body: encoded, token: token)
         return try decode(data)
     }

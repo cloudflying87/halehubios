@@ -27,6 +27,26 @@ struct LogEventSheet: View {
         }
     }
 
+    var isValid: Bool {
+        switch eventType {
+        case "gas":
+            return !gallons.isEmpty && Double(gallons) != nil
+                && !pricePerGallon.isEmpty && Double(pricePerGallon) != nil
+        default:
+            return true
+        }
+    }
+
+    var validationHint: String? {
+        if eventType == "gas" {
+            if gallons.isEmpty { return "Enter the number of gallons" }
+            if Double(gallons) == nil { return "Gallons must be a number" }
+            if pricePerGallon.isEmpty { return "Enter price per gallon" }
+            if Double(pricePerGallon) == nil { return "Price must be a number" }
+        }
+        return nil
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -78,9 +98,24 @@ struct LogEventSheet: View {
                         .lineLimit(2...4)
                 }
 
+                if let hint = validationHint {
+                    Section {
+                        Label(hint, systemImage: "info.circle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 if let error = errorMessage {
                     Section {
-                        Text(error).foregroundStyle(.red).font(.caption)
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundStyle(.red)
+                            Text(error)
+                                .foregroundStyle(.red)
+                                .font(.subheadline)
+                        }
+                        .padding(.vertical, 4)
                     }
                 }
             }
@@ -90,7 +125,7 @@ struct LogEventSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { Task { await save() } }
-                        .disabled(isSaving)
+                        .disabled(isSaving || !isValid)
                 }
             }
         }
