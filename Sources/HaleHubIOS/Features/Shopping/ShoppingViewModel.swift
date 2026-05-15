@@ -101,15 +101,7 @@ class ShoppingDetailViewModel: ObservableObject {
     }
 
     func deleteItem(_ item: ShoppingItem, token: String) async {
-        do {
-            // DELETE has no response body — use a raw request via postEmpty workaround
-            struct Empty: Decodable {}
-            guard let url = URL(string: "https://flyhomemn.com/api/shopping/\(listId)/items/\(item.id)/") else { return }
-            var req = URLRequest(url: url)
-            req.httpMethod = "DELETE"
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            _ = try? await URLSession.shared.data(for: req)
-            await load(token: token, isConnected: true)
-        }
+        try? await APIClient.shared.delete("/shopping/\(listId)/items/\(item.id)/", token: token)
+        await load(token: token, isConnected: true)
     }
 }

@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @EnvironmentObject var auth: AuthManager
     @EnvironmentObject var network: NetworkMonitor
+    @StateObject private var notifVM = NotificationsViewModel()
 
     var body: some View {
         TabView {
@@ -20,8 +22,12 @@ struct MainTabView: View {
             }
             .tabItem { Label("Shopping", systemImage: "cart.fill") }
 
-            AccountView()
+            AccountView(notifVM: notifVM)
                 .tabItem { Label("More", systemImage: "ellipsis.circle.fill") }
+                .badge(notifVM.unreadCount > 0 ? notifVM.unreadCount : 0)
+        }
+        .task {
+            await notifVM.fetchUnreadCount(token: auth.accessToken ?? "")
         }
     }
 }

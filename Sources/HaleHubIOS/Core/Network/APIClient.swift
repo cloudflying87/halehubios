@@ -77,6 +77,11 @@ actor APIClient {
         return try decode(data)
     }
 
+    // DELETE request
+    func delete(_ path: String, token: String) async throws {
+        _ = try await request(path: path, method: "DELETE", body: nil as Data?, token: token)
+    }
+
     private func request(path: String, method: String, body: Data?, token: String?) async throws -> Data {
         guard let url = URL(string: "\(baseURL)\(path)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)

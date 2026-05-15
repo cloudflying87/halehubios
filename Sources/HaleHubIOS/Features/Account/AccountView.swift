@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AccountView: View {
     @EnvironmentObject var auth: AuthManager
-    @StateObject private var notifVM = NotificationsViewModel()
+    @ObservedObject var notifVM: NotificationsViewModel
 
     var body: some View {
         NavigationStack {
@@ -76,14 +76,9 @@ struct AccountView: View {
             }
             .navigationTitle("More")
             .task {
-                async let userTask: Void = {
-                    if auth.currentUser == nil { await auth.fetchCurrentUser() }
-                }()
-                async let notifTask: Void = notifVM.fetchUnreadCount(token: auth.accessToken ?? "")
-                _ = await (userTask, notifTask)
+                if auth.currentUser == nil { await auth.fetchCurrentUser() }
             }
         }
-        .badge(notifVM.unreadCount > 0 ? notifVM.unreadCount : 0)
     }
 
     var initials: String {
