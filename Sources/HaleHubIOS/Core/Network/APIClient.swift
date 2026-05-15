@@ -55,12 +55,12 @@ actor APIClient {
         }
     }
 
-    func get<T: Decodable>(_ path: String, token: String) async throws -> T {
+    func get<T: Decodable & Sendable>(_ path: String, token: String) async throws -> T {
         let data = try await request(path: path, method: "GET", body: nil as Data?, token: token)
         return try decode(data)
     }
 
-    func post<Body: Encodable, Response: Decodable>(
+    func post<Body: Encodable & Sendable, Response: Decodable & Sendable>(
         _ path: String, body: Body, token: String?
     ) async throws -> Response {
         // Must use snake_case — Django serializers expect event_type, price_per_gallon, etc.
@@ -72,7 +72,7 @@ actor APIClient {
     }
 
     // POST with no request body (e.g. mark-cooked)
-    func postEmpty<Response: Decodable>(_ path: String, token: String) async throws -> Response {
+    func postEmpty<Response: Decodable & Sendable>(_ path: String, token: String) async throws -> Response {
         let data = try await request(path: path, method: "POST", body: nil as Data?, token: token)
         return try decode(data)
     }

@@ -1,6 +1,6 @@
 import Foundation
 
-struct RecipeCategory: Identifiable, Codable, Hashable {
+struct RecipeCategory: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     let name: String
     let icon: String?
@@ -9,7 +9,7 @@ struct RecipeCategory: Identifiable, Codable, Hashable {
     var displayName: String { [icon, name].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " ") }
 }
 
-struct Recipe: Identifiable, Codable {
+struct Recipe: Identifiable, Codable, Sendable {
     let id: UUID
     let title: String
     let description: String?
@@ -49,7 +49,7 @@ struct Recipe: Identifiable, Codable {
     }
 }
 
-struct Ingredient: Identifiable, Codable {
+struct Ingredient: Identifiable, Codable, Sendable {
     let id: UUID
     let rawText: String
     let name: String?
@@ -59,7 +59,7 @@ struct Ingredient: Identifiable, Codable {
     let isOptional: Bool
 }
 
-struct MealPlan: Identifiable, Codable {
+struct MealPlan: Identifiable, Codable, Sendable {
     let id: UUID
     let name: String?
     let displayName: String
@@ -70,7 +70,7 @@ struct MealPlan: Identifiable, Codable {
     let entries: [MealPlanEntry]?
 }
 
-struct MealPlanEntry: Identifiable, Codable {
+struct MealPlanEntry: Identifiable, Codable, Sendable {
     let id: UUID
     let recipe: Recipe?
     let customName: String?
@@ -82,7 +82,7 @@ struct MealPlanEntry: Identifiable, Codable {
     let sides: [MealPlanSide]?
 }
 
-struct MealPlanSide: Identifiable, Codable {
+struct MealPlanSide: Identifiable, Codable, Sendable {
     let id: UUID
     let name: String?
     let recipeTitle: String?
@@ -91,13 +91,13 @@ struct MealPlanSide: Identifiable, Codable {
     let order: Int
 }
 
-struct MarkCookedResponse: Decodable {
+struct MarkCookedResponse: Decodable, Sendable {
     let id: UUID
     let timesCooked: Int
     let lastCooked: Date?
 }
 
-struct PaginatedResponse<T: Decodable>: Decodable {
+struct PaginatedResponse<T: Decodable & Sendable>: Decodable, Sendable {
     let count: Int
     let next: String?
     let previous: String?

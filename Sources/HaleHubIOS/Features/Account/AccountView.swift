@@ -16,7 +16,7 @@ struct AccountView: View {
                                 .frame(width: 54, height: 54)
                             Text(initials)
                                 .font(.title3.bold())
-                                .foregroundStyle(.accentColor)
+                                .foregroundStyle(Color.accentColor)
                         }
                         VStack(alignment: .leading, spacing: 3) {
                             Text(auth.currentUser?.displayName ?? "—")

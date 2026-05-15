@@ -33,7 +33,7 @@ struct ShoppingListDetailView: View {
                             Task { await vm.addItem(token: auth.accessToken ?? "") }
                         } label: {
                             Image(systemName: "plus.circle.fill")
-                                .foregroundStyle(.accentColor)
+                                .foregroundStyle(Color.accentColor)
                                 .font(.title3)
                         }
                         .buttonStyle(.plain)

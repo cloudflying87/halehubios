@@ -55,7 +55,7 @@ struct ShoppingListRow: View {
             }
             if list.itemCount > 0 {
                 ProgressView(value: Double(list.checkedCount), total: Double(list.itemCount))
-                    .tint(list.isFullyChecked ? .green : .accentColor)
+                    .tint(list.isFullyChecked ? Color.green : Color.accentColor)
             }
         }
         .padding(.vertical, 4)

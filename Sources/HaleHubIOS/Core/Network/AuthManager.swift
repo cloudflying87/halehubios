@@ -63,7 +63,7 @@ class AuthManager: ObservableObject {
     }
 }
 
-struct HaleUser: Codable {
+struct HaleUser: Codable, Sendable {
     let id: Int
     let email: String
     let firstName: String
@@ -72,12 +72,12 @@ struct HaleUser: Codable {
     let role: String
 }
 
-private struct LoginRequest: Encodable {
+private struct LoginRequest: Encodable, Sendable {
     let username: String
     let password: String
 }
 
-struct LoginResponse: Decodable {
+struct LoginResponse: Decodable, Sendable {
     let access: String
     let refresh: String
 }

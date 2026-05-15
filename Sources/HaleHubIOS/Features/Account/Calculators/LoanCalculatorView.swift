@@ -52,7 +52,7 @@ struct LoanCalculatorView: View {
 
                         HStack {
                             Label(String(format: "Principal %.0f%%", principalPct * 100), systemImage: "square.fill")
-                                .foregroundStyle(.accentColor)
+                                .foregroundStyle(Color.accentColor)
                             Spacer()
                             Label(String(format: "Interest %.0f%%", interestPct * 100), systemImage: "square.fill")
                                 .foregroundStyle(.orange)

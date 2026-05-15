@@ -49,7 +49,7 @@ struct TimeCalculatorView: View {
                     VStack(alignment: .center, spacing: 6) {
                         Text(r)
                             .font(.system(size: 36, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.accentColor)
+                            .foregroundStyle(Color.accentColor)
                             .frame(maxWidth: .infinity)
                         if let detail = resultDetail {
                             Text(detail)

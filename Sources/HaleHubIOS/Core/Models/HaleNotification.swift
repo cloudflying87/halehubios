@@ -1,6 +1,6 @@
 import Foundation
 
-struct HaleNotification: Identifiable, Codable {
+struct HaleNotification: Identifiable, Codable, Sendable {
     let id: UUID
     let notificationType: String
     let typeLabel: String
@@ -24,6 +24,6 @@ struct HaleNotification: Identifiable, Codable {
     }
 }
 
-struct UnreadCountResponse: Decodable {
+struct UnreadCountResponse: Decodable, Sendable {
     let unreadCount: Int
 }

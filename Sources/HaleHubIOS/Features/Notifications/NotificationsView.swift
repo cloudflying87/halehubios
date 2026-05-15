@@ -11,7 +11,7 @@ struct NotificationsView: View {
                     Button("Mark all as read") {
                         Task { await vm.markAllRead(token: auth.accessToken ?? "") }
                     }
-                    .foregroundStyle(.accentColor)
+                    .foregroundStyle(Color.accentColor)
                     .disabled(vm.unreadCount == 0)
                 }
             }
@@ -52,7 +52,8 @@ struct NotificationRow: View {
                     .frame(width: 38, height: 38)
                 Image(systemName: notification.typeIcon)
                     .font(.subheadline)
-                    .foregroundStyle(notification.isRead ? .secondary : .accentColor)
+                    .foregroundStyle(Color.accentColor)
+                    .opacity(notification.isRead ? 0.35 : 1.0)
             }
 
             VStack(alignment: .leading, spacing: 4) {

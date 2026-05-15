@@ -1,6 +1,6 @@
 import Foundation
 
-struct Vehicle: Identifiable, Codable {
+struct Vehicle: Identifiable, Codable, Sendable {
     let id: Int
     let name: String
     let make: String?
@@ -34,7 +34,7 @@ struct Vehicle: Identifiable, Codable {
     var maintenanceCostDouble: Double? { totalMaintenanceCost.flatMap { Double($0) } }
 }
 
-struct VehicleEvent: Identifiable, Codable {
+struct VehicleEvent: Identifiable, Codable, Sendable {
     let id: Int
     let eventType: String
     let date: Date
@@ -68,14 +68,14 @@ struct VehicleEvent: Identifiable, Codable {
     }
 }
 
-struct MaintenanceCategory: Identifiable, Codable {
+struct MaintenanceCategory: Identifiable, Codable, Sendable {
     let id: Int
     let name: String
     let description: String?
     let vehicleTypes: [String]?
 }
 
-struct MaintenanceSchedule: Identifiable, Codable {
+struct MaintenanceSchedule: Identifiable, Codable, Sendable {
     let id: Int
     let categoryName: String?
     let intervalMiles: Int?
@@ -87,7 +87,7 @@ struct MaintenanceSchedule: Identifiable, Codable {
     let isDueReason: String?
 }
 
-struct LogEventRequest: Encodable {
+struct LogEventRequest: Encodable, Sendable {
     let eventType: String
     let date: String
     var miles: Int?

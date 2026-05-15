@@ -1,6 +1,6 @@
 import Foundation
 
-struct ShoppingList: Identifiable, Codable {
+struct ShoppingList: Identifiable, Codable, Sendable {
     let id: UUID
     let name: String
     let store: String?
@@ -15,7 +15,7 @@ struct ShoppingList: Identifiable, Codable {
     var isFullyChecked: Bool { itemCount > 0 && checkedCount == itemCount }
 }
 
-struct ShoppingItem: Identifiable, Codable {
+struct ShoppingItem: Identifiable, Codable, Sendable {
     let id: UUID
     var name: String
     var quantity: String?
@@ -27,13 +27,13 @@ struct ShoppingItem: Identifiable, Codable {
     let checkedByName: String?
 }
 
-struct AddItemRequest: Encodable {
+struct AddItemRequest: Encodable, Sendable {
     let name: String
     let quantity: String
     let notes: String
 }
 
-struct ToggleResponse: Decodable {
+struct ToggleResponse: Decodable, Sendable {
     let id: UUID
     let isChecked: Bool
     let checkedAt: Date?
