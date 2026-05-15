@@ -47,6 +47,12 @@ class RecipesViewModel: ObservableObject {
     @Published var sortOrder: RecipeSortOrder = .title
     @Published var selectedCategoryId: UUID? = nil
     @Published var error: String?
+    @Published var cacheDate: Date?
+    @Published var isFromCache = false
+
+    private let recipeCacheKey = "recipes"
+    private let planCacheKey = "active_meal_plan"
+    private let categoriesCacheKey = "recipe_categories"
 
     var filtered: [Recipe] {
         var result = recipes
@@ -69,7 +75,24 @@ class RecipesViewModel: ObservableObject {
         return result
     }
 
-    func load(token: String) async {
+    func load(token: String, isConnected: Bool = true) async {
+        // Serve from cache immediately
+        if recipes.isEmpty {
+            if let cached: [Recipe] = await CacheManager.shared.load(key: recipeCacheKey) {
+                recipes = cached
+                isFromCache = true
+                cacheDate = await CacheManager.shared.cacheDate(key: recipeCacheKey)
+            }
+            if let cachedPlan: MealPlan = await CacheManager.shared.load(key: planCacheKey) {
+                activeMealPlan = cachedPlan
+            }
+            if let cachedCats: [RecipeCategory] = await CacheManager.shared.load(key: categoriesCacheKey) {
+                categories = cachedCats
+            }
+        }
+
+        guard isConnected else { return }
+
         isLoading = true
         error = nil
 
@@ -79,9 +102,20 @@ class RecipesViewModel: ObservableObject {
         async let planTask: MealPlan = APIClient.shared.get("/meal-plans/active/", token: token)
         async let categoriesTask: [RecipeCategory] = APIClient.shared.get("/recipes/categories/", token: token)
 
-        if let r = try? await recipesTask { recipes = r.results }
-        activeMealPlan = try? await planTask
-        if let c = try? await categoriesTask { categories = c }
+        if let r = try? await recipesTask {
+            recipes = r.results
+            isFromCache = false
+            cacheDate = Date()
+            await CacheManager.shared.save(r.results, key: recipeCacheKey)
+        }
+        if let plan = try? await planTask {
+            activeMealPlan = plan
+            await CacheManager.shared.save(plan, key: planCacheKey)
+        }
+        if let c = try? await categoriesTask {
+            categories = c
+            await CacheManager.shared.save(c, key: categoriesCacheKey)
+        }
         isLoading = false
     }
 

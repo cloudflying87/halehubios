@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AccountView: View {
     @EnvironmentObject var auth: AuthManager
+    @StateObject private var notifVM = NotificationsViewModel()
 
     var body: some View {
         NavigationStack {
@@ -33,6 +34,24 @@ struct AccountView: View {
                     .padding(.vertical, 6)
                 }
 
+                // Notifications
+                Section {
+                    NavigationLink(destination: NotificationsView()) {
+                        HStack {
+                            Label("Notifications", systemImage: "bell.fill")
+                            Spacer()
+                            if notifVM.unreadCount > 0 {
+                                Text("\(notifVM.unreadCount)")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(Color.accentColor, in: Capsule())
+                            }
+                        }
+                    }
+                }
+
                 // Calculators
                 Section("Calculators") {
                     NavigationLink(destination: LoanCalculatorView()) {
@@ -57,17 +76,22 @@ struct AccountView: View {
             }
             .navigationTitle("More")
             .task {
-                if auth.currentUser == nil {
-                    await auth.fetchCurrentUser()
-                }
+                async let userTask: Void = {
+                    if auth.currentUser == nil { await auth.fetchCurrentUser() }
+                }()
+                async let notifTask: Void = notifVM.fetchUnreadCount(token: auth.accessToken ?? "")
+                _ = await (userTask, notifTask)
             }
         }
+        .badge(notifVM.unreadCount > 0 ? notifVM.unreadCount : 0)
     }
 
     var initials: String {
         guard let user = auth.currentUser else { return "?" }
-        let parts = [user.firstName, user.lastName].filter { !$0.isEmpty }
-        return parts.compactMap { $0.first.map(String.init) }.joined()
+        return [user.firstName, user.lastName]
+            .filter { !$0.isEmpty }
+            .compactMap { $0.first.map(String.init) }
+            .joined()
     }
 }
 

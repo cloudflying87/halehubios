@@ -7,22 +7,31 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		10AA929077617858F9C0033D /* ShoppingListsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 082F8360E610399CB9791E01 /* ShoppingListsView.swift */; };
 		150DF4647E3F54110B019C19 /* VehiclesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */; };
 		197269BDB738EF7DC058D031 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8846379DD0DC0029F8B00B6 /* APIClient.swift */; };
 		28BB62C71B132B865695D054 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 10D050A0AA135EA42867348B /* Assets.xcassets */; };
 		3D9A70283B1418D66C2EB770 /* Vehicle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9E73A2B5915D0510398991 /* Vehicle.swift */; };
 		498E62194638AF42D4D5F4A1 /* HaleHubIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9989920930EEF68FF24A99 /* HaleHubIOSApp.swift */; };
+		4BED8439C68597ED905E5518 /* HaleNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AA1D7CF6070F458F822E505 /* HaleNotification.swift */; };
 		4F3EE32CA697D673557F7F60 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D322D12691A62F28635D061 /* LoginView.swift */; };
 		5855076BEE4FCBA24B0E1E16 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC6F675794F03BA9FEA90968 /* AccountView.swift */; };
 		5D5BAB0D28F39AD5E2F28089 /* RecipeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE837B2ED56DF5798D132C3 /* RecipeDetailView.swift */; };
 		70570EDAB2447292C0FE276F /* RecipesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24B721CFDEC7BEE72927514 /* RecipesViewModel.swift */; };
+		781EE9C9FD1BF73B1123495B /* ShoppingListDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4007424790D9C4CD3E4E10 /* ShoppingListDetailView.swift */; };
+		823F50914D9327257F393EA2 /* CacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BF696F77373A167292BC317 /* CacheManager.swift */; };
+		88708811D5F23C9ACB63CCFF /* ShoppingList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96E1670807EE686A9B7E7683 /* ShoppingList.swift */; };
+		8927B65ACE9F99854E246D0E /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBF25113EBEDA00D06F38AC3 /* NotificationsView.swift */; };
 		91A6E494EED5EEBEADD0A03C /* VehicleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A0DF54CE532F5E9E5E92AE /* VehicleDetailView.swift */; };
+		9280B153050AE4AB40A9730B /* ShoppingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82E07456A55F649FBB9C8448 /* ShoppingViewModel.swift */; };
 		92CB91D03662E6106C02EED7 /* RecipesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38E93521147DA51107C96ABA /* RecipesListView.swift */; };
 		9B9348553D9A7A0E97A6E5C9 /* LogEventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 026B9CBC27B5BDAB71949F45 /* LogEventSheet.swift */; };
 		9C3F6E3B9748C95BBB6AAD63 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43CB5F5CE1DA94DB05CEFAB1 /* MainTabView.swift */; };
 		B64A219F2C54619AD786BF54 /* VehiclesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */; };
 		BCDE5F88E2E4D735D3B5F9FB /* MealPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 620CC00F94FEC794D68339CD /* MealPlanView.swift */; };
 		D4DAB7C569314B2B4EC325EF /* TimeCalculatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54172C50FB914E1F40A7B76E /* TimeCalculatorView.swift */; };
+		D54E2E36A819178621728593 /* NotificationsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78FB1010716375E4D43CFAC4 /* NotificationsViewModel.swift */; };
+		D5605EF868D5C66108CCCA2D /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DA68F684F0A477BD7D1FEB9 /* NetworkMonitor.swift */; };
 		D5D1582EF5D926ED63EC7881 /* LoanCalculatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB8B4D5F0F791D89EC2FB3A0 /* LoanCalculatorView.swift */; };
 		DE32D7A36A038D9603EA2763 /* CookModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D91DAB9A1CAE1BD99CF0623 /* CookModeView.swift */; };
 		EEAB2FADBDA87D90CA2F7687 /* CompoundInterestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 264657A8853B85BCCFCEA2EA /* CompoundInterestView.swift */; };
@@ -32,17 +41,25 @@
 
 /* Begin PBXFileReference section */
 		026B9CBC27B5BDAB71949F45 /* LogEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogEventSheet.swift; sourceTree = "<group>"; };
+		082F8360E610399CB9791E01 /* ShoppingListsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListsView.swift; sourceTree = "<group>"; };
+		0BF696F77373A167292BC317 /* CacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheManager.swift; sourceTree = "<group>"; };
 		0D322D12691A62F28635D061 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		10D050A0AA135EA42867348B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1DA68F684F0A477BD7D1FEB9 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesListView.swift; sourceTree = "<group>"; };
 		264657A8853B85BCCFCEA2EA /* CompoundInterestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompoundInterestView.swift; sourceTree = "<group>"; };
+		2AA1D7CF6070F458F822E505 /* HaleNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaleNotification.swift; sourceTree = "<group>"; };
 		38E93521147DA51107C96ABA /* RecipesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipesListView.swift; sourceTree = "<group>"; };
 		43CB5F5CE1DA94DB05CEFAB1 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		4A4007424790D9C4CD3E4E10 /* ShoppingListDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListDetailView.swift; sourceTree = "<group>"; };
 		4D91DAB9A1CAE1BD99CF0623 /* CookModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookModeView.swift; sourceTree = "<group>"; };
 		54172C50FB914E1F40A7B76E /* TimeCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeCalculatorView.swift; sourceTree = "<group>"; };
 		620CC00F94FEC794D68339CD /* MealPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanView.swift; sourceTree = "<group>"; };
+		78FB1010716375E4D43CFAC4 /* NotificationsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsViewModel.swift; sourceTree = "<group>"; };
+		82E07456A55F649FBB9C8448 /* ShoppingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingViewModel.swift; sourceTree = "<group>"; };
 		875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesViewModel.swift; sourceTree = "<group>"; };
 		8F9E73A2B5915D0510398991 /* Vehicle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vehicle.swift; sourceTree = "<group>"; };
+		96E1670807EE686A9B7E7683 /* ShoppingList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingList.swift; sourceTree = "<group>"; };
 		9BDCABC5B1F3AF0D5B94C773 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		A9562ADACDD9013D314DD553 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B5759ACDD003F849257746C0 /* Recipe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recipe.swift; sourceTree = "<group>"; };
@@ -51,6 +68,7 @@
 		D77C2BBF0F9F154CA449BA91 /* HaleHubIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HaleHubIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E3A0DF54CE532F5E9E5E92AE /* VehicleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleDetailView.swift; sourceTree = "<group>"; };
 		EB8B4D5F0F791D89EC2FB3A0 /* LoanCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanCalculatorView.swift; sourceTree = "<group>"; };
+		EBF25113EBEDA00D06F38AC3 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		EC6F675794F03BA9FEA90968 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		EDE837B2ED56DF5798D132C3 /* RecipeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeDetailView.swift; sourceTree = "<group>"; };
 		FE9989920930EEF68FF24A99 /* HaleHubIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaleHubIOSApp.swift; sourceTree = "<group>"; };
@@ -80,6 +98,7 @@
 			children = (
 				C8846379DD0DC0029F8B00B6 /* APIClient.swift */,
 				9BDCABC5B1F3AF0D5B94C773 /* AuthManager.swift */,
+				1DA68F684F0A477BD7D1FEB9 /* NetworkMonitor.swift */,
 			);
 			path = Network;
 			sourceTree = "<group>";
@@ -109,6 +128,14 @@
 				D77C2BBF0F9F154CA449BA91 /* HaleHubIOS.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A328491D00A9BF3A255E39E1 /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				0BF696F77373A167292BC317 /* CacheManager.swift */,
+			);
+			path = Storage;
 			sourceTree = "<group>";
 		};
 		A41D911E19A6940701787973 /* Recipes */ = {
@@ -145,7 +172,9 @@
 			children = (
 				A527332F79E146C023F518AE /* Account */,
 				2779E23076A0489295A19FEC /* Auth */,
+				D645A6604A6A6419044BE7C6 /* Notifications */,
 				A41D911E19A6940701787973 /* Recipes */,
+				F9E8A2DD09DC25FDDC9A7DB3 /* Shopping */,
 				568EAE4E88608D1EA0331FA4 /* Vehicles */,
 			);
 			path = Features;
@@ -164,6 +193,7 @@
 			children = (
 				D4A79967382059C3D2354F07 /* Models */,
 				2A11BDC9B4E80E58B096E2FA /* Network */,
+				A328491D00A9BF3A255E39E1 /* Storage */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -171,10 +201,21 @@
 		D4A79967382059C3D2354F07 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				2AA1D7CF6070F458F822E505 /* HaleNotification.swift */,
 				B5759ACDD003F849257746C0 /* Recipe.swift */,
+				96E1670807EE686A9B7E7683 /* ShoppingList.swift */,
 				8F9E73A2B5915D0510398991 /* Vehicle.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		D645A6604A6A6419044BE7C6 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				EBF25113EBEDA00D06F38AC3 /* NotificationsView.swift */,
+				78FB1010716375E4D43CFAC4 /* NotificationsViewModel.swift */,
+			);
+			path = Notifications;
 			sourceTree = "<group>";
 		};
 		E38C78865F9A8B9BA98DDF8B /* HaleHubIOS */ = {
@@ -189,6 +230,16 @@
 			);
 			name = HaleHubIOS;
 			path = Sources/HaleHubIOS;
+			sourceTree = "<group>";
+		};
+		F9E8A2DD09DC25FDDC9A7DB3 /* Shopping */ = {
+			isa = PBXGroup;
+			children = (
+				4A4007424790D9C4CD3E4E10 /* ShoppingListDetailView.swift */,
+				082F8360E610399CB9791E01 /* ShoppingListsView.swift */,
+				82E07456A55F649FBB9C8448 /* ShoppingViewModel.swift */,
+			);
+			path = Shopping;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -261,18 +312,27 @@
 				197269BDB738EF7DC058D031 /* APIClient.swift in Sources */,
 				5855076BEE4FCBA24B0E1E16 /* AccountView.swift in Sources */,
 				F5311CBEC7A613351D674BAE /* AuthManager.swift in Sources */,
+				823F50914D9327257F393EA2 /* CacheManager.swift in Sources */,
 				EEAB2FADBDA87D90CA2F7687 /* CompoundInterestView.swift in Sources */,
 				DE32D7A36A038D9603EA2763 /* CookModeView.swift in Sources */,
 				498E62194638AF42D4D5F4A1 /* HaleHubIOSApp.swift in Sources */,
+				4BED8439C68597ED905E5518 /* HaleNotification.swift in Sources */,
 				D5D1582EF5D926ED63EC7881 /* LoanCalculatorView.swift in Sources */,
 				9B9348553D9A7A0E97A6E5C9 /* LogEventSheet.swift in Sources */,
 				4F3EE32CA697D673557F7F60 /* LoginView.swift in Sources */,
 				9C3F6E3B9748C95BBB6AAD63 /* MainTabView.swift in Sources */,
 				BCDE5F88E2E4D735D3B5F9FB /* MealPlanView.swift in Sources */,
+				D5605EF868D5C66108CCCA2D /* NetworkMonitor.swift in Sources */,
+				8927B65ACE9F99854E246D0E /* NotificationsView.swift in Sources */,
+				D54E2E36A819178621728593 /* NotificationsViewModel.swift in Sources */,
 				F83EA4C8B97FAAF83529BB10 /* Recipe.swift in Sources */,
 				5D5BAB0D28F39AD5E2F28089 /* RecipeDetailView.swift in Sources */,
 				92CB91D03662E6106C02EED7 /* RecipesListView.swift in Sources */,
 				70570EDAB2447292C0FE276F /* RecipesViewModel.swift in Sources */,
+				88708811D5F23C9ACB63CCFF /* ShoppingList.swift in Sources */,
+				781EE9C9FD1BF73B1123495B /* ShoppingListDetailView.swift in Sources */,
+				10AA929077617858F9C0033D /* ShoppingListsView.swift in Sources */,
+				9280B153050AE4AB40A9730B /* ShoppingViewModel.swift in Sources */,
 				D4DAB7C569314B2B4EC325EF /* TimeCalculatorView.swift in Sources */,
 				3D9A70283B1418D66C2EB770 /* Vehicle.swift in Sources */,
 				91A6E494EED5EEBEADD0A03C /* VehicleDetailView.swift in Sources */,
