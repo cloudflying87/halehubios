@@ -39,7 +39,7 @@ struct VehicleEvent: Identifiable, Codable, Sendable {
     let eventType: String
     let date: Date
     let miles: Int?
-    let hours: Int?
+    let hours: Double?
     let gallons: Double?
     let pricePerGallon: Double?
     let totalCost: Double?

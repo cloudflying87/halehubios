@@ -1,3 +1,4 @@
+import Charts
 import SwiftUI
 
 enum EventTypeFilter: String, CaseIterable, Identifiable {
@@ -63,6 +64,12 @@ struct VehicleDetailView: View {
                     // Stats cards
                     if let s = stats {
                         StatsRow(vehicle: vehicle, stats: s)
+                    }
+
+                    // Price per gallon chart
+                    let priceEvents = events.filter { $0.eventType == "gas" && $0.pricePerGallon != nil }
+                    if priceEvents.count >= 2 {
+                        PriceHistoryChart(events: priceEvents)
                     }
 
                     // Maintenance due
@@ -199,6 +206,72 @@ struct VehicleHeroImage: View {
         Color(.systemGray5).overlay(
             Image(systemName: icon).font(.system(size: 52)).foregroundStyle(.tertiary)
         )
+    }
+}
+
+// MARK: - Price History Chart
+
+struct PriceHistoryChart: View {
+    let events: [VehicleEvent]
+
+    private var sorted: [VehicleEvent] { events.sorted { $0.date < $1.date } }
+    private var prices: [Double] { sorted.compactMap { $0.pricePerGallon } }
+    private var minPrice: Double { prices.min() ?? 0 }
+    private var maxPrice: Double { prices.max() ?? 0 }
+    private var avgPrice: Double { prices.isEmpty ? 0 : prices.reduce(0, +) / Double(prices.count) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Price per Gallon")
+                .font(.headline)
+
+            Chart(sorted) { event in
+                if let price = event.pricePerGallon {
+                    LineMark(
+                        x: .value("Date", event.date),
+                        y: .value("Price", price)
+                    )
+                    .foregroundStyle(Color.accentColor)
+                    .interpolationMethod(.catmullRom)
+
+                    PointMark(
+                        x: .value("Date", event.date),
+                        y: .value("Price", price)
+                    )
+                    .foregroundStyle(Color.accentColor)
+                    .symbolSize(30)
+                }
+            }
+            .chartYScale(domain: (minPrice * 0.95)...(maxPrice * 1.05))
+            .chartYAxis {
+                AxisMarks(format: .currency(code: "USD").precision(.fractionLength(2)))
+            }
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: 4)) {
+                    AxisValueLabel(format: .dateTime.month(.abbreviated).year(.twoDigits))
+                }
+            }
+            .frame(height: 160)
+
+            HStack(spacing: 0) {
+                statLabel("Low", value: minPrice)
+                Spacer()
+                statLabel("Avg", value: avgPrice)
+                Spacer()
+                statLabel("High", value: maxPrice)
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func statLabel(_ title: String, value: Double) -> some View {
+        VStack(spacing: 2) {
+            Text(title)
+            Text(String(format: "$%.3f", value)).fontWeight(.semibold).foregroundStyle(.primary)
+        }
     }
 }
 
