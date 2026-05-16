@@ -101,6 +101,51 @@ struct MaintenanceItemInput: Encodable, Sendable {
     let cost: Double
 }
 
+// MARK: - Parts Lookup
+
+struct PartLookupLastUsed: Codable, Sendable {
+    let description: String
+    let cost: Double
+    let date: Date
+    let vehicleName: String
+}
+
+struct PartLookup: Identifiable, Codable, Sendable {
+    let categoryId: Int
+    let categoryName: String
+    let lastUsed: PartLookupLastUsed?
+    var id: Int { categoryId }
+}
+
+// MARK: - Outings Analytics
+
+struct OutingsByMonth: Identifiable, Codable, Sendable {
+    let month: String
+    let count: Int
+    var id: String { month }
+}
+
+struct OutingsByVehicle: Identifiable, Codable, Sendable {
+    let vehicleId: Int
+    let vehicleName: String
+    let count: Int
+    var id: Int { vehicleId }
+}
+
+struct OutingsTopLocation: Identifiable, Codable, Sendable {
+    let name: String
+    let count: Int
+    var id: String { name }
+}
+
+struct OutingsAnalyticsResponse: Codable, Sendable {
+    let byMonth: [OutingsByMonth]
+    let byVehicle: [OutingsByVehicle]
+    let topLocations: [OutingsTopLocation]
+}
+
+// MARK: - Location
+
 struct VehicleLocation: Identifiable, Codable, Sendable {
     let id: Int
     let name: String

@@ -22,6 +22,8 @@
 		823F50914D9327257F393EA2 /* CacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BF696F77373A167292BC317 /* CacheManager.swift */; };
 		88708811D5F23C9ACB63CCFF /* ShoppingList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96E1670807EE686A9B7E7683 /* ShoppingList.swift */; };
 		8927B65ACE9F99854E246D0E /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBF25113EBEDA00D06F38AC3 /* NotificationsView.swift */; };
+		89A04B5E9B416B66376FBC9E /* PartsLookupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */; };
+		8B4AAD519B389AE6E8ABE5BE /* MaintenanceHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CD4130D14F56C5404DD4F9D /* MaintenanceHistoryView.swift */; };
 		91A6E494EED5EEBEADD0A03C /* VehicleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A0DF54CE532F5E9E5E92AE /* VehicleDetailView.swift */; };
 		9280B153050AE4AB40A9730B /* ShoppingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82E07456A55F649FBB9C8448 /* ShoppingViewModel.swift */; };
 		92CB91D03662E6106C02EED7 /* RecipesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38E93521147DA51107C96ABA /* RecipesListView.swift */; };
@@ -29,6 +31,7 @@
 		9C3F6E3B9748C95BBB6AAD63 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43CB5F5CE1DA94DB05CEFAB1 /* MainTabView.swift */; };
 		B64A219F2C54619AD786BF54 /* VehiclesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */; };
 		BCDE5F88E2E4D735D3B5F9FB /* MealPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 620CC00F94FEC794D68339CD /* MealPlanView.swift */; };
+		C55ECDB11898418FC61A3DBB /* OutingsAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */; };
 		D4DAB7C569314B2B4EC325EF /* TimeCalculatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54172C50FB914E1F40A7B76E /* TimeCalculatorView.swift */; };
 		D54E2E36A819178621728593 /* NotificationsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78FB1010716375E4D43CFAC4 /* NotificationsViewModel.swift */; };
 		D5605EF868D5C66108CCCA2D /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DA68F684F0A477BD7D1FEB9 /* NetworkMonitor.swift */; };
@@ -49,6 +52,7 @@
 		1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesListView.swift; sourceTree = "<group>"; };
 		264657A8853B85BCCFCEA2EA /* CompoundInterestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompoundInterestView.swift; sourceTree = "<group>"; };
 		2AA1D7CF6070F458F822E505 /* HaleNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaleNotification.swift; sourceTree = "<group>"; };
+		2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartsLookupView.swift; sourceTree = "<group>"; };
 		38E93521147DA51107C96ABA /* RecipesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipesListView.swift; sourceTree = "<group>"; };
 		43CB5F5CE1DA94DB05CEFAB1 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		4A4007424790D9C4CD3E4E10 /* ShoppingListDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListDetailView.swift; sourceTree = "<group>"; };
@@ -61,10 +65,12 @@
 		8F9E73A2B5915D0510398991 /* Vehicle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vehicle.swift; sourceTree = "<group>"; };
 		96E1670807EE686A9B7E7683 /* ShoppingList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingList.swift; sourceTree = "<group>"; };
 		9BDCABC5B1F3AF0D5B94C773 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		9CD4130D14F56C5404DD4F9D /* MaintenanceHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaintenanceHistoryView.swift; sourceTree = "<group>"; };
 		A9562ADACDD9013D314DD553 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B5759ACDD003F849257746C0 /* Recipe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recipe.swift; sourceTree = "<group>"; };
 		C8846379DD0DC0029F8B00B6 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		D24B721CFDEC7BEE72927514 /* RecipesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipesViewModel.swift; sourceTree = "<group>"; };
+		D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutingsAnalyticsView.swift; sourceTree = "<group>"; };
 		D77C2BBF0F9F154CA449BA91 /* HaleHubIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HaleHubIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E3A0DF54CE532F5E9E5E92AE /* VehicleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleDetailView.swift; sourceTree = "<group>"; };
 		EB8B4D5F0F791D89EC2FB3A0 /* LoanCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanCalculatorView.swift; sourceTree = "<group>"; };
@@ -115,6 +121,9 @@
 			isa = PBXGroup;
 			children = (
 				026B9CBC27B5BDAB71949F45 /* LogEventSheet.swift */,
+				9CD4130D14F56C5404DD4F9D /* MaintenanceHistoryView.swift */,
+				D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */,
+				2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */,
 				E3A0DF54CE532F5E9E5E92AE /* VehicleDetailView.swift */,
 				1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */,
 				875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */,
@@ -321,10 +330,13 @@
 				9B9348553D9A7A0E97A6E5C9 /* LogEventSheet.swift in Sources */,
 				4F3EE32CA697D673557F7F60 /* LoginView.swift in Sources */,
 				9C3F6E3B9748C95BBB6AAD63 /* MainTabView.swift in Sources */,
+				8B4AAD519B389AE6E8ABE5BE /* MaintenanceHistoryView.swift in Sources */,
 				BCDE5F88E2E4D735D3B5F9FB /* MealPlanView.swift in Sources */,
 				D5605EF868D5C66108CCCA2D /* NetworkMonitor.swift in Sources */,
 				8927B65ACE9F99854E246D0E /* NotificationsView.swift in Sources */,
 				D54E2E36A819178621728593 /* NotificationsViewModel.swift in Sources */,
+				C55ECDB11898418FC61A3DBB /* OutingsAnalyticsView.swift in Sources */,
+				89A04B5E9B416B66376FBC9E /* PartsLookupView.swift in Sources */,
 				F83EA4C8B97FAAF83529BB10 /* Recipe.swift in Sources */,
 				5D5BAB0D28F39AD5E2F28089 /* RecipeDetailView.swift in Sources */,
 				92CB91D03662E6106C02EED7 /* RecipesListView.swift in Sources */,
@@ -378,7 +390,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -453,7 +465,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;

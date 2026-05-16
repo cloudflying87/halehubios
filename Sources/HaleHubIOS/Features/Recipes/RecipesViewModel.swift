@@ -169,6 +169,50 @@ class RecipesViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Recipe Import from URL
+
+    func importRecipe(url: String, token: String) async throws -> Recipe {
+        struct ImportRequest: Encodable, Sendable { let url: String }
+        let body = ImportRequest(url: url)
+        let recipe: Recipe = try await APIClient.shared.post("/recipes/import/", body: body, token: token)
+        recipes.insert(recipe, at: 0)
+        await CacheManager.shared.save(recipes, key: recipeCacheKey)
+        return recipe
+    }
+
+    // MARK: - Sides Management
+
+    func addSideToEntry(entryId: String, recipeId: String, token: String) async throws {
+        struct AddSideRequest: Encodable, Sendable { let recipeId: String }
+        let body = AddSideRequest(recipeId: recipeId)
+        let _: MealPlanSide = try await APIClient.shared.post(
+            "/meal-plans/entries/\(entryId)/sides/", body: body, token: token
+        )
+        if let updatedPlan: MealPlan = try? await APIClient.shared.get("/meal-plans/active/", token: token) {
+            activeMealPlan = updatedPlan
+            await CacheManager.shared.save(updatedPlan, key: planCacheKey)
+        }
+    }
+
+    func removeSideFromEntry(entryId: String, sideId: String, token: String) async throws {
+        try await APIClient.shared.delete("/meal-plans/entries/\(entryId)/sides/\(sideId)/", token: token)
+        if let updatedPlan: MealPlan = try? await APIClient.shared.get("/meal-plans/active/", token: token) {
+            activeMealPlan = updatedPlan
+            await CacheManager.shared.save(updatedPlan, key: planCacheKey)
+        }
+    }
+
+    // MARK: - Shopping List Generation
+
+    func generateShoppingList(planId: String, listId: String, token: String) async throws -> ShoppingList {
+        struct GenerateRequest: Encodable, Sendable { let listId: String }
+        let body = GenerateRequest(listId: listId)
+        let list: ShoppingList = try await APIClient.shared.post(
+            "/meal-plans/\(planId)/generate-shopping-list/", body: body, token: token
+        )
+        return list
+    }
+
     func markCooked(recipe: Recipe, token: String) async {
         do {
             let response: MarkCookedResponse = try await APIClient.shared.postEmpty(

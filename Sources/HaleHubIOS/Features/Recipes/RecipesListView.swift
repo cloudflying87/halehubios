@@ -3,6 +3,9 @@ import SwiftUI
 struct RecipesListView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm = RecipesViewModel()
+    @State private var showImportURL = false
+    @State private var importedRecipe: Recipe?
+    @State private var navigateToImported = false
 
     var body: some View {
         Group {
@@ -14,9 +17,19 @@ struct RecipesListView: View {
                     FilterBar(vm: vm)
                         .padding(.vertical, 8)
                     Divider()
-                    List(vm.filtered) { recipe in
-                        NavigationLink(destination: RecipeDetailView(recipe: recipe)) {
-                            RecipeRow(recipe: recipe)
+                    List {
+                        // Hidden NavigationLink that activates when a recipe is imported
+                        if let imported = importedRecipe {
+                            NavigationLink(
+                                destination: RecipeDetailView(recipe: imported).environmentObject(auth),
+                                isActive: $navigateToImported
+                            ) { EmptyView() }
+                            .hidden()
+                        }
+                        ForEach(vm.filtered) { recipe in
+                            NavigationLink(destination: RecipeDetailView(recipe: recipe).environmentObject(auth)) {
+                                RecipeRow(recipe: recipe)
+                            }
                         }
                     }
                     .listStyle(.plain)
@@ -66,12 +79,105 @@ struct RecipesListView: View {
                             )
                         }
                     }
+                    Section {
+                        Button {
+                            showImportURL = true
+                        } label: {
+                            Label("Import from URL", systemImage: "square.and.arrow.down")
+                        }
+                    }
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
                 }
             }
         }
+        .sheet(isPresented: $showImportURL) {
+            ImportRecipeFromURLSheet(vm: vm) { recipe in
+                importedRecipe = recipe
+                navigateToImported = true
+            }
+            .environmentObject(auth)
+        }
         .task { await vm.load(token: auth.accessToken ?? "") }
+    }
+}
+
+// MARK: - Import Recipe from URL Sheet
+
+struct ImportRecipeFromURLSheet: View {
+    @EnvironmentObject var auth: AuthManager
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var vm: RecipesViewModel
+    let onSuccess: (Recipe) -> Void
+
+    @State private var urlText = ""
+    @State private var isImporting = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("https://", text: $urlText)
+                        .keyboardType(.URL)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                } header: {
+                    Text("Recipe URL")
+                } footer: {
+                    Text("Paste the URL of any recipe page to import it automatically.")
+                }
+
+                if isImporting {
+                    Section {
+                        HStack {
+                            ProgressView()
+                                .padding(.trailing, 8)
+                            Text("Importing recipe…")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                if let error = errorMessage {
+                    Section {
+                        Text(error)
+                            .foregroundStyle(.red)
+                            .font(.callout)
+                    }
+                }
+            }
+            .navigationTitle("Import from URL")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .disabled(isImporting)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Import") {
+                        Task { await performImport() }
+                    }
+                    .disabled(urlText.trimmingCharacters(in: .whitespaces).isEmpty || isImporting)
+                }
+            }
+        }
+    }
+
+    private func performImport() async {
+        guard let token = auth.accessToken else { return }
+        let trimmed = urlText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        isImporting = true
+        errorMessage = nil
+        do {
+            let recipe = try await vm.importRecipe(url: trimmed, token: token)
+            dismiss()
+            onSuccess(recipe)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isImporting = false
     }
 }
 
