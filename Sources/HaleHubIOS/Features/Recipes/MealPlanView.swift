@@ -1,8 +1,56 @@
 import SwiftUI
 
-struct MealPlanView: View {
+// MARK: - Meals Hub (root of the Meals tab)
+
+struct MealsHubView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm = RecipesViewModel()
+
+    var body: some View {
+        List {
+            Section {
+                NavigationLink(destination: RecipesListView().environmentObject(auth)) {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Recipes").font(.headline)
+                            Text("Browse and search all recipes")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "book.fill")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+
+                NavigationLink(destination: MealPlanView(vm: vm).environmentObject(auth)) {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("This Week").font(.headline)
+                            if let plan = vm.activeMealPlan, let entries = plan.entries, !entries.isEmpty {
+                                Text("\(entries.count) meals planned")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            } else {
+                                Text("View the weekly meal plan")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    } icon: {
+                        Image(systemName: "calendar")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Meals")
+        .task { await vm.load(token: auth.accessToken ?? "") }
+    }
+}
+
+// MARK: - Meal Plan View
+
+struct MealPlanView: View {
+    @EnvironmentObject var auth: AuthManager
+    @ObservedObject var vm: RecipesViewModel
 
     var body: some View {
         Group {
@@ -20,12 +68,6 @@ struct MealPlanView: View {
             }
         }
         .navigationTitle("This Week")
-        .toolbar {
-            NavigationLink(destination: RecipesListView()) {
-                Label("All Recipes", systemImage: "book.fill")
-            }
-        }
-        .task { await vm.load(token: auth.accessToken ?? "") }
         .refreshable { await vm.load(token: auth.accessToken ?? "") }
     }
 }

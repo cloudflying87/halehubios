@@ -13,7 +13,7 @@ struct MainTabView: View {
             .tabItem { Label("Vehicles", systemImage: "car.fill") }
 
             NavigationStack {
-                MealPlanView()
+                MealsHubView()
             }
             .tabItem { Label("Meals", systemImage: "fork.knife") }
 
