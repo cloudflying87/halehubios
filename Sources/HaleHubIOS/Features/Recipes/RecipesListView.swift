@@ -21,7 +21,14 @@ struct RecipesListView: View {
                     }
                     .listStyle(.plain)
                 }
-                .searchable(text: $vm.searchText, prompt: "Search recipes")
+                .searchable(text: $vm.searchQuery, prompt: "Search recipes…")
+                .onChange(of: vm.searchQuery) { _, query in
+                    let token = auth.accessToken ?? ""
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(300))
+                        await vm.search(query: query, token: token)
+                    }
+                }
                 .refreshable { await vm.load(token: auth.accessToken ?? "") }
             }
         }

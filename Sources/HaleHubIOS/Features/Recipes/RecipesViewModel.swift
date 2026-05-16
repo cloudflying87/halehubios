@@ -1,5 +1,13 @@
 import Foundation
 
+// MARK: - Meal Plan API request
+
+struct AddToMealPlanRequest: Encodable, Sendable {
+    let recipeId: String
+    let mealType: String
+    let date: String?
+}
+
 enum DietaryFilter: String, CaseIterable, Identifiable {
     case all = "All"
     case glutenFree = "GF"
@@ -42,6 +50,7 @@ class RecipesViewModel: ObservableObject {
     @Published var categories: [RecipeCategory] = []
     @Published var isLoading = false
     @Published var searchText = ""
+    @Published var searchQuery = ""
     @Published var showFavoritesOnly = false
     @Published var dietaryFilter: DietaryFilter = .all
     @Published var sortOrder: RecipeSortOrder = .title
@@ -56,8 +65,8 @@ class RecipesViewModel: ObservableObject {
 
     var filtered: [Recipe] {
         var result = recipes
-        if !searchText.isEmpty {
-            result = result.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
+        if !searchQuery.isEmpty {
+            result = result.filter { $0.title.localizedCaseInsensitiveContains(searchQuery) }
         }
         if showFavoritesOnly {
             result = result.filter { $0.isFavorite }
@@ -96,8 +105,9 @@ class RecipesViewModel: ObservableObject {
         isLoading = true
         error = nil
 
+        let searchSuffix = searchQuery.isEmpty ? "" : "&search=\(searchQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? searchQuery)"
         async let recipesTask: PaginatedResponse<Recipe> = APIClient.shared.get(
-            "/recipes/?sort=\(sortOrder.queryValue)", token: token
+            "/recipes/?sort=\(sortOrder.queryValue)\(searchSuffix)", token: token
         )
         async let planTask: MealPlan = APIClient.shared.get("/meal-plans/active/", token: token)
         async let categoriesTask: [RecipeCategory] = APIClient.shared.get("/recipes/categories/", token: token)
@@ -122,6 +132,43 @@ class RecipesViewModel: ObservableObject {
         isLoading = false
     }
 
+    func search(query: String, token: String) async {
+        searchQuery = query
+        await load(token: token)
+    }
+
+    func addToMealPlan(planId: String, recipeId: String, dayOfWeek: Int, mealType: String, token: String) async throws {
+        // dayOfWeek is informational; compute date from active plan's start_date if available
+        var dateString: String? = nil
+        if let plan = activeMealPlan, let start = plan.startDate {
+            var components = Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: start)
+            components.weekday = dayOfWeek + 2  // Calendar weekday: 1=Sun, Swift expects 1-based; dayOfWeek 0=Mon
+            if let targetDate = Calendar.current.date(from: components) {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd"
+                dateString = formatter.string(from: targetDate)
+            }
+        }
+        let body = AddToMealPlanRequest(recipeId: recipeId, mealType: mealType, date: dateString)
+        let _: MealPlanEntry = try await APIClient.shared.post(
+            "/meal-plans/\(planId)/entries/", body: body, token: token
+        )
+        // Refresh the active plan so the UI reflects the new entry
+        if let updatedPlan: MealPlan = try? await APIClient.shared.get("/meal-plans/active/", token: token) {
+            activeMealPlan = updatedPlan
+            await CacheManager.shared.save(updatedPlan, key: planCacheKey)
+        }
+    }
+
+    func removeFromMealPlan(entryId: String, token: String) async throws {
+        try await APIClient.shared.delete("/meal-plans/entries/\(entryId)/", token: token)
+        // Refresh the active plan so the UI reflects the deletion
+        if let updatedPlan: MealPlan = try? await APIClient.shared.get("/meal-plans/active/", token: token) {
+            activeMealPlan = updatedPlan
+            await CacheManager.shared.save(updatedPlan, key: planCacheKey)
+        }
+    }
+
     func markCooked(recipe: Recipe, token: String) async {
         do {
             let response: MarkCookedResponse = try await APIClient.shared.postEmpty(
@@ -140,7 +187,12 @@ class RecipesViewModel: ObservableObject {
                     isNutFree: old.isNutFree, isVegetarian: old.isVegetarian,
                     isVegan: old.isVegan, calories: old.calories, protein: old.protein,
                     carbs: old.carbs, fat: old.fat, fiber: old.fiber,
-                    ingredients: old.ingredients, categories: old.categories
+                    ingredients: old.ingredients, categories: old.categories,
+                    notes: old.notes, sourceUrl: old.sourceUrl, sourceName: old.sourceName,
+                    importedFrom: old.importedFrom, servingSize: old.servingSize,
+                    isGrainFree: old.isGrainFree, sodium: old.sodium, sugar: old.sugar,
+                    saturatedFat: old.saturatedFat, cholesterol: old.cholesterol,
+                    ovenTemp: old.ovenTemp
                 )
             }
         } catch {

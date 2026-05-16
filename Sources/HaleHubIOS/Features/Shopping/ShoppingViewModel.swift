@@ -29,6 +29,17 @@ class ShoppingViewModel: ObservableObject {
         }
         isLoading = false
     }
+
+    func createList(name: String, store: String, token: String) async {
+        let body = CreateShoppingListRequest(name: name, store: store.isEmpty ? nil : store)
+        do {
+            let newList: ShoppingList = try await APIClient.shared.post("/shopping/", body: body, token: token)
+            lists.insert(newList, at: 0)
+            await CacheManager.shared.save(lists, key: cacheKey)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
 }
 
 @MainActor

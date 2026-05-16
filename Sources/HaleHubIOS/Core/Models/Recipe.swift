@@ -36,6 +36,17 @@ struct Recipe: Identifiable, Codable, Sendable {
     let fiber: Double?
     let ingredients: [Ingredient]?
     let categories: [RecipeCategory]?
+    let notes: String?
+    let sourceUrl: String?
+    let sourceName: String?
+    let importedFrom: String?
+    let servingSize: String?
+    let isGrainFree: Bool?
+    let sodium: Double?
+    let sugar: Double?
+    let saturatedFat: Double?
+    let cholesterol: Double?
+    let ovenTemp: Int?
 
     var parsedSteps: [String] {
         guard let text = instructions, !text.isEmpty else { return [] }

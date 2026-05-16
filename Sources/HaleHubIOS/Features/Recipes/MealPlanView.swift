@@ -206,7 +206,7 @@ struct MealEntryRow: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
                     if let recipe = entry.recipe {
-                        NavigationLink(destination: RecipeDetailView(recipe: recipe)) {
+                        NavigationLink(destination: RecipeDetailView(recipe: recipe).environmentObject(auth)) {
                             Text(recipe.title)
                                 .font(.body.weight(cooked ? .regular : .medium))
                                 .foregroundStyle(cooked ? .secondary : .primary)
@@ -272,5 +272,15 @@ struct MealEntryRow: View {
             }
         }
         .padding(.vertical, 4)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                Task {
+                    guard let token = auth.accessToken else { return }
+                    try? await vm.removeFromMealPlan(entryId: entry.id.uuidString, token: token)
+                }
+            } label: {
+                Label("Remove", systemImage: "trash")
+            }
+        }
     }
 }

@@ -7,6 +7,7 @@ struct RecipeDetailView: View {
     @State private var fullRecipe: Recipe?
     @State private var showCookedToast = false
     @State private var showCookMode = false
+    @State private var showAddToMealPlan = false
 
     var displayed: Recipe { fullRecipe ?? recipe }
 
@@ -96,13 +97,24 @@ struct RecipeDetailView: View {
                     }
 
                     // Stats footer
-                    if displayed.timesCooked > 0 {
-                        HStack {
-                            Image(systemName: "flame.fill").foregroundStyle(.orange)
-                            Text("Made \(displayed.timesCooked) time\(displayed.timesCooked == 1 ? "" : "s")")
-                            if let last = displayed.lastCooked {
-                                Text("· Last: \(last, style: .date)")
-                                    .foregroundStyle(.secondary)
+                    if displayed.timesCooked > 0 || displayed.importedFrom != nil {
+                        VStack(alignment: .leading, spacing: 4) {
+                            if displayed.timesCooked > 0 {
+                                HStack {
+                                    Image(systemName: "flame.fill").foregroundStyle(.orange)
+                                    Text("Made \(displayed.timesCooked) time\(displayed.timesCooked == 1 ? "" : "s")")
+                                    if let last = displayed.lastCooked {
+                                        Text("· Last: \(last, style: .date)")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                            if let source = displayed.importedFrom {
+                                HStack {
+                                    Image(systemName: "square.and.arrow.down").foregroundStyle(.secondary)
+                                    Text("Imported from \(source)")
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
                         .font(.caption)
@@ -115,10 +127,19 @@ struct RecipeDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    Task { await markCooked() }
+                Menu {
+                    Button {
+                        Task { await markCooked() }
+                    } label: {
+                        Label("Cooked It", systemImage: "checkmark.circle")
+                    }
+                    Button {
+                        showAddToMealPlan = true
+                    } label: {
+                        Label("Add to Meal Plan", systemImage: "calendar.badge.plus")
+                    }
                 } label: {
-                    Label("Cooked It", systemImage: "checkmark.circle")
+                    Image(systemName: "ellipsis.circle")
                 }
             }
         }
@@ -141,6 +162,10 @@ struct RecipeDetailView: View {
                 CookModeView(title: displayed.title, steps: displayed.parsedSteps)
             }
         }
+        .sheet(isPresented: $showAddToMealPlan) {
+            AddToMealPlanSheet(recipe: displayed)
+                .environmentObject(auth)
+        }
         .task { await loadFull() }
     }
 
@@ -159,6 +184,122 @@ struct RecipeDetailView: View {
             try? await Task.sleep(for: .seconds(2))
             showCookedToast = false
         } catch {}
+    }
+}
+
+// MARK: - Add to Meal Plan Sheet
+
+struct AddToMealPlanSheet: View {
+    @EnvironmentObject var auth: AuthManager
+    @Environment(\.dismiss) private var dismiss
+    let recipe: Recipe
+
+    @State private var mealPlans: [MealPlan] = []
+    @State private var selectedPlanId: String = ""
+    @State private var selectedDayOfWeek: Int = 0
+    @State private var selectedMealType: String = "dinner"
+    @State private var isLoading = false
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    private let mealTypes = ["breakfast", "lunch", "dinner", "snack"]
+    private let daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if isLoading {
+                    Section {
+                        ProgressView("Loading meal plans…")
+                    }
+                } else if mealPlans.isEmpty {
+                    Section {
+                        Text("No meal plans found. Create one on the website first.")
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Section("Meal Plan") {
+                        Picker("Plan", selection: $selectedPlanId) {
+                            ForEach(mealPlans, id: \.id) { plan in
+                                Text(plan.displayName).tag(plan.id.uuidString)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
+
+                    Section("Schedule") {
+                        Picker("Day", selection: $selectedDayOfWeek) {
+                            ForEach(Array(daysOfWeek.enumerated()), id: \.offset) { index, day in
+                                Text(day).tag(index)
+                            }
+                        }
+                        .pickerStyle(.menu)
+
+                        Picker("Meal", selection: $selectedMealType) {
+                            ForEach(mealTypes, id: \.self) { type in
+                                Text(type.capitalized).tag(type)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
+
+                    if let error = errorMessage {
+                        Section {
+                            Text(error).foregroundStyle(.red).font(.caption)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Add to Meal Plan")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        Task { await addToMealPlan() }
+                    }
+                    .disabled(selectedPlanId.isEmpty || isSaving || isLoading)
+                }
+            }
+        }
+        .task { await loadMealPlans() }
+    }
+
+    private func loadMealPlans() async {
+        guard let token = auth.accessToken else { return }
+        isLoading = true
+        do {
+            let response: PaginatedResponse<MealPlan> = try await APIClient.shared.get("/meal-plans/", token: token)
+            mealPlans = response.results
+            if let first = mealPlans.first {
+                selectedPlanId = first.id.uuidString
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    private func addToMealPlan() async {
+        guard let token = auth.accessToken, !selectedPlanId.isEmpty else { return }
+        isSaving = true
+        errorMessage = nil
+        let body = AddToMealPlanRequest(
+            recipeId: recipe.id.uuidString,
+            mealType: selectedMealType,
+            date: nil
+        )
+        do {
+            let _: MealPlanEntry = try await APIClient.shared.post(
+                "/meal-plans/\(selectedPlanId)/entries/", body: body, token: token
+            )
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isSaving = false
     }
 }
 

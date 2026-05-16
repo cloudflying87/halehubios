@@ -4,6 +4,7 @@ struct ShoppingListsView: View {
     @EnvironmentObject var auth: AuthManager
     @EnvironmentObject var network: NetworkMonitor
     @StateObject private var vm = ShoppingViewModel()
+    @State private var showCreateSheet = false
 
     var body: some View {
         Group {
@@ -13,7 +14,7 @@ struct ShoppingListsView: View {
                 ContentUnavailableView(
                     "No Shopping Lists",
                     systemImage: "cart",
-                    description: Text("Create a shopping list on the website.")
+                    description: Text("Tap + to create a shopping list.")
                 )
             } else {
                 VStack(spacing: 0) {
@@ -30,7 +31,66 @@ struct ShoppingListsView: View {
             }
         }
         .navigationTitle("Shopping")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showCreateSheet = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showCreateSheet) {
+            CreateShoppingListSheet(vm: vm)
+                .environmentObject(auth)
+        }
         .task { await vm.load(token: auth.accessToken ?? "", isConnected: network.isConnected) }
+    }
+}
+
+struct CreateShoppingListSheet: View {
+    @EnvironmentObject var auth: AuthManager
+    @ObservedObject var vm: ShoppingViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var listName = ""
+    @State private var storeName = ""
+    @State private var isCreating = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("List Name", text: $listName)
+                    TextField("Store (optional)", text: $storeName)
+                }
+            }
+            .navigationTitle("New Shopping List")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create") {
+                        Task { await create() }
+                    }
+                    .disabled(listName.trimmingCharacters(in: .whitespaces).isEmpty || isCreating)
+                }
+            }
+        }
+    }
+
+    private func create() async {
+        guard let token = auth.accessToken else { return }
+        isCreating = true
+        await vm.createList(
+            name: listName.trimmingCharacters(in: .whitespaces),
+            store: storeName.trimmingCharacters(in: .whitespaces),
+            token: token
+        )
+        isCreating = false
+        dismiss()
     }
 }
 

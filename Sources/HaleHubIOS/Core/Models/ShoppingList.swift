@@ -38,3 +38,8 @@ struct ToggleResponse: Decodable, Sendable {
     let isChecked: Bool
     let checkedAt: Date?
 }
+
+struct CreateShoppingListRequest: Encodable, Sendable {
+    let name: String
+    let store: String?
+}
