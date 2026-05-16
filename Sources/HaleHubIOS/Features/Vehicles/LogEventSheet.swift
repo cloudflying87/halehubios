@@ -147,7 +147,7 @@ struct LogEventSheet: View {
 
         var body = LogEventRequest(eventType: eventType, date: formatter.string(from: date))
         body.miles = vehicle.isBoat ? nil : Int(odometer)
-        body.hours = vehicle.isBoat ? Int(odometer) : nil
+        body.hours = vehicle.isBoat ? Double(odometer) : nil
         body.gallons = Double(gallons)
         body.pricePerGallon = Double(pricePerGallon)
         body.notes = notes.isEmpty ? nil : notes

@@ -11,9 +11,9 @@ struct Vehicle: Identifiable, Codable, Sendable {
     let isActive: Bool
     let photoUrl: String?
     let currentMileage: Int?
-    let currentHours: Int?
-    let totalFuelCost: String?
-    let totalMaintenanceCost: String?
+    let currentHours: Double?
+    let totalFuelCost: Double?
+    let totalMaintenanceCost: Double?
     let displayUnit: String?
 
     var isBoat: Bool { vehicleType == "boat" || vehicleType == "other" }
@@ -30,8 +30,8 @@ struct Vehicle: Identifiable, Codable, Sendable {
         default: return "car.fill"
         }
     }
-    var fuelCostDouble: Double? { totalFuelCost.flatMap { Double($0) } }
-    var maintenanceCostDouble: Double? { totalMaintenanceCost.flatMap { Double($0) } }
+    var fuelCostDouble: Double? { totalFuelCost }
+    var maintenanceCostDouble: Double? { totalMaintenanceCost }
 }
 
 struct VehicleEvent: Identifiable, Codable, Sendable {
@@ -91,7 +91,7 @@ struct LogEventRequest: Encodable, Sendable {
     let eventType: String
     let date: String
     var miles: Int?
-    var hours: Int?
+    var hours: Double?
     var gallons: Double?
     var pricePerGallon: Double?
     var notes: String?
