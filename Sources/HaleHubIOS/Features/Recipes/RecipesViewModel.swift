@@ -169,6 +169,19 @@ class RecipesViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Recipe Update
+
+    func updateRecipe(_ recipe: Recipe, request: RecipeUpdateRequest, token: String) async throws -> Recipe {
+        let updated: Recipe = try await APIClient.shared.patch(
+            "/recipes/\(recipe.id)/update/", body: request, token: token
+        )
+        if let idx = recipes.firstIndex(where: { $0.id == updated.id }) {
+            recipes[idx] = updated
+        }
+        await CacheManager.shared.save(recipes, key: recipeCacheKey)
+        return updated
+    }
+
     // MARK: - Recipe Import from URL
 
     func importRecipe(url: String, token: String) async throws -> Recipe {

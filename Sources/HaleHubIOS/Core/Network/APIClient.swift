@@ -83,6 +83,17 @@ actor APIClient {
         return try decode(data)
     }
 
+    // PATCH request
+    func patch<Body: Encodable & Sendable, Response: Decodable & Sendable>(
+        _ path: String, body: Body, token: String
+    ) async throws -> Response {
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let encoded = try encoder.encode(body)
+        let data = try await request(path: path, method: "PATCH", body: encoded, token: token)
+        return try decode(data)
+    }
+
     // DELETE request
     func delete(_ path: String, token: String) async throws {
         _ = try await request(path: path, method: "DELETE", body: nil as Data?, token: token)

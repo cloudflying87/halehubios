@@ -8,6 +8,7 @@ struct RecipeDetailView: View {
     @State private var showCookedToast = false
     @State private var showCookMode = false
     @State private var showAddToMealPlan = false
+    @State private var showEditRecipe = false
 
     var displayed: Recipe { fullRecipe ?? recipe }
 
@@ -138,6 +139,11 @@ struct RecipeDetailView: View {
                     } label: {
                         Label("Add to Meal Plan", systemImage: "calendar.badge.plus")
                     }
+                    Button {
+                        showEditRecipe = true
+                    } label: {
+                        Label("Edit Recipe", systemImage: "pencil")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -165,6 +171,12 @@ struct RecipeDetailView: View {
         .sheet(isPresented: $showAddToMealPlan) {
             AddToMealPlanSheet(recipe: displayed)
                 .environmentObject(auth)
+        }
+        .sheet(isPresented: $showEditRecipe) {
+            RecipeEditView(recipe: displayed) { updatedRecipe in
+                fullRecipe = updatedRecipe
+            }
+            .environmentObject(auth)
         }
         .task { await loadFull() }
     }

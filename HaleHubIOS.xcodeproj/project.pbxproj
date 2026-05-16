@@ -32,6 +32,7 @@
 		B64A219F2C54619AD786BF54 /* VehiclesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */; };
 		BCDE5F88E2E4D735D3B5F9FB /* MealPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 620CC00F94FEC794D68339CD /* MealPlanView.swift */; };
 		C55ECDB11898418FC61A3DBB /* OutingsAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */; };
+		D467E8EA2E3144B396FD8895 /* RecipeEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FCDF504AF0FF0F7B2F22CC9 /* RecipeEditView.swift */; };
 		D4DAB7C569314B2B4EC325EF /* TimeCalculatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54172C50FB914E1F40A7B76E /* TimeCalculatorView.swift */; };
 		D54E2E36A819178621728593 /* NotificationsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78FB1010716375E4D43CFAC4 /* NotificationsViewModel.swift */; };
 		D5605EF868D5C66108CCCA2D /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DA68F684F0A477BD7D1FEB9 /* NetworkMonitor.swift */; };
@@ -50,6 +51,7 @@
 		10D050A0AA135EA42867348B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1DA68F684F0A477BD7D1FEB9 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesListView.swift; sourceTree = "<group>"; };
+		1FCDF504AF0FF0F7B2F22CC9 /* RecipeEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeEditView.swift; sourceTree = "<group>"; };
 		264657A8853B85BCCFCEA2EA /* CompoundInterestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompoundInterestView.swift; sourceTree = "<group>"; };
 		2AA1D7CF6070F458F822E505 /* HaleNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaleNotification.swift; sourceTree = "<group>"; };
 		2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartsLookupView.swift; sourceTree = "<group>"; };
@@ -153,6 +155,7 @@
 				4D91DAB9A1CAE1BD99CF0623 /* CookModeView.swift */,
 				620CC00F94FEC794D68339CD /* MealPlanView.swift */,
 				EDE837B2ED56DF5798D132C3 /* RecipeDetailView.swift */,
+				1FCDF504AF0FF0F7B2F22CC9 /* RecipeEditView.swift */,
 				38E93521147DA51107C96ABA /* RecipesListView.swift */,
 				D24B721CFDEC7BEE72927514 /* RecipesViewModel.swift */,
 			);
@@ -339,6 +342,7 @@
 				89A04B5E9B416B66376FBC9E /* PartsLookupView.swift in Sources */,
 				F83EA4C8B97FAAF83529BB10 /* Recipe.swift in Sources */,
 				5D5BAB0D28F39AD5E2F28089 /* RecipeDetailView.swift in Sources */,
+				D467E8EA2E3144B396FD8895 /* RecipeEditView.swift in Sources */,
 				92CB91D03662E6106C02EED7 /* RecipesListView.swift in Sources */,
 				70570EDAB2447292C0FE276F /* RecipesViewModel.swift in Sources */,
 				88708811D5F23C9ACB63CCFF /* ShoppingList.swift in Sources */,
@@ -390,7 +394,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -465,7 +469,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
