@@ -192,7 +192,12 @@ struct LogEventSheet: View {
 
     private func loadLocations() async {
         guard let token = auth.accessToken else { return }
-        locations = (try? await APIClient.shared.get("/vehicles/locations/", token: token)) ?? []
+        do {
+            locations = try await APIClient.shared.get("/vehicles/locations/", token: token)
+        } catch {
+            // Locations endpoint may not be deployed yet — silently degrade to add-new only
+            locations = []
+        }
     }
 
     private func addLocation() async {
