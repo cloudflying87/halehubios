@@ -46,6 +46,7 @@ struct VehicleEvent: Identifiable, Codable, Sendable {
     let milespergallon: Double?
     let gallonsperhour: Double?
     let maintenanceCategoryName: String?
+    let maintenanceItems: [MaintenanceItemRecord]?
     let locationName: String?
     let notes: String?
     let createdAt: Date?
@@ -87,6 +88,19 @@ struct MaintenanceSchedule: Identifiable, Codable, Sendable {
     let isDueReason: String?
 }
 
+struct MaintenanceItemRecord: Identifiable, Codable, Sendable {
+    let id: Int
+    let categoryName: String?
+    let description: String
+    let cost: Double
+}
+
+struct MaintenanceItemInput: Encodable, Sendable {
+    let categoryId: Int
+    let description: String
+    let cost: Double
+}
+
 struct VehicleLocation: Identifiable, Codable, Sendable {
     let id: Int
     let name: String
@@ -109,6 +123,7 @@ struct LogEventRequest: Encodable, Sendable {
     var pricePerGallon: Double?
     var notes: String?
     var maintenanceCategoryId: Int?
+    var maintenanceItems: [MaintenanceItemInput]?
     var locationName: String?
 }
 

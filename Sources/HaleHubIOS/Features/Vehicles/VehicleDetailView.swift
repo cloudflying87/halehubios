@@ -397,7 +397,24 @@ struct EventCard: View {
                         Text("\(miles.formatted()) \(vehicle.unitAbbrev)").font(.caption).foregroundStyle(.tertiary)
                     }
                 }
-                if let notes = event.notes, !notes.isEmpty {
+                if let items = event.maintenanceItems, !items.isEmpty {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(items) { item in
+                            HStack {
+                                Text(item.categoryName ?? "Service")
+                                if !item.description.isEmpty {
+                                    Text("· \(item.description)")
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if item.cost > 0 {
+                                    Text(String(format: "$%.2f", item.cost))
+                                }
+                            }
+                            .font(.caption)
+                        }
+                    }
+                } else if let notes = event.notes, !notes.isEmpty {
                     Text(notes).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }
             }

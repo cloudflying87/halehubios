@@ -18,7 +18,7 @@ struct LogEventSheet: View {
     @State private var showAddLocation = false
     @State private var newLocationName = ""
     @State private var newLocationAddress = ""
-    @State private var selectedCategoryId: Int? = nil
+    @State private var serviceItems: [ServiceItem] = [ServiceItem()]
     @State private var categories: [MaintenanceCategory] = []
     @State private var isSaving = false
     @State private var errorMessage: String?
@@ -26,9 +26,11 @@ struct LogEventSheet: View {
     private let eventTypes = ["gas", "maintenance", "outing"]
 
     var relevantCategories: [MaintenanceCategory] {
-        categories.filter { cat in
-            cat.vehicleTypes?.contains(vehicle.vehicleType) ?? true
-        }
+        categories.filter { $0.vehicleTypes?.contains(vehicle.vehicleType) ?? true }
+    }
+
+    var serviceTotal: Double {
+        serviceItems.compactMap { Double($0.cost) }.reduce(0, +)
     }
 
     var isValid: Bool {
@@ -61,7 +63,7 @@ struct LogEventSheet: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    .onChange(of: eventType) { _, _ in selectedCategoryId = nil }
+                    .onChange(of: eventType) { _, _ in serviceItems = [ServiceItem()] }
 
                     DatePicker("Date", selection: $date, displayedComponents: .date)
                 }
@@ -85,11 +87,24 @@ struct LogEventSheet: View {
                         }
                     }
 
-                    if eventType == "maintenance" && !relevantCategories.isEmpty {
-                        Picker("Category", selection: $selectedCategoryId) {
-                            Text("— Select —").tag(nil as Int?)
-                            ForEach(relevantCategories) { cat in
-                                Text(cat.name).tag(cat.id as Int?)
+                    if eventType == "maintenance" {
+                        ForEach($serviceItems) { $item in
+                            ServiceItemRow(item: $item, categories: relevantCategories) {
+                                serviceItems.removeAll { $0.id == item.id }
+                            }
+                        }
+                        Button {
+                            serviceItems.append(ServiceItem())
+                        } label: {
+                            Label("Add Another Item", systemImage: "plus.circle")
+                                .font(.subheadline)
+                        }
+                        if serviceTotal > 0 {
+                            HStack {
+                                Text("Total").foregroundStyle(.secondary)
+                                Spacer()
+                                Text(String(format: "$%.2f", serviceTotal))
+                                    .fontWeight(.semibold)
                             }
                         }
                     }
@@ -210,7 +225,18 @@ struct LogEventSheet: View {
         body.gallons = Double(gallons)
         body.pricePerGallon = Double(pricePerGallon)
         body.notes = notes.isEmpty ? nil : notes
-        body.maintenanceCategoryId = selectedCategoryId
+        if eventType == "maintenance" {
+            let items = serviceItems.compactMap { item -> MaintenanceItemInput? in
+                guard let catId = item.categoryId else { return nil }
+                return MaintenanceItemInput(
+                    categoryId: catId,
+                    description: item.description,
+                    cost: Double(item.cost) ?? 0
+                )
+            }
+            body.maintenanceItems = items.isEmpty ? nil : items
+            body.maintenanceCategoryId = items.first?.categoryId
+        }
         body.locationName = locations.first(where: { $0.id == selectedLocationId })?.name
 
         do {
@@ -223,5 +249,54 @@ struct LogEventSheet: View {
             errorMessage = error.localizedDescription
         }
         isSaving = false
+    }
+}
+
+// MARK: - Service Item helpers
+
+struct ServiceItem: Identifiable {
+    let id = UUID()
+    var categoryId: Int? = nil
+    var description: String = ""
+    var cost: String = ""
+}
+
+struct ServiceItemRow: View {
+    @Binding var item: ServiceItem
+    let categories: [MaintenanceCategory]
+    let onRemove: () -> Void
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Picker("Category", selection: $item.categoryId) {
+                    Text("— Select type —").tag(nil as Int?)
+                    ForEach(categories) { cat in
+                        Text(cat.name).tag(cat.id as Int?)
+                    }
+                }
+                .labelsHidden()
+                Spacer()
+                Button(action: onRemove) {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundStyle(.red)
+                }
+                .buttonStyle(.plain)
+            }
+            HStack {
+                TextField("Description (e.g. Mobil 1 5W-30)", text: $item.description)
+                    .font(.subheadline)
+                Spacer()
+                HStack(spacing: 2) {
+                    Text("$").foregroundStyle(.secondary)
+                    TextField("0.00", text: $item.cost)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 70)
+                }
+            }
+            .font(.subheadline)
+        }
+        .padding(.vertical, 4)
     }
 }
