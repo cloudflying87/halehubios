@@ -43,6 +43,14 @@ struct VehiclesListView: View {
             }
         }
         .navigationTitle("Vehicles")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button { Task { await vm.load(token: auth.accessToken ?? "") } } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .disabled(vm.isLoading)
+            }
+        }
         .task { await vm.load(token: auth.accessToken ?? "") }
         .alert("Error", isPresented: .constant(vm.error != nil)) {
             Button("OK") { vm.error = nil }

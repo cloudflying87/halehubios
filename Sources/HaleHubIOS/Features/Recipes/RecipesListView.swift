@@ -27,6 +27,12 @@ struct RecipesListView: View {
         }
         .navigationTitle("Recipes")
         .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button { Task { await vm.load(token: auth.accessToken ?? "", isConnected: true) } } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .disabled(vm.isLoading)
+            }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Section("Sort") {
