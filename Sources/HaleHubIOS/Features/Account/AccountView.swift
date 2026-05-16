@@ -3,6 +3,7 @@ import SwiftUI
 struct AccountView: View {
     @EnvironmentObject var auth: AuthManager
     @ObservedObject var notifVM: NotificationsViewModel
+    @State private var tokenCopied = false
 
     var body: some View {
         NavigationStack {
@@ -32,6 +33,22 @@ struct AccountView: View {
                         }
                     }
                     .padding(.vertical, 6)
+
+                    Button {
+                        if let token = auth.accessToken {
+                            UIPasteboard.general.string = token
+                            tokenCopied = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                tokenCopied = false
+                            }
+                        }
+                    } label: {
+                        Label(
+                            tokenCopied ? "Copied!" : "Copy Shortcut Token",
+                            systemImage: tokenCopied ? "checkmark.circle.fill" : "doc.on.clipboard"
+                        )
+                        .foregroundStyle(tokenCopied ? .green : Color.accentColor)
+                    }
                 }
 
                 // Notifications
