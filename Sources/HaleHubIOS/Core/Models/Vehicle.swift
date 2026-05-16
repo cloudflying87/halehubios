@@ -87,6 +87,19 @@ struct MaintenanceSchedule: Identifiable, Codable, Sendable {
     let isDueReason: String?
 }
 
+struct VehicleLocation: Identifiable, Codable, Sendable {
+    let id: Int
+    let name: String
+    let address: String?
+    let latitude: Double?
+    let longitude: Double?
+}
+
+struct CreateLocationRequest: Encodable, Sendable {
+    let name: String
+    let address: String?
+}
+
 struct LogEventRequest: Encodable, Sendable {
     let eventType: String
     let date: String

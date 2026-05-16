@@ -13,7 +13,11 @@ struct LogEventSheet: View {
     @State private var gallons = ""
     @State private var pricePerGallon = ""
     @State private var notes = ""
-    @State private var locationName = ""
+    @State private var selectedLocationId: Int? = nil
+    @State private var locations: [VehicleLocation] = []
+    @State private var showAddLocation = false
+    @State private var newLocationName = ""
+    @State private var newLocationAddress = ""
     @State private var selectedCategoryId: Int? = nil
     @State private var categories: [MaintenanceCategory] = []
     @State private var isSaving = false
@@ -91,7 +95,18 @@ struct LogEventSheet: View {
                     }
 
                     if eventType == "outing" {
-                        TextField("Location (optional)", text: $locationName)
+                        Picker("Location", selection: $selectedLocationId) {
+                            Text("— None —").tag(nil as Int?)
+                            ForEach(locations) { loc in
+                                Text(loc.name).tag(loc.id as Int?)
+                            }
+                        }
+                        Button {
+                            showAddLocation = true
+                        } label: {
+                            Label("Add New Location", systemImage: "plus.circle")
+                                .font(.subheadline)
+                        }
                     }
 
                     TextField("Notes (optional)", text: $notes, axis: .vertical)
@@ -129,12 +144,56 @@ struct LogEventSheet: View {
                 }
             }
         }
-        .task { await loadCategories() }
+        .task { await loadCategories(); await loadLocations() }
+        .sheet(isPresented: $showAddLocation) {
+            NavigationStack {
+                Form {
+                    Section {
+                        TextField("Location name", text: $newLocationName)
+                        TextField("Address (optional)", text: $newLocationAddress)
+                    }
+                }
+                .navigationTitle("New Location")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { showAddLocation = false }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Add") {
+                            Task { await addLocation() }
+                        }
+                        .disabled(newLocationName.isEmpty)
+                    }
+                }
+            }
+        }
     }
 
     private func loadCategories() async {
         guard let token = auth.accessToken else { return }
         categories = (try? await APIClient.shared.get("/vehicles/maintenance-categories/", token: token)) ?? []
+    }
+
+    private func loadLocations() async {
+        guard let token = auth.accessToken else { return }
+        locations = (try? await APIClient.shared.get("/vehicles/locations/", token: token)) ?? []
+    }
+
+    private func addLocation() async {
+        guard let token = auth.accessToken, !newLocationName.isEmpty else { return }
+        let body = CreateLocationRequest(
+            name: newLocationName,
+            address: newLocationAddress.isEmpty ? nil : newLocationAddress
+        )
+        if let created: VehicleLocation = try? await APIClient.shared.post("/vehicles/locations/", body: body, token: token) {
+            locations.append(created)
+            locations.sort { $0.name < $1.name }
+            selectedLocationId = created.id
+        }
+        newLocationName = ""
+        newLocationAddress = ""
+        showAddLocation = false
     }
 
     private func save() async {
@@ -152,7 +211,7 @@ struct LogEventSheet: View {
         body.pricePerGallon = Double(pricePerGallon)
         body.notes = notes.isEmpty ? nil : notes
         body.maintenanceCategoryId = selectedCategoryId
-        body.locationName = locationName.isEmpty ? nil : locationName
+        body.locationName = locations.first(where: { $0.id == selectedLocationId })?.name
 
         do {
             let _: VehicleEvent = try await APIClient.shared.post(
