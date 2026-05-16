@@ -22,6 +22,7 @@ struct LogEventSheet: View {
     @State private var categories: [MaintenanceCategory] = []
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var savedGasEvent: VehicleEvent? = nil
 
     private let eventTypes = ["gas", "maintenance", "outing"]
 
@@ -55,7 +56,10 @@ struct LogEventSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            if let event = savedGasEvent {
+                GasSuccessCard(event: event, vehicle: vehicle) { dismiss() }
+            } else {
+                Form {
                 Section("Type") {
                     Picker("Event Type", selection: $eventType) {
                         ForEach(eventTypes, id: \.self) {
@@ -148,17 +152,18 @@ struct LogEventSheet: View {
                         .padding(.vertical, 4)
                     }
                 }
-            }
-            .navigationTitle("Log \(eventType == "maintenance" ? "Service" : eventType.capitalized)")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { Task { await save() } }
-                        .disabled(isSaving || !isValid)
                 }
-            }
-        }
+                .navigationTitle("Log \(eventType == "maintenance" ? "Service" : eventType.capitalized)")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") { Task { await save() } }
+                            .disabled(isSaving || !isValid)
+                    }
+                }
+            } // end else
+        } // end NavigationStack
         .task { await loadCategories(); await loadLocations() }
         .sheet(isPresented: $showAddLocation) {
             NavigationStack {
@@ -245,11 +250,15 @@ struct LogEventSheet: View {
         body.locationName = locations.first(where: { $0.id == selectedLocationId })?.name
 
         do {
-            let _: VehicleEvent = try await APIClient.shared.post(
+            let saved: VehicleEvent = try await APIClient.shared.post(
                 "/vehicles/\(vehicle.id)/log/", body: body, token: token
             )
             onSaved()
-            dismiss()
+            if eventType == "gas" {
+                savedGasEvent = saved  // show success card
+            } else {
+                dismiss()
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -303,5 +312,114 @@ struct ServiceItemRow: View {
             .font(.subheadline)
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Gas Success Card
+
+struct GasSuccessCard: View {
+    let event: VehicleEvent
+    let vehicle: Vehicle
+    let onDone: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            Image(systemName: "fuelpump.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.accentColor)
+
+            Text("Fill-up Recorded!")
+                .font(.title2.bold())
+
+            // Stats grid
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    SuccessStatBox(label: "Gallons", value: event.gallons.map { String(format: "%.3f", $0) } ?? "—")
+                    SuccessStatBox(label: "Total Cost", value: event.totalCost.map { String(format: "$%.2f", $0) } ?? "—", highlight: true)
+                }
+
+                if let mpg = event.milespergallon {
+                    EfficiencyBox(label: "Fuel Efficiency", value: String(format: "%.1f", mpg), unit: "MPG", color: Color.accentColor)
+                } else if let gph = event.gallonsperhour {
+                    EfficiencyBox(label: "Fuel Consumption", value: String(format: "%.2f", gph), unit: "GPH", color: Color.accentColor)
+                } else {
+                    Text("Efficiency calculated on next fill-up")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(12)
+                        .frame(maxWidth: .infinity)
+                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+                }
+
+                if let ppg = event.pricePerGallon {
+                    SuccessStatBox(label: "Price per Gallon", value: String(format: "$%.3f", ppg))
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.horizontal, 20)
+
+            Spacer()
+
+            Button(action: onDone) {
+                Text("Got it!")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 32)
+        }
+        .navigationTitle(vehicle.name)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct SuccessStatBox: View {
+    let label: String
+    let value: String
+    var highlight = false
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.title3.bold())
+                .foregroundStyle(highlight ? Color.green : .primary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+struct EfficiencyBox: View {
+    let label: String
+    let value: String
+    let unit: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            HStack(alignment: .lastTextBaseline, spacing: 4) {
+                Text(value)
+                    .font(.system(size: 42, weight: .bold, design: .rounded))
+                    .foregroundStyle(color)
+                Text(unit)
+                    .font(.title3.bold())
+                    .foregroundStyle(color)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(color.opacity(0.3), lineWidth: 1))
     }
 }

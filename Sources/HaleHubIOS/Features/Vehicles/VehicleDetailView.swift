@@ -27,6 +27,7 @@ struct VehicleDetailView: View {
     @State private var showLogSheet = false
     @State private var isLoading = false
     @State private var stats: VehicleStats?
+    @State private var selectedChart: VehicleChartMode = .pricePerGallon
 
     var dueSchedules: [MaintenanceSchedule] { schedules.filter { $0.isDue } }
     var filteredEvents: [VehicleEvent] {
@@ -61,16 +62,14 @@ struct VehicleDetailView: View {
                         }
                     }
 
-                    // Stats cards
+                    // Stats cards — tappable to switch chart
                     if let s = stats {
-                        StatsRow(vehicle: vehicle, stats: s)
+                        StatsRow(vehicle: vehicle, stats: s, selectedChart: $selectedChart)
                     }
 
-                    // Price per gallon chart
-                    let priceEvents = events.filter { $0.eventType == "gas" && $0.pricePerGallon != nil }
-                    if priceEvents.count >= 2 {
-                        PriceHistoryChart(events: priceEvents)
-                    }
+                    // Dynamic chart based on selected stat pill
+                    let gasEvents = events.filter { $0.eventType == "gas" }
+                    VehicleChartSection(events: gasEvents, vehicle: vehicle, mode: selectedChart)
 
                     // Maintenance due
                     if !dueSchedules.isEmpty {
@@ -209,6 +208,160 @@ struct VehicleHeroImage: View {
     }
 }
 
+// MARK: - Chart Mode
+
+enum VehicleChartMode: String, CaseIterable {
+    case pricePerGallon = "Price/gal"
+    case efficiency = "MPG/GPH"
+    case fuelCost = "Fuel Cost"
+}
+
+// MARK: - Vehicle Chart Section
+
+struct VehicleChartSection: View {
+    let events: [VehicleEvent]
+    let vehicle: Vehicle
+    let mode: VehicleChartMode
+
+    var body: some View {
+        let sorted = events.sorted { $0.date < $1.date }
+
+        switch mode {
+        case .pricePerGallon:
+            let priceEvents = sorted.filter { $0.pricePerGallon != nil }
+            if priceEvents.count >= 2 {
+                PriceHistoryChart(events: priceEvents)
+            }
+
+        case .efficiency:
+            let effEvents = vehicle.isBoat
+                ? sorted.filter { $0.gallonsperhour != nil }
+                : sorted.filter { $0.milespergallon != nil }
+            if effEvents.count >= 2 {
+                EfficiencyChart(events: effEvents, isBoat: vehicle.isBoat)
+            }
+
+        case .fuelCost:
+            let costEvents = sorted.filter { $0.totalCost != nil }
+            if costEvents.count >= 2 {
+                FuelCostChart(events: costEvents)
+            }
+        }
+    }
+}
+
+// MARK: - Efficiency Chart (MPG or GPH over time)
+
+struct EfficiencyChart: View {
+    let events: [VehicleEvent]
+    let isBoat: Bool
+
+    private var values: [Double] { events.compactMap { isBoat ? $0.gallonsperhour : $0.milespergallon } }
+    private var minVal: Double { values.min() ?? 0 }
+    private var maxVal: Double { values.max() ?? 0 }
+    private var avgVal: Double { values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count) }
+    private var unit: String { isBoat ? "GPH" : "MPG" }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(isBoat ? "Gallons per Hour" : "Miles per Gallon")
+                .font(.headline)
+
+            Chart(events) { event in
+                let val = isBoat ? event.gallonsperhour : event.milespergallon
+                if let v = val {
+                    LineMark(x: .value("Date", event.date), y: .value(unit, v))
+                        .foregroundStyle(Color.accentColor)
+                        .interpolationMethod(.catmullRom)
+                    PointMark(x: .value("Date", event.date), y: .value(unit, v))
+                        .foregroundStyle(Color.accentColor)
+                        .symbolSize(30)
+                }
+            }
+            .chartYScale(domain: (minVal * 0.9)...(maxVal * 1.1))
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: 4)) {
+                    AxisValueLabel(format: .dateTime.month(.abbreviated).year(.twoDigits))
+                }
+            }
+            .frame(height: 160)
+
+            HStack(spacing: 0) {
+                VStack(spacing: 2) {
+                    Text("Low")
+                    Text(String(format: "%.1f", minVal)).fontWeight(.semibold).foregroundStyle(.primary)
+                }
+                Spacer()
+                VStack(spacing: 2) {
+                    Text("Avg")
+                    Text(String(format: "%.1f", avgVal)).fontWeight(.semibold).foregroundStyle(.primary)
+                }
+                Spacer()
+                VStack(spacing: 2) {
+                    Text("High")
+                    Text(String(format: "%.1f", maxVal)).fontWeight(.semibold).foregroundStyle(.primary)
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+// MARK: - Fuel Cost Chart
+
+struct FuelCostChart: View {
+    let events: [VehicleEvent]
+
+    private var costs: [Double] { events.compactMap { $0.totalCost } }
+    private var total: Double { costs.reduce(0, +) }
+    private var avg: Double { costs.isEmpty ? 0 : total / Double(costs.count) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Fuel Cost per Fill-up")
+                .font(.headline)
+
+            Chart(events) { event in
+                if let cost = event.totalCost {
+                    BarMark(x: .value("Date", event.date, unit: .month), y: .value("Cost", cost))
+                        .foregroundStyle(Color.accentColor)
+                        .cornerRadius(4)
+                }
+            }
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: 4)) {
+                    AxisValueLabel(format: .dateTime.month(.abbreviated).year(.twoDigits))
+                }
+            }
+            .chartYAxis {
+                AxisMarks { v in
+                    AxisValueLabel { if let d = v.as(Double.self) { Text("$\(Int(d))") } }
+                }
+            }
+            .frame(height: 160)
+
+            HStack(spacing: 0) {
+                VStack(spacing: 2) {
+                    Text("Avg/fill-up")
+                    Text(String(format: "$%.2f", avg)).fontWeight(.semibold).foregroundStyle(.primary)
+                }
+                Spacer()
+                VStack(spacing: 2) {
+                    Text("Total spent")
+                    Text(String(format: "$%.0f", total)).fontWeight(.semibold).foregroundStyle(.primary)
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
 // MARK: - Price History Chart
 
 struct PriceHistoryChart: View {
@@ -280,6 +433,7 @@ struct PriceHistoryChart: View {
 struct StatsRow: View {
     let vehicle: Vehicle
     let stats: VehicleStats
+    @Binding var selectedChart: VehicleChartMode
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -292,13 +446,26 @@ struct StatsRow: View {
                     )
                 }
                 if let mpg = stats.avgMPG {
-                    VehicleStatPill(label: "Avg MPG", value: String(format: "%.1f", mpg), icon: "fuelpump")
+                    VehicleStatPill(label: "Avg MPG", value: String(format: "%.1f", mpg), icon: "fuelpump",
+                                   isSelected: selectedChart == .efficiency) {
+                        selectedChart = .efficiency
+                    }
                 }
                 if let gph = stats.avgGPH {
-                    VehicleStatPill(label: "Avg GPH", value: String(format: "%.2f", gph), icon: "fuelpump")
+                    VehicleStatPill(label: "Avg GPH", value: String(format: "%.2f", gph), icon: "fuelpump",
+                                   isSelected: selectedChart == .efficiency) {
+                        selectedChart = .efficiency
+                    }
                 }
                 if let fuel = vehicle.fuelCostDouble, fuel > 0 {
-                    VehicleStatPill(label: "Total Fuel", value: "$\(Int(fuel))", icon: "creditcard")
+                    VehicleStatPill(label: "Total Fuel", value: "$\(Int(fuel))", icon: "creditcard",
+                                   isSelected: selectedChart == .fuelCost) {
+                        selectedChart = .fuelCost
+                    }
+                }
+                VehicleStatPill(label: "Price/gal", value: "", icon: "fuelpump.circle",
+                               isSelected: selectedChart == .pricePerGallon) {
+                    selectedChart = .pricePerGallon
                 }
                 if let maint = vehicle.maintenanceCostDouble, maint > 0 {
                     VehicleStatPill(label: "Total Service", value: "$\(Int(maint))", icon: "wrench")
@@ -314,16 +481,32 @@ struct VehicleStatPill: View {
     let label: String
     let value: String
     let icon: String
+    var isSelected: Bool = false
+    var action: (() -> Void)? = nil
+
     var body: some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon).font(.caption).foregroundStyle(.secondary)
-            Text(value).font(.subheadline.bold())
-            Text(label).font(.caption2).foregroundStyle(.secondary)
+        let content = VStack(spacing: 4) {
+            Image(systemName: icon).font(.caption)
+                .foregroundStyle(isSelected ? .white : .secondary)
+            if !value.isEmpty {
+                Text(value).font(.subheadline.bold())
+                    .foregroundStyle(isSelected ? .white : .primary)
+            }
+            Text(label).font(.caption2)
+                .foregroundStyle(isSelected ? .white.opacity(0.85) : .secondary)
         }
         .frame(minWidth: 72)
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
+        .background(isSelected ? Color.accentColor : Color(.systemGray6),
+                    in: RoundedRectangle(cornerRadius: 10))
+
+        if let action {
+            Button(action: action) { content }
+                .buttonStyle(.plain)
+        } else {
+            content
+        }
     }
 }
 
