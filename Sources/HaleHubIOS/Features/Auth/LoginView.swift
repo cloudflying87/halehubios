@@ -21,10 +21,10 @@ struct LoginView: View {
             }
 
             VStack(spacing: 12) {
-                TextField("Email", text: $email)
+                TextField("Username or Email", text: $email)
                     .textFieldStyle(.roundedBorder)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
+                    .textContentType(.username)
+                    .keyboardType(.default)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
 

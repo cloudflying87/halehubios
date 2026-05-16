@@ -12,11 +12,17 @@ enum APIError: Error, LocalizedError {
         case .invalidURL: return "Invalid URL"
         case .unauthorized: return "Session expired — please log in again"
         case .serverError(let code, let body):
-            // Try to parse DRF validation errors like {"field": ["message"]}
-            if let data = body.data(using: .utf8),
-               let json = try? JSONDecoder().decode([String: [String]].self, from: data) {
-                let messages = json.values.flatMap { $0 }
-                if !messages.isEmpty { return messages.joined(separator: ". ") }
+            if let data = body.data(using: .utf8) {
+                // {"detail": "message"} — simplejwt and DRF generic errors
+                if let json = try? JSONDecoder().decode([String: String].self, from: data),
+                   let detail = json["detail"] {
+                    return detail
+                }
+                // {"field": ["message"]} — DRF validation errors
+                if let json = try? JSONDecoder().decode([String: [String]].self, from: data) {
+                    let messages = json.values.flatMap { $0 }
+                    if !messages.isEmpty { return messages.joined(separator: ". ") }
+                }
             }
             return "Server error (\(code))"
         case .decodingError(let e): return "Data error: \(e.localizedDescription)"

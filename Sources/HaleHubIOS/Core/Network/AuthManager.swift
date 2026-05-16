@@ -38,6 +38,13 @@ class AuthManager: ObservableObject {
             UserDefaults.standard.set(response.refresh, forKey: refreshKey)
             isAuthenticated = true
             await fetchCurrentUser()
+        } catch let error as APIError {
+            switch error {
+            case .unauthorized:
+                errorMessage = "Username or password is incorrect."
+            default:
+                errorMessage = error.localizedDescription
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
