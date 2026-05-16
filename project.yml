@@ -32,6 +32,6 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationPortraitUpsideDown
-        UIRequiresFullScreen: false
+        UIRequiresFullScreen: true
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false

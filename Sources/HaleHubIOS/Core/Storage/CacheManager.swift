@@ -16,10 +16,10 @@ actor CacheManager {
     init() {
         encoder.keyEncodingStrategy = .convertToSnakeCase
         decoder.keyDecodingStrategy = .convertFromSnakeCase
-        let fmt = ISO8601DateFormatter()
-        fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         decoder.dateDecodingStrategy = .custom { dec in
             let str = try dec.singleValueContainer().decode(String.self)
+            let fmt = ISO8601DateFormatter()
+            fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             if let d = fmt.date(from: str) { return d }
             let fb = ISO8601DateFormatter(); fb.formatOptions = [.withFullDate]
             if let d = fb.date(from: str) { return d }

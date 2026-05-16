@@ -63,7 +63,7 @@ class ShoppingDetailViewModel: ObservableObject {
     }
 
     func toggle(item: ShoppingItem, token: String) async {
-        guard var current = list else { return }
+        guard let current = list else { return }
         // Optimistic update
         if let idx = current.items?.firstIndex(where: { $0.id == item.id }) {
             var items = current.items!
