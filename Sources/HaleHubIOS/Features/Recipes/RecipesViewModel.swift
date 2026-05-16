@@ -102,11 +102,14 @@ class RecipesViewModel: ObservableObject {
         async let planTask: MealPlan = APIClient.shared.get("/meal-plans/active/", token: token)
         async let categoriesTask: [RecipeCategory] = APIClient.shared.get("/recipes/categories/", token: token)
 
-        if let r = try? await recipesTask {
+        do {
+            let r = try await recipesTask
             recipes = r.results
             isFromCache = false
             cacheDate = Date()
             await CacheManager.shared.save(r.results, key: recipeCacheKey)
+        } catch {
+            self.error = error.localizedDescription
         }
         if let plan = try? await planTask {
             activeMealPlan = plan

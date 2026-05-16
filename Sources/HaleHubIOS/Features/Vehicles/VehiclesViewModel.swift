@@ -42,10 +42,15 @@ class VehiclesViewModel: ObservableObject {
     func load(token: String) async {
         isLoading = true
         error = nil
-        async let vehiclesTask: PaginatedResponse<Vehicle> = APIClient.shared.get("/vehicles/", token: token)
-        async let categoriesTask: [MaintenanceCategory] = APIClient.shared.get("/vehicles/maintenance-categories/", token: token)
-        if let v = try? await vehiclesTask { vehicles = v.results }
-        if let c = try? await categoriesTask { maintenanceCategories = c }
+        do {
+            let v: PaginatedResponse<Vehicle> = try await APIClient.shared.get("/vehicles/", token: token)
+            vehicles = v.results
+        } catch {
+            self.error = error.localizedDescription
+        }
+        if let c = try? await APIClient.shared.get("/vehicles/maintenance-categories/", token: token) as [MaintenanceCategory] {
+            maintenanceCategories = c
+        }
         isLoading = false
     }
 }
