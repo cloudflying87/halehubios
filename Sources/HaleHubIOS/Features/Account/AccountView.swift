@@ -69,6 +69,30 @@ struct AccountView: View {
                     }
                 }
 
+                // Reading Plan
+                Section("Reading") {
+                    NavigationLink(destination: ReadingView()) {
+                        CalculatorRow(icon: "📖", title: "Reading Plan", subtitle: "Daily Bible reading progress")
+                    }
+                }
+
+                // Organize
+                Section("Organize") {
+                    NavigationLink(destination: TotesListView()) {
+                        CalculatorRow(icon: "📦", title: "Totes", subtitle: "Track storage bins & contents")
+                    }
+                    NavigationLink(destination: QRCodesView()) {
+                        CalculatorRow(icon: "📷", title: "QR Codes", subtitle: "Generate & manage QR codes")
+                    }
+                }
+
+                // Content
+                Section("Content") {
+                    NavigationLink(destination: ResourcesHubView()) {
+                        CalculatorRow(icon: "📄", title: "Resources & Letters", subtitle: "Family guides and letters")
+                    }
+                }
+
                 // Calculators
                 Section("Calculators") {
                     NavigationLink(destination: LoanCalculatorView()) {
