@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		02C04EC24E37CB558298C065 /* FinanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3E0F5A841DEE102A2A748E9 /* FinanceView.swift */; };
 		10AA929077617858F9C0033D /* ShoppingListsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 082F8360E610399CB9791E01 /* ShoppingListsView.swift */; };
 		150DF4647E3F54110B019C19 /* VehiclesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */; };
 		197269BDB738EF7DC058D031 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8846379DD0DC0029F8B00B6 /* APIClient.swift */; };
@@ -15,8 +16,10 @@
 		498E62194638AF42D4D5F4A1 /* HaleHubIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9989920930EEF68FF24A99 /* HaleHubIOSApp.swift */; };
 		4BED8439C68597ED905E5518 /* HaleNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AA1D7CF6070F458F822E505 /* HaleNotification.swift */; };
 		4F3EE32CA697D673557F7F60 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D322D12691A62F28635D061 /* LoginView.swift */; };
+		574B0D1BD4CBC4B98428F106 /* LocalAuthentication.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C309AC162DA76ACDF7A95C8 /* LocalAuthentication.framework */; };
 		5855076BEE4FCBA24B0E1E16 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC6F675794F03BA9FEA90968 /* AccountView.swift */; };
 		5D5BAB0D28F39AD5E2F28089 /* RecipeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE837B2ED56DF5798D132C3 /* RecipeDetailView.swift */; };
+		6BA53ED787AD869D98668CFF /* FinanceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1AD9D996E827387C9F71922 /* FinanceViewModel.swift */; };
 		70570EDAB2447292C0FE276F /* RecipesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24B721CFDEC7BEE72927514 /* RecipesViewModel.swift */; };
 		781EE9C9FD1BF73B1123495B /* ShoppingListDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4007424790D9C4CD3E4E10 /* ShoppingListDetailView.swift */; };
 		823F50914D9327257F393EA2 /* CacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BF696F77373A167292BC317 /* CacheManager.swift */; };
@@ -24,6 +27,7 @@
 		8927B65ACE9F99854E246D0E /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBF25113EBEDA00D06F38AC3 /* NotificationsView.swift */; };
 		89A04B5E9B416B66376FBC9E /* PartsLookupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */; };
 		8B4AAD519B389AE6E8ABE5BE /* MaintenanceHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CD4130D14F56C5404DD4F9D /* MaintenanceHistoryView.swift */; };
+		8B6ED2837A457F2220C99BE7 /* Finance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EEFA3D48D7D75683FDAAF83 /* Finance.swift */; };
 		91A6E494EED5EEBEADD0A03C /* VehicleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A0DF54CE532F5E9E5E92AE /* VehicleDetailView.swift */; };
 		9280B153050AE4AB40A9730B /* ShoppingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82E07456A55F649FBB9C8448 /* ShoppingViewModel.swift */; };
 		92CB91D03662E6106C02EED7 /* RecipesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38E93521147DA51107C96ABA /* RecipesListView.swift */; };
@@ -47,6 +51,7 @@
 		026B9CBC27B5BDAB71949F45 /* LogEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogEventSheet.swift; sourceTree = "<group>"; };
 		082F8360E610399CB9791E01 /* ShoppingListsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListsView.swift; sourceTree = "<group>"; };
 		0BF696F77373A167292BC317 /* CacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheManager.swift; sourceTree = "<group>"; };
+		0C309AC162DA76ACDF7A95C8 /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LocalAuthentication.framework; path = System/Library/Frameworks/LocalAuthentication.framework; sourceTree = SDKROOT; };
 		0D322D12691A62F28635D061 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		10D050A0AA135EA42867348B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1DA68F684F0A477BD7D1FEB9 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
@@ -61,6 +66,7 @@
 		4D91DAB9A1CAE1BD99CF0623 /* CookModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookModeView.swift; sourceTree = "<group>"; };
 		54172C50FB914E1F40A7B76E /* TimeCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeCalculatorView.swift; sourceTree = "<group>"; };
 		620CC00F94FEC794D68339CD /* MealPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanView.swift; sourceTree = "<group>"; };
+		6EEFA3D48D7D75683FDAAF83 /* Finance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Finance.swift; sourceTree = "<group>"; };
 		78FB1010716375E4D43CFAC4 /* NotificationsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsViewModel.swift; sourceTree = "<group>"; };
 		82E07456A55F649FBB9C8448 /* ShoppingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingViewModel.swift; sourceTree = "<group>"; };
 		875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesViewModel.swift; sourceTree = "<group>"; };
@@ -70,10 +76,12 @@
 		9CD4130D14F56C5404DD4F9D /* MaintenanceHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaintenanceHistoryView.swift; sourceTree = "<group>"; };
 		A9562ADACDD9013D314DD553 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B5759ACDD003F849257746C0 /* Recipe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recipe.swift; sourceTree = "<group>"; };
+		C3E0F5A841DEE102A2A748E9 /* FinanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceView.swift; sourceTree = "<group>"; };
 		C8846379DD0DC0029F8B00B6 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		D24B721CFDEC7BEE72927514 /* RecipesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipesViewModel.swift; sourceTree = "<group>"; };
 		D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutingsAnalyticsView.swift; sourceTree = "<group>"; };
 		D77C2BBF0F9F154CA449BA91 /* HaleHubIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HaleHubIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E1AD9D996E827387C9F71922 /* FinanceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceViewModel.swift; sourceTree = "<group>"; };
 		E3A0DF54CE532F5E9E5E92AE /* VehicleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleDetailView.swift; sourceTree = "<group>"; };
 		EB8B4D5F0F791D89EC2FB3A0 /* LoanCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanCalculatorView.swift; sourceTree = "<group>"; };
 		EBF25113EBEDA00D06F38AC3 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
@@ -81,6 +89,17 @@
 		EDE837B2ED56DF5798D132C3 /* RecipeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeDetailView.swift; sourceTree = "<group>"; };
 		FE9989920930EEF68FF24A99 /* HaleHubIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaleHubIOSApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		118F711278F6A1BC376E142E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				574B0D1BD4CBC4B98428F106 /* LocalAuthentication.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		0C5917EC5CFD1AE35C23DF26 /* Calculators */ = {
@@ -133,6 +152,15 @@
 			path = Vehicles;
 			sourceTree = "<group>";
 		};
+		930528345EA9D2A1C1D133E1 /* Finance */ = {
+			isa = PBXGroup;
+			children = (
+				C3E0F5A841DEE102A2A748E9 /* FinanceView.swift */,
+				E1AD9D996E827387C9F71922 /* FinanceViewModel.swift */,
+			);
+			path = Finance;
+			sourceTree = "<group>";
+		};
 		97EEECC98A68AA188994A413 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -175,6 +203,7 @@
 			isa = PBXGroup;
 			children = (
 				E38C78865F9A8B9BA98DDF8B /* HaleHubIOS */,
+				D683228B37CA6C0555D7EDD3 /* Frameworks */,
 				97EEECC98A68AA188994A413 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -184,6 +213,7 @@
 			children = (
 				A527332F79E146C023F518AE /* Account */,
 				2779E23076A0489295A19FEC /* Auth */,
+				930528345EA9D2A1C1D133E1 /* Finance */,
 				D645A6604A6A6419044BE7C6 /* Notifications */,
 				A41D911E19A6940701787973 /* Recipes */,
 				F9E8A2DD09DC25FDDC9A7DB3 /* Shopping */,
@@ -213,6 +243,7 @@
 		D4A79967382059C3D2354F07 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				6EEFA3D48D7D75683FDAAF83 /* Finance.swift */,
 				2AA1D7CF6070F458F822E505 /* HaleNotification.swift */,
 				B5759ACDD003F849257746C0 /* Recipe.swift */,
 				96E1670807EE686A9B7E7683 /* ShoppingList.swift */,
@@ -228,6 +259,14 @@
 				78FB1010716375E4D43CFAC4 /* NotificationsViewModel.swift */,
 			);
 			path = Notifications;
+			sourceTree = "<group>";
+		};
+		D683228B37CA6C0555D7EDD3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0C309AC162DA76ACDF7A95C8 /* LocalAuthentication.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		E38C78865F9A8B9BA98DDF8B /* HaleHubIOS */ = {
@@ -263,6 +302,7 @@
 			buildPhases = (
 				FE2FFF9148B97F3E891C7646 /* Sources */,
 				8C9EC32351570C793B3192D8 /* Resources */,
+				118F711278F6A1BC376E142E /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -327,6 +367,9 @@
 				823F50914D9327257F393EA2 /* CacheManager.swift in Sources */,
 				EEAB2FADBDA87D90CA2F7687 /* CompoundInterestView.swift in Sources */,
 				DE32D7A36A038D9603EA2763 /* CookModeView.swift in Sources */,
+				8B6ED2837A457F2220C99BE7 /* Finance.swift in Sources */,
+				02C04EC24E37CB558298C065 /* FinanceView.swift in Sources */,
+				6BA53ED787AD869D98668CFF /* FinanceViewModel.swift in Sources */,
 				498E62194638AF42D4D5F4A1 /* HaleHubIOSApp.swift in Sources */,
 				4BED8439C68597ED905E5518 /* HaleNotification.swift in Sources */,
 				D5D1582EF5D926ED63EC7881 /* LoanCalculatorView.swift in Sources */,
@@ -394,7 +437,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -469,7 +512,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;

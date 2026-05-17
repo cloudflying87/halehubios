@@ -36,6 +36,14 @@ struct MainTabView: View {
             .tabItem { Label("Shopping", systemImage: "cart.fill") }
             .tag(2)
 
+            if auth.currentUser?.canViewFinances == true {
+                NavigationStack {
+                    FinanceView()
+                }
+                .tabItem { Label("Finance", systemImage: "chart.line.uptrend.xyaxis") }
+                .tag(4)
+            }
+
             AccountView(notifVM: notifVM)
                 .tabItem { Label("More", systemImage: "ellipsis.circle.fill") }
                 .badge(notifVM.unreadCount > 0 ? notifVM.unreadCount : 0)

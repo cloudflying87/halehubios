@@ -77,6 +77,25 @@ struct HaleUser: Codable, Sendable {
     let lastName: String
     let displayName: String
     let role: String
+    let canViewFinances: Bool
+    let canViewPaychecks: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id, email, firstName, lastName, displayName, role
+        case canViewFinances, canViewPaychecks
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        email = try c.decode(String.self, forKey: .email)
+        firstName = try c.decode(String.self, forKey: .firstName)
+        lastName = try c.decode(String.self, forKey: .lastName)
+        displayName = try c.decode(String.self, forKey: .displayName)
+        role = try c.decode(String.self, forKey: .role)
+        canViewFinances = (try? c.decode(Bool.self, forKey: .canViewFinances)) ?? false
+        canViewPaychecks = (try? c.decode(Bool.self, forKey: .canViewPaychecks)) ?? false
+    }
 }
 
 private struct LoginRequest: Encodable, Sendable {

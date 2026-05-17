@@ -10,7 +10,7 @@ settings:
   base:
     SWIFT_VERSION: 6.0
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "15"
+    CURRENT_PROJECT_VERSION: "16"
 
 targets:
   HaleHubIOS:
@@ -19,6 +19,8 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Sources/HaleHubIOS
+    dependencies:
+      - sdk: LocalAuthentication.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.halefamily.halehubios
