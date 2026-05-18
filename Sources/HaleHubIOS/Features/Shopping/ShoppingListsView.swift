@@ -10,6 +10,12 @@ struct ShoppingListsView: View {
         Group {
             if vm.isLoading && vm.lists.isEmpty {
                 ProgressView("Loading lists…").frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = vm.error {
+                ContentUnavailableView(
+                    "Couldn't Load Lists",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(error)
+                )
             } else if vm.lists.isEmpty {
                 ContentUnavailableView(
                     "No Shopping Lists",

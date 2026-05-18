@@ -47,13 +47,18 @@ actor APIClient {
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         decoder.dateDecodingStrategy = .custom { decoder in
             let string = try decoder.singleValueContainer().decode(String.self)
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let date = formatter.date(from: string) { return date }
-            // Fallback: date-only strings like "2025-01-15"
-            let fallback = ISO8601DateFormatter()
-            fallback.formatOptions = [.withFullDate]
-            if let date = fallback.date(from: string) { return date }
+            // DRF emits "2026-05-18T10:30:00.123456Z" when microseconds > 0
+            let withFractional = ISO8601DateFormatter()
+            withFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = withFractional.date(from: string) { return date }
+            // DRF emits "2026-05-18T10:30:00Z" when microseconds == 0
+            let withoutFractional = ISO8601DateFormatter()
+            withoutFractional.formatOptions = [.withInternetDateTime]
+            if let date = withoutFractional.date(from: string) { return date }
+            // Date-only fields e.g. last_cooked: "2026-05-18"
+            let dateOnly = ISO8601DateFormatter()
+            dateOnly.formatOptions = [.withFullDate]
+            if let date = dateOnly.date(from: string) { return date }
             throw DecodingError.dataCorruptedError(
                 in: try decoder.singleValueContainer(),
                 debugDescription: "Cannot parse date: \(string)"

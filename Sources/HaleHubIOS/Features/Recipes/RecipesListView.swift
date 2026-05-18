@@ -18,14 +18,6 @@ struct RecipesListView: View {
                         .padding(.vertical, 8)
                     Divider()
                     List {
-                        // Hidden NavigationLink that activates when a recipe is imported
-                        if let imported = importedRecipe {
-                            NavigationLink(
-                                destination: RecipeDetailView(recipe: imported).environmentObject(auth),
-                                isActive: $navigateToImported
-                            ) { EmptyView() }
-                            .hidden()
-                        }
                         ForEach(vm.filtered) { recipe in
                             NavigationLink(destination: RecipeDetailView(recipe: recipe).environmentObject(auth)) {
                                 RecipeRow(recipe: recipe)
@@ -33,6 +25,11 @@ struct RecipesListView: View {
                         }
                     }
                     .listStyle(.plain)
+                    .navigationDestination(isPresented: $navigateToImported) {
+                        if let imported = importedRecipe {
+                            RecipeDetailView(recipe: imported).environmentObject(auth)
+                        }
+                    }
                 }
                 .searchable(text: $vm.searchQuery, prompt: "Search recipes…")
                 .onChange(of: vm.searchQuery) { _, query in

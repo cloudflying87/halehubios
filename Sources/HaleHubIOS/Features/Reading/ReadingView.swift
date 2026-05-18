@@ -34,7 +34,7 @@ class ReadingViewModel: ObservableObject {
 
     func toggleDay(planId: String, dayNum: Int, token: String) async {
         // Optimistic UI update before the network call
-        if var detail = primaryPlanDetail, let today = detail.todayDay, today.dayNumber == dayNum {
+        if let detail = primaryPlanDetail, let today = detail.todayDay, today.dayNumber == dayNum {
             let nowCompleted = !today.isCompleted
             let updatedDay = ReadingDay(
                 dayNumber: today.dayNumber,
@@ -65,7 +65,7 @@ class ReadingViewModel: ObservableObject {
                 "/reading/plans/\(planId)/days/\(dayNum)/toggle/", token: token
             )
             // Apply authoritative server response
-            if var detail = primaryPlanDetail {
+            if let detail = primaryPlanDetail {
                 let updatedToday: ReadingDay?
                 if let today = detail.todayDay {
                     updatedToday = ReadingDay(

@@ -64,7 +64,7 @@ struct Ingredient: Identifiable, Codable, Sendable {
     let id: UUID
     let rawText: String
     let name: String?
-    let quantity: String?
+    let quantity: Double?
     let unit: String?
     let preparation: String?
     let isOptional: Bool

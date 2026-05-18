@@ -41,6 +41,8 @@
 		<key>UIColorName</key>
 		<string></string>
 	</dict>
+	<key>NSFaceIDUsageDescription</key>
+	<string>HaleHub uses Face ID to protect your financial data.</string>
 	<key>UIRequiresFullScreen</key>
 	<true/>
 	<key>UISupportedInterfaceOrientations</key>

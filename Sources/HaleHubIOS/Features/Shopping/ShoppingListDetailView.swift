@@ -104,6 +104,9 @@ struct ShoppingListDetailView: View {
         }
         .task { await vm.load(token: auth.accessToken ?? "", isConnected: network.isConnected) }
         .refreshable { await vm.load(token: auth.accessToken ?? "", isConnected: true) }
+        .alert("Error", isPresented: .init(get: { vm.error != nil }, set: { if !$0 { vm.error = nil } })) {
+            Button("OK") { }
+        } message: { Text(vm.error ?? "") }
     }
 }
 

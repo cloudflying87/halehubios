@@ -45,8 +45,8 @@ struct FinanceView: View {
             isUnlocked = false
             hasTriggeredAuth = false
         }
-        .alert("Error", isPresented: .constant(vm.error != nil)) {
-            Button("OK") { vm.error = nil }
+        .alert("Error", isPresented: .init(get: { vm.error != nil }, set: { if !$0 { vm.error = nil } })) {
+            Button("OK") { }
         } message: { Text(vm.error ?? "") }
     }
 
@@ -114,7 +114,6 @@ struct FinanceView: View {
         let ctx = LAContext()
         var error: NSError?
         guard ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
-            authError = "Biometrics not available — data shown"
             isUnlocked = true
             Task { await vm.load(token: auth.accessToken ?? "") }
             return
@@ -123,11 +122,11 @@ struct FinanceView: View {
             .deviceOwnerAuthenticationWithBiometrics,
             localizedReason: "Unlock your financial data"
         ) { success, evalError in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 if success {
                     authError = nil
                     isUnlocked = true
-                    Task { await vm.load(token: auth.accessToken ?? "") }
+                    await vm.load(token: auth.accessToken ?? "")
                 } else {
                     authError = evalError?.localizedDescription ?? "Authentication failed"
                 }
