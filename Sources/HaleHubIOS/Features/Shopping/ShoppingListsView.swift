@@ -5,6 +5,7 @@ struct ShoppingListsView: View {
     @EnvironmentObject var network: NetworkMonitor
     @StateObject private var vm = ShoppingViewModel()
     @State private var showCreateSheet = false
+    @State private var navigateToNewList: ShoppingList? = nil
 
     var body: some View {
         Group {
@@ -31,6 +32,13 @@ struct ShoppingListsView: View {
                         NavigationLink(destination: ShoppingListDetailView(list: list)) {
                             ShoppingListRow(list: list)
                         }
+                        .swipeActions(edge: .trailing) {
+                            if network.isConnected {
+                                Button(role: .destructive) {
+                                    Task { await vm.deleteList(id: list.id, token: auth.accessToken ?? "") }
+                                } label: { Label("Delete", systemImage: "trash") }
+                            }
+                        }
                     }
                     .refreshable { await vm.load(token: auth.accessToken ?? "", isConnected: network.isConnected) }
                 }
@@ -47,8 +55,13 @@ struct ShoppingListsView: View {
             }
         }
         .sheet(isPresented: $showCreateSheet) {
-            CreateShoppingListSheet(vm: vm)
-                .environmentObject(auth)
+            CreateShoppingListSheet(vm: vm) { newList in
+                navigateToNewList = newList
+            }
+            .environmentObject(auth)
+        }
+        .navigationDestination(item: $navigateToNewList) { list in
+            ShoppingListDetailView(list: list)
         }
         .task { await vm.load(token: auth.accessToken ?? "", isConnected: network.isConnected) }
     }
@@ -57,6 +70,7 @@ struct ShoppingListsView: View {
 struct CreateShoppingListSheet: View {
     @EnvironmentObject var auth: AuthManager
     @ObservedObject var vm: ShoppingViewModel
+    let onCreated: (ShoppingList) -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var listName = ""
@@ -96,13 +110,16 @@ struct CreateShoppingListSheet: View {
     private func create() async {
         guard let token = auth.accessToken else { return }
         isCreating = true
-        await vm.createList(
+        let newList = await vm.createList(
             name: listName.trimmingCharacters(in: .whitespaces),
             store: storeName.trimmingCharacters(in: .whitespaces),
             token: token
         )
         isCreating = false
-        dismiss()
+        if let newList {
+            dismiss()
+            onCreated(newList)
+        }
     }
 }
 
