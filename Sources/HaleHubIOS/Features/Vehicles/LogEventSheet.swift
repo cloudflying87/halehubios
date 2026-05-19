@@ -249,10 +249,17 @@ struct LogEventSheet: View {
         isSaving = true
         errorMessage = nil
 
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate]
+        let dateFmt = ISO8601DateFormatter()
+        dateFmt.formatOptions = [.withFullDate]
 
-        var body = LogEventRequest(eventType: eventType, date: formatter.string(from: date))
+        let tsFmt = ISO8601DateFormatter()
+        tsFmt.formatOptions = [.withInternetDateTime]
+
+        var body = LogEventRequest(
+            eventType: eventType,
+            date: dateFmt.string(from: date),
+            loggedAt: tsFmt.string(from: Date())
+        )
         body.miles = vehicle.isBoat ? nil : Int(odometer)
         body.hours = vehicle.isBoat ? Double(odometer) : nil
         body.gallons = Double(gallons)

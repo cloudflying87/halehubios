@@ -172,6 +172,7 @@ struct EditEventRequest: Encodable, Sendable {
 struct LogEventRequest: Encodable, Sendable {
     let eventType: String
     let date: String
+    let loggedAt: String
     var miles: Int?
     var hours: Double?
     var gallons: Double?
