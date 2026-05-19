@@ -7,6 +7,7 @@ struct GenerateShoppingListSheet: View {
     @Environment(\.dismiss) private var dismiss
     let plan: MealPlan
     @ObservedObject var vm: RecipesViewModel
+    var onNavigate: ((ShoppingList) -> Void)? = nil
 
     @State private var shoppingLists: [ShoppingList] = []
     @State private var selectedListId: String = ""
@@ -17,8 +18,6 @@ struct GenerateShoppingListSheet: View {
     @State private var skipStaples = true
     @State private var skipPantry = false
     @State private var errorMessage: String?
-    @State private var successMessage: String?
-    @State private var generatedList: ShoppingList?
 
     var body: some View {
         NavigationStack {
@@ -84,23 +83,6 @@ struct GenerateShoppingListSheet: View {
                     Section("Filters") {
                         Toggle("Skip staples (tsp, tbsp, pinch…)", isOn: $skipStaples)
                         Toggle("Skip items I already have", isOn: $skipPantry)
-                    }
-                }
-
-                // Success / error
-                if let success = successMessage {
-                    Section {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(success)
-                                .foregroundStyle(.green)
-                                .font(.callout)
-                            if let list = generatedList {
-                                NavigationLink(destination: ShoppingListDetailView(list: list).environmentObject(auth)) {
-                                    Label("View Shopping List", systemImage: "cart")
-                                        .font(.callout.bold())
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -177,10 +159,8 @@ struct GenerateShoppingListSheet: View {
                 skipStaples: skipStaples, skipPantry: skipPantry,
                 token: token
             )
-            generatedList = result
-            let addedCount = result.itemCount
-            let listName = result.name
-            successMessage = "Added \(addedCount) item\(addedCount == 1 ? "" : "s") to \(listName)"
+            dismiss()
+            onNavigate?(result)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -417,6 +397,7 @@ struct MealPlanContent: View {
     @ObservedObject var vm: RecipesViewModel
     @EnvironmentObject private var auth: AuthManager
     @State private var showGenerateSheet = false
+    @State private var navigateToShoppingList: ShoppingList? = nil
 
     var hasDates: Bool {
         plan.entries?.contains(where: { $0.date != nil }) == true
@@ -460,8 +441,13 @@ struct MealPlanContent: View {
             }
         }
         .sheet(isPresented: $showGenerateSheet) {
-            GenerateShoppingListSheet(plan: plan, vm: vm)
-                .environmentObject(auth)
+            GenerateShoppingListSheet(plan: plan, vm: vm) { list in
+                navigateToShoppingList = list
+            }
+            .environmentObject(auth)
+        }
+        .navigationDestination(item: $navigateToShoppingList) { list in
+            ShoppingListDetailView(list: list)
         }
     }
 }
