@@ -182,9 +182,11 @@ struct VehicleDetailView: View {
             .environmentObject(auth)
         }
         .sheet(item: $editingEvent) { event in
-            EditEventSheet(event: event, vehicle: vehicle) {
+            EditEventSheet(event: event, vehicle: vehicle, onSaved: {
                 Task { await loadData() }
-            }
+            }, onDeleted: {
+                Task { await loadData() }
+            })
             .environmentObject(auth)
         }
         .sheet(item: $detailEvent) { event in
@@ -691,6 +693,7 @@ struct EditEventSheet: View {
     let event: VehicleEvent
     let vehicle: Vehicle
     let onSaved: () -> Void
+    let onDeleted: (() -> Void)?
 
     @State private var date: Date
     @State private var odometer: String
@@ -700,12 +703,15 @@ struct EditEventSheet: View {
     @State private var selectedLocationId: Int?
     @State private var locations: [VehicleLocation] = []
     @State private var isSaving = false
+    @State private var isDeleting = false
+    @State private var showDeleteConfirm = false
     @State private var errorMessage: String?
 
-    init(event: VehicleEvent, vehicle: Vehicle, onSaved: @escaping () -> Void) {
+    init(event: VehicleEvent, vehicle: Vehicle, onSaved: @escaping () -> Void, onDeleted: (() -> Void)? = nil) {
         self.event = event
         self.vehicle = vehicle
         self.onSaved = onSaved
+        self.onDeleted = onDeleted
         _date = State(initialValue: event.date)
         let odomStr = event.miles.map(String.init) ?? event.hours.map { String(format: "%.1f", $0) } ?? ""
         _odometer = State(initialValue: odomStr)
@@ -746,17 +752,34 @@ struct EditEventSheet: View {
                             .foregroundStyle(.red).font(.subheadline)
                     }
                 }
+
+                if onDeleted != nil {
+                    Section {
+                        Button(role: .destructive) {
+                            showDeleteConfirm = true
+                        } label: {
+                            Label("Delete Record", systemImage: "trash")
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                    }
+                }
             }
             .navigationTitle("Edit \(eventTypeTitle)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.disabled(isSaving)
+                    Button("Cancel") { dismiss() }.disabled(isSaving || isDeleting)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    if isSaving { ProgressView() }
+                    if isSaving || isDeleting { ProgressView() }
                     else { Button("Save") { Task { await save() } } }
                 }
+            }
+            .confirmationDialog("Delete this record?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) { Task { await deleteRecord() } }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("This cannot be undone.")
             }
         }
         .task {
@@ -781,6 +804,19 @@ struct EditEventSheet: View {
         if let name = event.locationName {
             selectedLocationId = locations.first(where: { $0.name == name })?.id
         }
+    }
+
+    private func deleteRecord() async {
+        guard let token = auth.accessToken else { return }
+        isDeleting = true
+        do {
+            try await APIClient.shared.delete("/vehicles/events/\(event.id)/", token: token)
+            onDeleted?()
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isDeleting = false
     }
 
     private func save() async {
