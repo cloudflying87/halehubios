@@ -616,6 +616,10 @@ struct MealEntryRow: View {
             // Sides
             if let sides = entry.sides, !sides.isEmpty {
                 VStack(alignment: .leading, spacing: 3) {
+                    Text("with:")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .padding(.leading, 4)
                     ForEach(sides) { side in
                         HStack(spacing: 6) {
                             Image(systemName: "arrow.turn.down.right")
@@ -755,23 +759,24 @@ struct MealPlanDetailDestination: View {
     @State private var fullPlan: MealPlan?
     @State private var isLoading = false
 
+    var displayed: MealPlan { fullPlan ?? plan }
+
     var body: some View {
-        Group {
-            if isLoading && fullPlan == nil {
-                ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let full = fullPlan {
-                MealPlanContent(plan: full, vm: vm)
-            } else {
-                MealPlanContent(plan: plan, vm: vm)
+        MealPlanContent(plan: displayed, vm: vm)
+            .navigationTitle(displayed.displayName)
+            .task { await reload() }
+            .onReceive(vm.$activeMealPlan) { _ in
+                // Re-fetch whenever the active plan refreshes (e.g. after adding a side)
+                Task { await reload(force: true) }
             }
-        }
-        .navigationTitle(plan.displayName)
-        .task {
-            guard let token = auth.accessToken, fullPlan == nil else { return }
-            isLoading = true
-            fullPlan = try? await vm.fetchPlanDetail(planId: plan.id, token: token)
-            isLoading = false
-        }
+    }
+
+    private func reload(force: Bool = false) async {
+        guard let token = auth.accessToken else { return }
+        guard force || fullPlan == nil else { return }
+        isLoading = true
+        fullPlan = try? await vm.fetchPlanDetail(planId: plan.id, token: token)
+        isLoading = false
     }
 }
 
