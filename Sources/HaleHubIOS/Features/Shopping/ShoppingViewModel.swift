@@ -56,6 +56,42 @@ class ShoppingDetailViewModel: ObservableObject {
 
     var cacheKey: String { "shopping_\(listId)" }
 
+    @Published var showBulkAdd = false
+    @Published var bulkText = ""
+
+    private func parseBulkText(_ text: String) -> [(name: String, qty: String)] {
+        text
+            .components(separatedBy: .newlines)
+            .flatMap { $0.components(separatedBy: ",") }
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .map { line in
+                // Strip common list markers (•, -, *, etc.)
+                let stripped = line.trimmingCharacters(in: CharacterSet(charactersIn: "•-*·›▸▹▪▫").union(.whitespaces))
+                // Match "item x2" or "item x 2 lbs" (case-insensitive)
+                if let range = stripped.range(of: #"\s+[xX×]\s*(.+)$"#, options: .regularExpression) {
+                    let xIdx = stripped.range(of: #"\s+[xX×]"#, options: .regularExpression)!.lowerBound
+                    let name = String(stripped[stripped.startIndex..<xIdx]).trimmingCharacters(in: .whitespaces)
+                    let qty  = stripped[range].trimmingCharacters(in: .whitespaces)
+                                .replacingOccurrences(of: #"^[xX×]\s*"#, with: "", options: .regularExpression)
+                    if !name.isEmpty { return (name, qty) }
+                }
+                return (stripped, "")
+            }
+    }
+
+    func addBulkItems(token: String) async {
+        let items = parseBulkText(bulkText)
+        guard !items.isEmpty else { return }
+        bulkText = ""
+        showBulkAdd = false
+        for item in items {
+            let body = AddItemRequest(name: item.name, quantity: item.qty, notes: "")
+            _ = try? await APIClient.shared.post("/shopping/\(listId)/items/", body: body, token: token)
+        }
+        await load(token: token, isConnected: true)
+    }
+
     func load(token: String, isConnected: Bool) async {
         if list == nil, let cached: ShoppingList = await CacheManager.shared.load(key: cacheKey) {
             list = cached

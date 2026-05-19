@@ -88,18 +88,29 @@ struct ShoppingListDetailView: View {
         .navigationTitle(current.name)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            if network.isConnected && !checked.isEmpty {
+            if network.isConnected {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
-                        Button(role: .destructive) {
-                            Task {
-                                for item in checked {
-                                    await vm.deleteItem(item, token: auth.accessToken ?? "")
+                        Button { vm.showBulkAdd = true } label: {
+                            Label("Bulk Add", systemImage: "text.badge.plus")
+                        }
+                        if !checked.isEmpty {
+                            Divider()
+                            Button(role: .destructive) {
+                                Task {
+                                    for item in checked {
+                                        await vm.deleteItem(item, token: auth.accessToken ?? "")
+                                    }
                                 }
-                            }
-                        } label: { Label("Clear Checked", systemImage: "trash") }
+                            } label: { Label("Clear Checked", systemImage: "trash") }
+                        }
                     } label: { Image(systemName: "ellipsis.circle") }
                 }
+            }
+        }
+        .sheet(isPresented: $vm.showBulkAdd) {
+            BulkAddSheet(text: $vm.bulkText) {
+                Task { await vm.addBulkItems(token: auth.accessToken ?? "") }
             }
         }
         .task { await vm.load(token: auth.accessToken ?? "", isConnected: network.isConnected) }
@@ -135,6 +146,37 @@ struct ItemRow: View {
             }
 
             Spacer()
+        }
+    }
+}
+
+// MARK: - Bulk Add Sheet
+
+struct BulkAddSheet: View {
+    @Binding var text: String
+    let onAdd: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextEditor(text: $text)
+                        .frame(minHeight: 140)
+                } header: {
+                    Text("One item per line or comma-separated.\nAdd quantity with \"x2\" — e.g. \"Milk x2, Eggs x dozen\"")
+                        .textCase(nil)
+                }
+            }
+            .navigationTitle("Bulk Add Items")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") { onAdd() }
+                        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
         }
     }
 }

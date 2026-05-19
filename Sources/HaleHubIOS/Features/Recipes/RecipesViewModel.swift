@@ -47,8 +47,10 @@ enum RecipeSortOrder: String, CaseIterable, Identifiable {
 class RecipesViewModel: ObservableObject {
     @Published var recipes: [Recipe] = []
     @Published var activeMealPlan: MealPlan?
+    @Published var allPlans: [MealPlan] = []
     @Published var categories: [RecipeCategory] = []
     @Published var isLoading = false
+    @Published var isLoadingAllPlans = false
     @Published var searchText = ""
     @Published var searchQuery = ""
     @Published var showFavoritesOnly = false
@@ -197,33 +199,91 @@ class RecipesViewModel: ObservableObject {
 
     func addSideToEntry(entryId: String, recipeId: String, token: String) async throws {
         struct AddSideRequest: Encodable, Sendable { let recipeId: String }
-        let body = AddSideRequest(recipeId: recipeId)
         let _: MealPlanSide = try await APIClient.shared.post(
-            "/meal-plans/entries/\(entryId)/sides/", body: body, token: token
+            "/meal-plans/entries/\(entryId)/sides/",
+            body: AddSideRequest(recipeId: recipeId),
+            token: token
         )
-        if let updatedPlan: MealPlan = try? await APIClient.shared.get("/meal-plans/active/", token: token) {
-            activeMealPlan = updatedPlan
-            await CacheManager.shared.save(updatedPlan, key: planCacheKey)
-        }
+        await refreshActivePlan(token: token)
+    }
+
+    func addTextSideToEntry(entryId: String, name: String, token: String) async throws {
+        struct AddTextSideRequest: Encodable, Sendable { let name: String }
+        let _: MealPlanSide = try await APIClient.shared.post(
+            "/meal-plans/entries/\(entryId)/sides/",
+            body: AddTextSideRequest(name: name),
+            token: token
+        )
+        await refreshActivePlan(token: token)
     }
 
     func removeSideFromEntry(entryId: String, sideId: String, token: String) async throws {
         try await APIClient.shared.delete("/meal-plans/entries/\(entryId)/sides/\(sideId)/", token: token)
-        if let updatedPlan: MealPlan = try? await APIClient.shared.get("/meal-plans/active/", token: token) {
-            activeMealPlan = updatedPlan
-            await CacheManager.shared.save(updatedPlan, key: planCacheKey)
+        await refreshActivePlan(token: token)
+    }
+
+    private func refreshActivePlan(token: String) async {
+        if let updated: MealPlan = try? await APIClient.shared.get("/meal-plans/active/", token: token) {
+            activeMealPlan = updated
+            await CacheManager.shared.save(updated, key: planCacheKey)
         }
     }
 
     // MARK: - Shopping List Generation
 
-    func generateShoppingList(planId: String, listId: String, token: String) async throws -> ShoppingList {
-        struct GenerateRequest: Encodable, Sendable { let listId: String }
-        let body = GenerateRequest(listId: listId)
-        let list: ShoppingList = try await APIClient.shared.post(
-            "/meal-plans/\(planId)/generate-shopping-list/", body: body, token: token
+    func generateShoppingList(
+        planId: String, listId: String,
+        skipStaples: Bool = false, skipPantry: Bool = false,
+        token: String
+    ) async throws -> ShoppingList {
+        struct GenerateRequest: Encodable, Sendable {
+            let listId: String
+            let skipStaples: Bool
+            let skipPantry: Bool
+        }
+        return try await APIClient.shared.post(
+            "/meal-plans/\(planId)/generate-shopping-list/",
+            body: GenerateRequest(listId: listId, skipStaples: skipStaples, skipPantry: skipPantry),
+            token: token
         )
-        return list
+    }
+
+    // MARK: - All Plans
+
+    func loadAllPlans(token: String) async {
+        isLoadingAllPlans = true
+        do {
+            let response: PaginatedResponse<MealPlan> = try await APIClient.shared.get("/meal-plans/", token: token)
+            allPlans = response.results
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isLoadingAllPlans = false
+    }
+
+    func fetchPlanDetail(planId: UUID, token: String) async throws -> MealPlan {
+        return try await APIClient.shared.get("/meal-plans/\(planId)/", token: token)
+    }
+
+    func createMealPlan(name: String, startDate: Date?, endDate: Date?, token: String) async throws -> MealPlan {
+        struct CreateRequest: Encodable, Sendable {
+            let name: String
+            let startDate: String?
+            let endDate: String?
+        }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        let plan: MealPlan = try await APIClient.shared.post(
+            "/meal-plans/",
+            body: CreateRequest(
+                name: name,
+                startDate: startDate.map { fmt.string(from: $0) },
+                endDate: endDate.map { fmt.string(from: $0) }
+            ),
+            token: token
+        )
+        allPlans.insert(plan, at: 0)
+        return plan
     }
 
     func markCooked(recipe: Recipe, token: String) async {

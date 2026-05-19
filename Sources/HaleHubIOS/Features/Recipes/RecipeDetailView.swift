@@ -5,6 +5,7 @@ struct RecipeDetailView: View {
     let recipe: Recipe
 
     @State private var fullRecipe: Recipe?
+    @State private var loadError: String?
     @State private var showCookedToast = false
     @State private var showCookMode = false
     @State private var showAddToMealPlan = false
@@ -179,11 +180,18 @@ struct RecipeDetailView: View {
             .environmentObject(auth)
         }
         .task { await loadFull() }
+        .alert("Load Error", isPresented: .init(get: { loadError != nil }, set: { if !$0 { loadError = nil } })) {
+            Button("OK") { }
+        } message: { Text(loadError ?? "") }
     }
 
     private func loadFull() async {
         guard let token = auth.accessToken, fullRecipe == nil else { return }
-        fullRecipe = try? await APIClient.shared.get("/recipes/\(recipe.id)/", token: token)
+        do {
+            fullRecipe = try await APIClient.shared.get("/recipes/\(recipe.id)/", token: token)
+        } catch {
+            loadError = error.localizedDescription
+        }
     }
 
     private func markCooked() async {

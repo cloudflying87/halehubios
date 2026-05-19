@@ -79,6 +79,7 @@ struct MealPlan: Identifiable, Codable, Sendable {
     let isActive: Bool
     let createdAt: Date?
     let entries: [MealPlanEntry]?
+    let entryCount: Int?   // present in list view (MealPlanListSerializer), absent in detail
 }
 
 struct MealPlanEntry: Identifiable, Codable, Sendable {

@@ -14,6 +14,8 @@ struct GenerateShoppingListSheet: View {
     @State private var isGenerating = false
     @State private var newListName = ""
     @State private var isCreatingNew = false
+    @State private var skipStaples = true
+    @State private var skipPantry = false
     @State private var errorMessage: String?
     @State private var successMessage: String?
     @State private var generatedList: ShoppingList?
@@ -77,6 +79,11 @@ struct GenerateShoppingListSheet: View {
                             TextField("e.g. Weekly Groceries", text: $newListName)
                                 .autocorrectionDisabled()
                         }
+                    }
+
+                    Section("Filters") {
+                        Toggle("Skip staples (tsp, tbsp, pinch…)", isOn: $skipStaples)
+                        Toggle("Skip items I already have", isOn: $skipPantry)
                     }
                 }
 
@@ -166,7 +173,9 @@ struct GenerateShoppingListSheet: View {
             }
 
             let result = try await vm.generateShoppingList(
-                planId: plan.id.uuidString, listId: listId, token: token
+                planId: plan.id.uuidString, listId: listId,
+                skipStaples: skipStaples, skipPantry: skipPantry,
+                token: token
             )
             generatedList = result
             let addedCount = result.itemCount
@@ -264,6 +273,58 @@ struct AddSideSheet: View {
     }
 }
 
+// MARK: - Add Text Side Sheet
+
+struct AddTextSideSheet: View {
+    @EnvironmentObject var auth: AuthManager
+    @Environment(\.dismiss) private var dismiss
+    let entry: MealPlanEntry
+    @ObservedObject var vm: RecipesViewModel
+    @State private var sideName = ""
+    @State private var isAdding = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Side dish name") {
+                    TextField("e.g. Rice, Garden Salad, Garlic Bread", text: $sideName)
+                        .autocorrectionDisabled()
+                }
+                if let error = errorMessage {
+                    Section { Text(error).foregroundStyle(.red).font(.caption) }
+                }
+            }
+            .navigationTitle("Add Text Side")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    if isAdding { ProgressView() }
+                    else {
+                        Button("Add") { Task { await addSide() } }
+                            .disabled(sideName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+            }
+        }
+    }
+
+    private func addSide() async {
+        guard let token = auth.accessToken else { return }
+        isAdding = true
+        do {
+            try await vm.addTextSideToEntry(
+                entryId: entry.id.uuidString,
+                name: sideName.trimmingCharacters(in: .whitespaces),
+                token: token
+            )
+            dismiss()
+        } catch { errorMessage = error.localizedDescription }
+        isAdding = false
+    }
+}
+
 // MARK: - Meals Hub (root of the Meals tab)
 
 struct MealsHubView: View {
@@ -300,6 +361,19 @@ struct MealsHubView: View {
                         }
                     } icon: {
                         Image(systemName: "calendar")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+
+                NavigationLink(destination: AllPlansView(vm: vm).environmentObject(auth)) {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("All Plans").font(.headline)
+                            Text("Browse and create meal plans")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "calendar.badge.clock")
                             .foregroundStyle(Color.accentColor)
                     }
                 }
@@ -482,6 +556,7 @@ struct MealEntryRow: View {
     @EnvironmentObject var auth: AuthManager
     @State private var cooked = false
     @State private var showAddSide = false
+    @State private var showAddTextSide = false
 
     var hasSides: Bool { !(entry.sides?.isEmpty ?? true) }
 
@@ -571,15 +646,19 @@ struct MealEntryRow: View {
                 .padding(.leading, 4)
             }
 
-            // "+ side" button
-            Button {
-                showAddSide = true
+            // "+ side" menu
+            Menu {
+                Button { showAddSide = true } label: {
+                    Label("Recipe Side", systemImage: "book")
+                }
+                Button { showAddTextSide = true } label: {
+                    Label("Text Side", systemImage: "text.cursor")
+                }
             } label: {
                 Text("＋ side")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(Color.accentColor)
             }
-            .buttonStyle(.plain)
             .padding(.leading, 4)
         }
         .padding(.vertical, 4)
@@ -597,5 +676,164 @@ struct MealEntryRow: View {
             AddSideSheet(entry: entry, vm: vm)
                 .environmentObject(auth)
         }
+        .sheet(isPresented: $showAddTextSide) {
+            AddTextSideSheet(entry: entry, vm: vm)
+                .environmentObject(auth)
+        }
+    }
+}
+
+// MARK: - All Plans
+
+struct AllPlansView: View {
+    @EnvironmentObject var auth: AuthManager
+    @ObservedObject var vm: RecipesViewModel
+    @State private var showCreateSheet = false
+
+    var body: some View {
+        Group {
+            if vm.isLoadingAllPlans && vm.allPlans.isEmpty {
+                ProgressView("Loading plans…").frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if vm.allPlans.isEmpty {
+                ContentUnavailableView("No Meal Plans", systemImage: "calendar.badge.exclamationmark",
+                                       description: Text("Tap + to create your first plan."))
+            } else {
+                List {
+                    ForEach(vm.allPlans) { plan in
+                        NavigationLink(destination: MealPlanDetailDestination(plan: plan, vm: vm).environmentObject(auth)) {
+                            PlanSummaryRow(plan: plan)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("All Plans")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button { showCreateSheet = true } label: { Image(systemName: "plus") }
+            }
+        }
+        .sheet(isPresented: $showCreateSheet) {
+            CreateMealPlanSheet(vm: vm).environmentObject(auth)
+        }
+        .task { await vm.loadAllPlans(token: auth.accessToken ?? "") }
+        .refreshable { await vm.loadAllPlans(token: auth.accessToken ?? "") }
+    }
+}
+
+struct PlanSummaryRow: View {
+    let plan: MealPlan
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(plan.displayName).font(.body.weight(.medium))
+                if plan.isActive {
+                    Text("ACTIVE")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.accentColor, in: Capsule())
+                }
+            }
+            if let start = plan.startDate, let end = plan.endDate {
+                Text("\(start, style: .date) – \(end, style: .date)")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            if let count = plan.entryCount {
+                Text("\(count) meal\(count == 1 ? "" : "s")")
+                    .font(.caption).foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+struct MealPlanDetailDestination: View {
+    @EnvironmentObject var auth: AuthManager
+    let plan: MealPlan
+    @ObservedObject var vm: RecipesViewModel
+    @State private var fullPlan: MealPlan?
+    @State private var isLoading = false
+
+    var body: some View {
+        Group {
+            if isLoading && fullPlan == nil {
+                ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let full = fullPlan {
+                MealPlanContent(plan: full, vm: vm)
+            } else {
+                MealPlanContent(plan: plan, vm: vm)
+            }
+        }
+        .navigationTitle(plan.displayName)
+        .task {
+            guard let token = auth.accessToken, fullPlan == nil else { return }
+            isLoading = true
+            fullPlan = try? await vm.fetchPlanDetail(planId: plan.id, token: token)
+            isLoading = false
+        }
+    }
+}
+
+// MARK: - Create Meal Plan Sheet
+
+struct CreateMealPlanSheet: View {
+    @EnvironmentObject var auth: AuthManager
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var vm: RecipesViewModel
+    @State private var name = ""
+    @State private var useDates = false
+    @State private var startDate = Date()
+    @State private var endDate = Calendar.current.date(byAdding: .day, value: 6, to: Date()) ?? Date()
+    @State private var isCreating = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Plan Name") {
+                    TextField("e.g. Week of May 19", text: $name)
+                        .autocorrectionDisabled()
+                }
+                Section {
+                    Toggle("Set date range", isOn: $useDates)
+                    if useDates {
+                        DatePicker("Start", selection: $startDate, displayedComponents: .date)
+                        DatePicker("End",   selection: $endDate,   displayedComponents: .date)
+                    }
+                }
+                if let error = errorMessage {
+                    Section { Text(error).foregroundStyle(.red).font(.caption) }
+                }
+            }
+            .navigationTitle("New Meal Plan")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    if isCreating { ProgressView() }
+                    else {
+                        Button("Create") { Task { await create() } }
+                            .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+            }
+        }
+    }
+
+    private func create() async {
+        guard let token = auth.accessToken else { return }
+        isCreating = true
+        errorMessage = nil
+        do {
+            _ = try await vm.createMealPlan(
+                name: name.trimmingCharacters(in: .whitespaces),
+                startDate: useDates ? startDate : nil,
+                endDate: useDates ? endDate : nil,
+                token: token
+            )
+            dismiss()
+        } catch { errorMessage = error.localizedDescription }
+        isCreating = false
     }
 }
