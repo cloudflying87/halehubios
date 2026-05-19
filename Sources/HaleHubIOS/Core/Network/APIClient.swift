@@ -55,10 +55,15 @@ actor APIClient {
             let withoutFractional = ISO8601DateFormatter()
             withoutFractional.formatOptions = [.withInternetDateTime]
             if let date = withoutFractional.date(from: string) { return date }
-            // Date-only fields e.g. last_cooked: "2026-05-18"
-            let dateOnly = ISO8601DateFormatter()
-            dateOnly.formatOptions = [.withFullDate]
-            if let date = dateOnly.date(from: string) { return date }
+            // Date-only fields e.g. event date: "2026-05-01" — parse in local timezone
+            // so May 1 stays May 1 regardless of UTC offset
+            if string.count == 10 {
+                let localFmt = DateFormatter()
+                localFmt.locale = Locale(identifier: "en_US_POSIX")
+                localFmt.dateFormat = "yyyy-MM-dd"
+                localFmt.timeZone = TimeZone.current
+                if let date = localFmt.date(from: string) { return date }
+            }
             throw DecodingError.dataCorruptedError(
                 in: try decoder.singleValueContainer(),
                 debugDescription: "Cannot parse date: \(string)"

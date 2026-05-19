@@ -148,6 +148,8 @@ struct VehicleDetailView: View {
                                             editingEvent = event
                                         } onLongPress: {
                                             detailEvent = event
+                                        } onDelete: {
+                                            Task { await deleteEvent(event) }
                                         }
                                     }
                                 }
@@ -182,6 +184,12 @@ struct VehicleDetailView: View {
             EventDetailSheet(event: event, vehicle: vehicle)
         }
         .task { await loadData() }
+    }
+
+    private func deleteEvent(_ event: VehicleEvent) async {
+        guard let token = auth.accessToken else { return }
+        try? await APIClient.shared.delete("/vehicles/events/\(event.id)/", token: token)
+        await loadData()
     }
 
     private func loadData() async {
@@ -568,6 +576,7 @@ struct EventCard: View {
     let vehicle: Vehicle
     let onTap: () -> Void
     let onLongPress: () -> Void
+    var onDelete: (() -> Void)? = nil
 
     var accentColor: Color {
         switch event.eventType {
@@ -633,6 +642,13 @@ struct EventCard: View {
         .contentShape(RoundedRectangle(cornerRadius: 10))
         .onTapGesture { onTap() }
         .onLongPressGesture { onLongPress() }
+        .swipeActions(edge: .trailing) {
+            if let onDelete {
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
     }
 
     var eventTitle: String {
