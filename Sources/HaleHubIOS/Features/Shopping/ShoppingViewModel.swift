@@ -69,11 +69,10 @@ class ShoppingDetailViewModel: ObservableObject {
                 // Strip common list markers (•, -, *, etc.)
                 let stripped = line.trimmingCharacters(in: CharacterSet(charactersIn: "•-*·›▸▹▪▫").union(.whitespaces))
                 // Match "item x2" or "item x 2 lbs" (case-insensitive)
-                if let range = stripped.range(of: #"\s+[xX×]\s*(.+)$"#, options: .regularExpression) {
-                    let xIdx = stripped.range(of: #"\s+[xX×]"#, options: .regularExpression)!.lowerBound
-                    let name = String(stripped[stripped.startIndex..<xIdx]).trimmingCharacters(in: .whitespaces)
-                    let qty  = stripped[range].trimmingCharacters(in: .whitespaces)
-                                .replacingOccurrences(of: #"^[xX×]\s*"#, with: "", options: .regularExpression)
+                if let xRange = stripped.range(of: #"\s+[xX×]"#, options: .regularExpression) {
+                    let name = String(stripped[stripped.startIndex..<xRange.lowerBound]).trimmingCharacters(in: .whitespaces)
+                    let qty  = String(stripped[xRange.upperBound...])
+                                .trimmingCharacters(in: .whitespaces)
                     if !name.isEmpty { return (name, qty) }
                 }
                 return (stripped, "")
@@ -87,7 +86,7 @@ class ShoppingDetailViewModel: ObservableObject {
         showBulkAdd = false
         for item in items {
             let body = AddItemRequest(name: item.name, quantity: item.qty, notes: "")
-            _ = try? await APIClient.shared.post("/shopping/\(listId)/items/", body: body, token: token)
+            let _: ShoppingItem? = try? await APIClient.shared.post("/shopping/\(listId)/items/", body: body, token: token)
         }
         await load(token: token, isConnected: true)
     }
@@ -112,8 +111,7 @@ class ShoppingDetailViewModel: ObservableObject {
     func toggle(item: ShoppingItem, token: String) async {
         guard let current = list else { return }
         // Optimistic update
-        if let idx = current.items?.firstIndex(where: { $0.id == item.id }) {
-            var items = current.items!
+        if var items = current.items, let idx = items.firstIndex(where: { $0.id == item.id }) {
             items[idx].isChecked.toggle()
             list = ShoppingList(
                 id: current.id, name: current.name, store: current.store,

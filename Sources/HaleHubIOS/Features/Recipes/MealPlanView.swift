@@ -476,7 +476,7 @@ struct DayGroupedEntries: View {
         guard let entries = plan.entries else { return [] }
         let withDates = entries.filter { $0.date != nil }
         let grouped = Dictionary(grouping: withDates) { entry -> Date in
-            Calendar.current.startOfDay(for: entry.date!)
+            Calendar.current.startOfDay(for: entry.date ?? Date())
         }
         return grouped.sorted { $0.key < $1.key }
     }
@@ -598,11 +598,11 @@ struct MealEntryRow: View {
 
                 Spacer()
 
-                if entry.recipe != nil {
+                if let recipe = entry.recipe {
                     Button {
                         withAnimation { cooked.toggle() }
                         if cooked {
-                            Task { await vm.markCooked(recipe: entry.recipe!, token: auth.accessToken ?? "") }
+                            Task { await vm.markCooked(recipe: recipe, token: auth.accessToken ?? "") }
                         }
                     } label: {
                         Image(systemName: cooked ? "checkmark.circle.fill" : "circle")
@@ -614,9 +614,9 @@ struct MealEntryRow: View {
             }
 
             // Sides
-            if hasSides {
+            if let sides = entry.sides, !sides.isEmpty {
                 VStack(alignment: .leading, spacing: 3) {
-                    ForEach(entry.sides!) { side in
+                    ForEach(sides) { side in
                         HStack(spacing: 6) {
                             Image(systemName: "arrow.turn.down.right")
                                 .font(.caption2)
