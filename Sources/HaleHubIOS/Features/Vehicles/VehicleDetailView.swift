@@ -28,6 +28,8 @@ struct VehicleDetailView: View {
     @State private var isLoading = false
     @State private var stats: VehicleStats?
     @State private var selectedChart: VehicleChartMode = .pricePerGallon
+    @State private var editingEvent: VehicleEvent? = nil
+    @State private var detailEvent: VehicleEvent? = nil
 
     var dueSchedules: [MaintenanceSchedule] { schedules.filter { $0.isDue } }
     var filteredEvents: [VehicleEvent] {
@@ -131,12 +133,22 @@ struct VehicleDetailView: View {
                         } else {
                             ForEach(groupedEvents, id: \.0) { month, monthEvents in
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Text(month)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                        .padding(.top, 4)
+                                    HStack {
+                                        Text(month)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(.secondary)
+                                        Spacer()
+                                        Text("\(monthEvents.count)")
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    .padding(.top, 4)
                                     ForEach(monthEvents) { event in
-                                        EventCard(event: event, vehicle: vehicle)
+                                        EventCard(event: event, vehicle: vehicle) {
+                                            editingEvent = event
+                                        } onLongPress: {
+                                            detailEvent = event
+                                        }
                                     }
                                 }
                             }
@@ -159,6 +171,15 @@ struct VehicleDetailView: View {
             LogEventSheet(vehicle: vehicle) {
                 Task { await loadData() }
             }
+        }
+        .sheet(item: $editingEvent) { event in
+            EditEventSheet(event: event, vehicle: vehicle) {
+                Task { await loadData() }
+            }
+            .environmentObject(auth)
+        }
+        .sheet(item: $detailEvent) { event in
+            EventDetailSheet(event: event, vehicle: vehicle)
         }
         .task { await loadData() }
     }
@@ -470,6 +491,9 @@ struct StatsRow: View {
                 if let maint = vehicle.maintenanceCostDouble, maint > 0 {
                     VehicleStatPill(label: "Total Service", value: "$\(Int(maint))", icon: "wrench")
                 }
+                if vehicle.isBoat {
+                    VehicleStatPill(label: "This Month", value: "\(stats.outingsThisMonth)", icon: "map")
+                }
                 VehicleStatPill(label: "Gas Logs", value: "\(stats.gasEventCount)", icon: "fuelpump.fill")
                 VehicleStatPill(label: "Service Logs", value: "\(stats.maintenanceEventCount)", icon: "wrench.fill")
             }
@@ -542,6 +566,8 @@ struct MaintenanceRow: View {
 struct EventCard: View {
     let event: VehicleEvent
     let vehicle: Vehicle
+    let onTap: () -> Void
+    let onLongPress: () -> Void
 
     var accentColor: Color {
         switch event.eventType {
@@ -604,9 +630,240 @@ struct EventCard: View {
         }
         .padding(10)
         .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
+        .contentShape(RoundedRectangle(cornerRadius: 10))
+        .onTapGesture { onTap() }
+        .onLongPressGesture { onLongPress() }
     }
 
     var eventTitle: String {
+        switch event.eventType {
+        case "gas": return "Gas Fill-up"
+        case "maintenance": return event.maintenanceCategoryName ?? "Service"
+        case "outing": return event.locationName ?? "Outing"
+        default: return event.eventType.capitalized
+        }
+    }
+}
+
+// MARK: - Edit Event Sheet
+
+struct EditEventSheet: View {
+    @EnvironmentObject var auth: AuthManager
+    @Environment(\.dismiss) private var dismiss
+
+    let event: VehicleEvent
+    let vehicle: Vehicle
+    let onSaved: () -> Void
+
+    @State private var date: Date
+    @State private var odometer: String
+    @State private var gallons: String
+    @State private var pricePerGallon: String
+    @State private var notes: String
+    @State private var selectedLocationId: Int?
+    @State private var locations: [VehicleLocation] = []
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    init(event: VehicleEvent, vehicle: Vehicle, onSaved: @escaping () -> Void) {
+        self.event = event
+        self.vehicle = vehicle
+        self.onSaved = onSaved
+        _date = State(initialValue: event.date)
+        let odomStr = event.miles.map(String.init) ?? event.hours.map { String(format: "%.1f", $0) } ?? ""
+        _odometer = State(initialValue: odomStr)
+        _gallons = State(initialValue: event.gallons.map { String(format: "%.3f", $0) } ?? "")
+        _pricePerGallon = State(initialValue: event.pricePerGallon.map { String(format: "%.3f", $0) } ?? "")
+        _notes = State(initialValue: event.notes ?? "")
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Details") {
+                    DatePicker("Date", selection: $date, displayedComponents: .date)
+                    TextField(vehicle.isBoat ? "Hours" : "Odometer (miles)", text: $odometer)
+                        .keyboardType(.decimalPad)
+
+                    if event.eventType == "gas" {
+                        TextField("Gallons", text: $gallons).keyboardType(.decimalPad)
+                        TextField("Price per gallon", text: $pricePerGallon).keyboardType(.decimalPad)
+                    }
+
+                    if event.eventType == "outing" {
+                        Picker("Location", selection: $selectedLocationId) {
+                            Text("— None —").tag(nil as Int?)
+                            ForEach(locations) { loc in
+                                Text(loc.name).tag(loc.id as Int?)
+                            }
+                        }
+                    }
+
+                    TextField("Notes (optional)", text: $notes, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+
+                if let err = errorMessage {
+                    Section {
+                        Label(err, systemImage: "exclamationmark.circle.fill")
+                            .foregroundStyle(.red).font(.subheadline)
+                    }
+                }
+            }
+            .navigationTitle("Edit \(eventTypeTitle)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }.disabled(isSaving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if isSaving { ProgressView() }
+                    else { Button("Save") { Task { await save() } } }
+                }
+            }
+        }
+        .task {
+            if event.eventType == "outing" {
+                await loadLocations()
+            }
+        }
+    }
+
+    private var eventTypeTitle: String {
+        switch event.eventType {
+        case "gas": return "Fill-up"
+        case "maintenance": return "Service"
+        case "outing": return "Outing"
+        default: return "Event"
+        }
+    }
+
+    private func loadLocations() async {
+        guard let token = auth.accessToken else { return }
+        locations = (try? await APIClient.shared.get("/vehicles/locations/", token: token)) ?? []
+        if let name = event.locationName {
+            selectedLocationId = locations.first(where: { $0.name == name })?.id
+        }
+    }
+
+    private func save() async {
+        guard let token = auth.accessToken else { return }
+        isSaving = true
+        errorMessage = nil
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+
+        var body = EditEventRequest(date: formatter.string(from: date))
+        if vehicle.isBoat {
+            body.hours = Double(odometer)
+        } else {
+            body.miles = Int(odometer)
+        }
+        body.gallons = Double(gallons)
+        body.pricePerGallon = Double(pricePerGallon)
+        body.notes = notes.isEmpty ? nil : notes
+        if event.eventType == "outing" {
+            body.locationName = locations.first(where: { $0.id == selectedLocationId })?.name ?? ""
+        }
+
+        do {
+            let _: VehicleEvent = try await APIClient.shared.patch(
+                "/vehicles/events/\(event.id)/", body: body, token: token
+            )
+            onSaved()
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isSaving = false
+    }
+}
+
+// MARK: - Event Detail Sheet
+
+struct EventDetailSheet: View {
+    let event: VehicleEvent
+    let vehicle: Vehicle
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Event") {
+                    LabeledContent("Date", value: event.date.formatted(date: .long, time: .omitted))
+                    if let loc = event.locationName {
+                        LabeledContent("Location", value: loc)
+                    }
+                    if let miles = event.miles {
+                        LabeledContent(vehicle.isBoat ? "Hours" : "Odometer",
+                                       value: "\(miles.formatted()) \(vehicle.unitAbbrev)")
+                    }
+                    if let hours = event.hours {
+                        LabeledContent("Hours", value: String(format: "%.1f hrs", hours))
+                    }
+                }
+
+                if event.eventType == "gas" {
+                    Section("Fuel") {
+                        if let g = event.gallons {
+                            LabeledContent("Gallons", value: String(format: "%.3f", g))
+                        }
+                        if let ppg = event.pricePerGallon {
+                            LabeledContent("Price/gal", value: String(format: "$%.3f", ppg))
+                        }
+                        if let cost = event.totalCost {
+                            LabeledContent("Total", value: String(format: "$%.2f", cost))
+                        }
+                        if let mpg = event.milespergallon {
+                            LabeledContent("MPG", value: String(format: "%.1f", mpg))
+                        }
+                        if let gph = event.gallonsperhour {
+                            LabeledContent("GPH", value: String(format: "%.2f", gph))
+                        }
+                    }
+                }
+
+                if let items = event.maintenanceItems, !items.isEmpty {
+                    Section("Service Items") {
+                        ForEach(items) { item in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.categoryName ?? "Service")
+                                    if !item.description.isEmpty {
+                                        Text(item.description).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                if item.cost > 0 {
+                                    Text(String(format: "$%.2f", item.cost)).foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        if let cost = event.totalCost, cost > 0 {
+                            LabeledContent("Total", value: String(format: "$%.2f", cost))
+                                .fontWeight(.semibold)
+                        }
+                    }
+                }
+
+                if let notes = event.notes, !notes.isEmpty {
+                    Section("Notes") {
+                        Text(notes)
+                    }
+                }
+            }
+            .navigationTitle(eventTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private var eventTitle: String {
         switch event.eventType {
         case "gas": return "Gas Fill-up"
         case "maintenance": return event.maintenanceCategoryName ?? "Service"

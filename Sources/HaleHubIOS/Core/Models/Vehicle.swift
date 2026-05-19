@@ -34,7 +34,7 @@ struct Vehicle: Identifiable, Codable, Sendable {
     var maintenanceCostDouble: Double? { totalMaintenanceCost }
 }
 
-struct VehicleEvent: Identifiable, Codable, Sendable {
+struct VehicleEvent: Identifiable, Codable, Hashable, Sendable {
     let id: Int
     let eventType: String
     let date: Date
@@ -88,7 +88,7 @@ struct MaintenanceSchedule: Identifiable, Codable, Sendable {
     let isDueReason: String?
 }
 
-struct MaintenanceItemRecord: Identifiable, Codable, Sendable {
+struct MaintenanceItemRecord: Identifiable, Codable, Hashable, Sendable {
     let id: Int
     let categoryName: String?
     let description: String
@@ -159,6 +159,16 @@ struct CreateLocationRequest: Encodable, Sendable {
     let address: String?
 }
 
+struct EditEventRequest: Encodable, Sendable {
+    var date: String
+    var miles: Int?
+    var hours: Double?
+    var gallons: Double?
+    var pricePerGallon: Double?
+    var notes: String?
+    var locationName: String?
+}
+
 struct LogEventRequest: Encodable, Sendable {
     let eventType: String
     let date: String
@@ -179,6 +189,7 @@ struct VehicleStats {
     let gasEventCount: Int
     let maintenanceEventCount: Int
     let outingEventCount: Int
+    let outingsThisMonth: Int
     let lastGasDate: Date?
     let lastMaintenanceDate: Date?
 
@@ -193,12 +204,22 @@ struct VehicleStats {
         let gphValues = gasEvents.compactMap { $0.gallonsperhour }
         let avgGPH = gphValues.isEmpty ? nil : gphValues.reduce(0, +) / Double(gphValues.count)
 
+        let cal = Calendar.current
+        let now = Date()
+        let thisMonth = cal.component(.month, from: now)
+        let thisYear = cal.component(.year, from: now)
+        let outingsThisMonth = outingEvents.filter {
+            cal.component(.month, from: $0.date) == thisMonth &&
+            cal.component(.year, from: $0.date) == thisYear
+        }.count
+
         return VehicleStats(
             avgMPG: vehicle.isBoat ? nil : avgMPG,
             avgGPH: vehicle.isBoat ? avgGPH : nil,
             gasEventCount: gasEvents.count,
             maintenanceEventCount: maintEvents.count,
             outingEventCount: outingEvents.count,
+            outingsThisMonth: outingsThisMonth,
             lastGasDate: gasEvents.first?.date,
             lastMaintenanceDate: maintEvents.first?.date
         )
