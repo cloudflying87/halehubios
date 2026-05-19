@@ -30,6 +30,7 @@ struct VehicleDetailView: View {
     @State private var selectedChart: VehicleChartMode = .pricePerGallon
     @State private var editingEvent: VehicleEvent? = nil
     @State private var detailEvent: VehicleEvent? = nil
+    @State private var selectedSchedule: MaintenanceSchedule? = nil
 
     var dueSchedules: [MaintenanceSchedule] { schedules.filter { $0.isDue } }
     var filteredEvents: [VehicleEvent] {
@@ -80,7 +81,7 @@ struct VehicleDetailView: View {
                                 .font(.headline)
                                 .foregroundStyle(.orange)
                             ForEach(dueSchedules) { s in
-                                MaintenanceRow(schedule: s)
+                                MaintenanceRow(schedule: s) { selectedSchedule = s }
                             }
                         }
                         .padding(14)
@@ -173,6 +174,12 @@ struct VehicleDetailView: View {
             LogEventSheet(vehicle: vehicle) {
                 Task { await loadData() }
             }
+        }
+        .sheet(item: $selectedSchedule) { schedule in
+            MaintenanceActionSheet(schedule: schedule, vehicle: vehicle) {
+                Task { await loadData() }
+            }
+            .environmentObject(auth)
         }
         .sheet(item: $editingEvent) { event in
             EditEventSheet(event: event, vehicle: vehicle) {
@@ -546,26 +553,40 @@ struct VehicleStatPill: View {
 
 struct MaintenanceRow: View {
     let schedule: MaintenanceSchedule
+    var onTap: (() -> Void)? = nil
+
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(schedule.categoryName ?? "Unknown").font(.subheadline)
-                if let reason = schedule.isDueReason, !reason.isEmpty {
-                    Text(reason).font(.caption).foregroundStyle(.secondary)
-                } else if let last = schedule.lastPerformed {
-                    Text("Last: \(last, style: .date)").font(.caption).foregroundStyle(.secondary)
+        Button {
+            onTap?()
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(schedule.categoryName ?? "Unknown")
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                    if let reason = schedule.isDueReason, !reason.isEmpty {
+                        Text(reason).font(.caption).foregroundStyle(.secondary)
+                    } else if let last = schedule.lastPerformed {
+                        Text("Last: \(last, style: .date)").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                if schedule.isDue {
+                    Text("DUE")
+                        .font(.caption.bold()).foregroundStyle(.white)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(.orange, in: Capsule())
+                } else {
+                    Text("OK").font(.caption.bold()).foregroundStyle(.green)
+                }
+                if onTap != nil {
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
             }
-            Spacer()
-            if schedule.isDue {
-                Text("DUE")
-                    .font(.caption.bold()).foregroundStyle(.white)
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(.orange, in: Capsule())
-            } else {
-                Text("OK").font(.caption.bold()).foregroundStyle(.green)
-            }
         }
+        .buttonStyle(.plain)
     }
 }
 
@@ -885,6 +906,122 @@ struct EventDetailSheet: View {
         case "maintenance": return event.maintenanceCategoryName ?? "Service"
         case "outing": return event.locationName ?? "Outing"
         default: return event.eventType.capitalized
+        }
+    }
+}
+
+// MARK: - Maintenance Action Sheet
+
+struct MaintenanceActionSheet: View {
+    @EnvironmentObject var auth: AuthManager
+    @Environment(\.dismiss) private var dismiss
+
+    let schedule: MaintenanceSchedule
+    let vehicle: Vehicle
+    let onRefresh: () -> Void
+
+    @State private var showLogSheet = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Due Service") {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(schedule.categoryName ?? "Maintenance")
+                                .font(.headline)
+                            if let reason = schedule.isDueReason, !reason.isEmpty {
+                                Text(reason).font(.subheadline).foregroundStyle(.orange)
+                            }
+                        }
+                        Spacer()
+                        Text("DUE")
+                            .font(.caption.bold()).foregroundStyle(.white)
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(.orange, in: Capsule())
+                    }
+                }
+
+                Section("History") {
+                    if let last = schedule.lastPerformed {
+                        LabeledContent("Last Performed", value: last.formatted(date: .long, time: .omitted))
+                    } else {
+                        Text("No record of previous service").foregroundStyle(.secondary)
+                    }
+                    if let miles = schedule.lastMiles {
+                        LabeledContent("At Odometer", value: "\(miles.formatted()) \(vehicle.unitAbbrev)")
+                    }
+                    if let interval = schedule.intervalMiles {
+                        LabeledContent("Interval", value: "Every \(interval.formatted()) \(vehicle.unitAbbrev)")
+                    }
+                    if let interval = schedule.intervalHours {
+                        LabeledContent("Interval", value: "Every \(interval) hrs")
+                    }
+                    if let interval = schedule.intervalDays {
+                        LabeledContent("Interval", value: "Every \(interval) days")
+                    }
+                }
+
+                Section {
+                    Button {
+                        showLogSheet = true
+                    } label: {
+                        Label("Log Service Now", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .font(.body.weight(.medium))
+                    }
+                }
+
+                Section("Snooze Reminder") {
+                    Button {
+                        Task { await snooze(days: 7) }
+                    } label: {
+                        Label("Remind Me in 1 Week", systemImage: "clock.arrow.circlepath")
+                    }
+                    Button {
+                        Task { await snooze(days: 30) }
+                    } label: {
+                        Label("Remind Me in 1 Month", systemImage: "clock.arrow.circlepath")
+                    }
+                }
+
+                if let err = errorMessage {
+                    Section {
+                        Label(err, systemImage: "exclamationmark.circle.fill").foregroundStyle(.red)
+                    }
+                }
+            }
+            .navigationTitle("Maintenance Due")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+            }
+        }
+        .sheet(isPresented: $showLogSheet) {
+            LogEventSheet(vehicle: vehicle, prefilledCategoryId: schedule.categoryId) {
+                onRefresh()
+                dismiss()
+            }
+        }
+    }
+
+    private func snooze(days: Int) async {
+        guard let token = auth.accessToken else { return }
+        errorMessage = nil
+        struct SnoozeBody: Encodable { let days: Int }
+        do {
+            let _: MaintenanceSchedule = try await APIClient.shared.post(
+                "/vehicles/maintenance/\(schedule.id)/snooze/",
+                body: SnoozeBody(days: days),
+                token: token
+            )
+            onRefresh()
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }

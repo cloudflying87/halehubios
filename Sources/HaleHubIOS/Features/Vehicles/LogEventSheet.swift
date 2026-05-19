@@ -5,6 +5,7 @@ struct LogEventSheet: View {
     @Environment(\.dismiss) var dismiss
 
     let vehicle: Vehicle
+    var prefilledCategoryId: Int? = nil
     let onSaved: () -> Void
 
     @State private var eventType = "gas"
@@ -166,7 +167,16 @@ struct LogEventSheet: View {
                 }
             } // end else
         } // end NavigationStack
-        .task { await loadCategories(); await loadLocations() }
+        .task {
+            await loadCategories()
+            await loadLocations()
+            if let catId = prefilledCategoryId {
+                eventType = "maintenance"
+                var prefilled = ServiceItem()
+                prefilled.categoryId = catId
+                serviceItems = [prefilled]
+            }
+        }
         .sheet(isPresented: $showAddLocation) {
             NavigationStack {
                 Form {

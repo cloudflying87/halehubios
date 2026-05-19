@@ -76,8 +76,9 @@ struct MaintenanceCategory: Identifiable, Codable, Sendable {
     let vehicleTypes: [String]?
 }
 
-struct MaintenanceSchedule: Identifiable, Codable, Sendable {
+struct MaintenanceSchedule: Identifiable, Codable, Hashable, Sendable {
     let id: Int
+    let categoryId: Int?
     let categoryName: String?
     let intervalMiles: Int?
     let intervalHours: Int?
@@ -86,6 +87,7 @@ struct MaintenanceSchedule: Identifiable, Codable, Sendable {
     let lastMiles: Int?
     let isDue: Bool
     let isDueReason: String?
+    let snoozedUntil: Date?
 }
 
 struct MaintenanceItemRecord: Identifiable, Codable, Hashable, Sendable {
