@@ -18,6 +18,8 @@ struct LogEventSheet: View {
     @State private var showAddLocation = false
     @State private var newLocationName = ""
     @State private var newLocationAddress = ""
+    @State private var isAddingLocation = false
+    @State private var addLocationError: String?
     @State private var serviceItems: [ServiceItem] = [ServiceItem()]
     @State private var categories: [MaintenanceCategory] = []
     @State private var isSaving = false
@@ -172,18 +174,33 @@ struct LogEventSheet: View {
                         TextField("Location name", text: $newLocationName)
                         TextField("Address (optional)", text: $newLocationAddress)
                     }
+                    if let err = addLocationError {
+                        Section {
+                            Label(err, systemImage: "exclamationmark.circle.fill")
+                                .foregroundStyle(.red)
+                                .font(.subheadline)
+                        }
+                    }
                 }
                 .navigationTitle("New Location")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { showAddLocation = false }
+                        Button("Cancel") {
+                            addLocationError = nil
+                            showAddLocation = false
+                        }
+                        .disabled(isAddingLocation)
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Add") {
-                            Task { await addLocation() }
+                        if isAddingLocation {
+                            ProgressView()
+                        } else {
+                            Button("Add") {
+                                Task { await addLocation() }
+                            }
+                            .disabled(newLocationName.isEmpty)
                         }
-                        .disabled(newLocationName.isEmpty)
                     }
                 }
             }
@@ -207,18 +224,24 @@ struct LogEventSheet: View {
 
     private func addLocation() async {
         guard let token = auth.accessToken, !newLocationName.isEmpty else { return }
+        isAddingLocation = true
+        addLocationError = nil
         let body = CreateLocationRequest(
             name: newLocationName,
             address: newLocationAddress.isEmpty ? nil : newLocationAddress
         )
-        if let created: VehicleLocation = try? await APIClient.shared.post("/vehicles/locations/", body: body, token: token) {
+        do {
+            let created: VehicleLocation = try await APIClient.shared.post("/vehicles/locations/", body: body, token: token)
             locations.append(created)
             locations.sort { $0.name < $1.name }
             selectedLocationId = created.id
+            newLocationName = ""
+            newLocationAddress = ""
+            showAddLocation = false
+        } catch {
+            addLocationError = error.localizedDescription
         }
-        newLocationName = ""
-        newLocationAddress = ""
-        showAddLocation = false
+        isAddingLocation = false
     }
 
     private func save() async {
