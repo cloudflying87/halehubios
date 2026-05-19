@@ -3,6 +3,7 @@ import SwiftUI
 struct ShoppingListDetailView: View {
     @EnvironmentObject var auth: AuthManager
     @EnvironmentObject var network: NetworkMonitor
+    @Environment(\.dismiss) private var dismiss
     let list: ShoppingList
     @StateObject private var vm: ShoppingDetailViewModel
 
@@ -104,9 +105,24 @@ struct ShoppingListDetailView: View {
                                 }
                             } label: { Label("Clear Checked", systemImage: "trash") }
                         }
+                        Divider()
+                        Button(role: .destructive) {
+                            vm.showDeleteListConfirm = true
+                        } label: { Label("Delete List", systemImage: "trash") }
                     } label: { Image(systemName: "ellipsis.circle") }
                 }
             }
+        }
+        .confirmationDialog("Delete \"\(current.name)\"?",
+                            isPresented: $vm.showDeleteListConfirm, titleVisibility: .visible) {
+            Button("Delete List", role: .destructive) {
+                Task {
+                    await vm.deleteList(id: current.id, token: auth.accessToken ?? "")
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This will permanently delete the list and all its items.")
         }
         .sheet(isPresented: $vm.showBulkAdd) {
             BulkAddSheet(text: $vm.bulkText) {
@@ -115,6 +131,7 @@ struct ShoppingListDetailView: View {
         }
         .task { await vm.load(token: auth.accessToken ?? "", isConnected: network.isConnected) }
         .refreshable { await vm.load(token: auth.accessToken ?? "", isConnected: true) }
+        .onChange(of: vm.listDeleted) { _, deleted in if deleted { dismiss() } }
         .alert("Error", isPresented: .init(get: { vm.error != nil }, set: { if !$0 { vm.error = nil } })) {
             Button("OK") { }
         } message: { Text(vm.error ?? "") }

@@ -73,15 +73,21 @@ struct CreateShoppingListSheet: View {
             }
             .navigationTitle("New Shopping List")
             .navigationBarTitleDisplayMode(.inline)
+            .interactiveDismissDisabled(isCreating)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .disabled(isCreating)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Create") {
-                        Task { await create() }
+                    if isCreating {
+                        ProgressView()
+                    } else {
+                        Button("Create") {
+                            Task { await create() }
+                        }
+                        .disabled(listName.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
-                    .disabled(listName.trimmingCharacters(in: .whitespaces).isEmpty || isCreating)
                 }
             }
         }

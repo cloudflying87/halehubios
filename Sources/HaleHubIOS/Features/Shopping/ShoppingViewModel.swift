@@ -30,6 +30,16 @@ class ShoppingViewModel: ObservableObject {
         isLoading = false
     }
 
+    func deleteList(id: UUID, token: String) async {
+        do {
+            try await APIClient.shared.delete("/shopping/\(id)/delete/", token: token)
+            lists.removeAll { $0.id == id }
+            await CacheManager.shared.save(lists, key: cacheKey)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
     func createList(name: String, store: String, token: String) async {
         let body = CreateShoppingListRequest(name: name, store: store.isEmpty ? nil : store)
         do {
@@ -48,6 +58,8 @@ class ShoppingDetailViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
     @Published var newItemName = ""
+    @Published var showDeleteListConfirm = false
+    @Published var listDeleted = false
     @Published var newItemQty = ""
 
     private let listId: UUID
@@ -148,5 +160,14 @@ class ShoppingDetailViewModel: ObservableObject {
     func deleteItem(_ item: ShoppingItem, token: String) async {
         try? await APIClient.shared.delete("/shopping/\(listId)/items/\(item.id)/", token: token)
         await load(token: token, isConnected: true)
+    }
+
+    func deleteList(id: UUID, token: String) async {
+        do {
+            try await APIClient.shared.delete("/shopping/\(id)/delete/", token: token)
+            listDeleted = true
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 }
