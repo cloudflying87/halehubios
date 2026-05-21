@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Tote list item (returned by GET /api/totes/)
 
-struct Tote: Identifiable, Codable, Sendable {
+struct Tote: Identifiable, Codable, Hashable, Sendable {
     let id: String
     let name: String
     let location: String
@@ -11,6 +11,8 @@ struct Tote: Identifiable, Codable, Sendable {
     let dateSorted: String?   // "YYYY-MM-DD"
     let qrCodeIdentifier: String?
     let notes: String
+    let photo1Url: String?
+    let photo2Url: String?
 }
 
 // MARK: - Tote detail with items (returned by GET /api/totes/{id}/)
@@ -24,6 +26,8 @@ struct ToteDetail: Identifiable, Codable, Sendable {
     let dateSorted: String?
     let qrCodeIdentifier: String?
     let notes: String
+    let photo1Url: String?
+    let photo2Url: String?
     let items: [ToteItem]
 }
 

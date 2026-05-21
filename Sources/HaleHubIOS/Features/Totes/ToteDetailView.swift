@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 // MARK: - ViewModel
 
@@ -7,13 +8,13 @@ class ToteDetailViewModel: ObservableObject {
     @Published var toteDetail: ToteDetail?
     @Published var categories: [ToteCategory] = []
     @Published var isLoading = false
+    @Published var isUploadingPhoto = false
     @Published var error: String?
 
     func load(id: String, token: String) async {
         isLoading = true
         error = nil
 
-        // Fetch tote detail and categories in parallel.
         async let detailFetch: ToteDetail = APIClient.shared.get("/totes/\(id)/", token: token)
         async let categoriesFetch: [ToteCategory] = APIClient.shared.get("/totes/categories/", token: token)
 
@@ -31,7 +32,6 @@ class ToteDetailViewModel: ObservableObject {
     func deleteItem(itemId: String, token: String) async {
         do {
             try await APIClient.shared.delete("/tote-items/\(itemId)/", token: token)
-            // Remove from local state immediately (optimistic).
             if let detail = toteDetail {
                 toteDetail = ToteDetail(
                     id: detail.id,
@@ -42,6 +42,8 @@ class ToteDetailViewModel: ObservableObject {
                     dateSorted: detail.dateSorted,
                     qrCodeIdentifier: detail.qrCodeIdentifier,
                     notes: detail.notes,
+                    photo1Url: detail.photo1Url,
+                    photo2Url: detail.photo2Url,
                     items: detail.items.filter { $0.id != itemId }
                 )
             }
@@ -50,7 +52,37 @@ class ToteDetailViewModel: ObservableObject {
         }
     }
 
-    /// Items grouped by category name, preserving insertion order.
+    func uploadPhoto(toteId: String, slot: Int, image: UIImage, token: String) async {
+        guard let jpeg = image.jpegData(compressionQuality: 0.85) else { return }
+        isUploadingPhoto = true
+        defer { isUploadingPhoto = false }
+
+        do {
+            let url = try await APIClient.shared.uploadPhoto(
+                "/totes/\(toteId)/photos/",
+                imageData: jpeg,
+                slot: slot,
+                token: token
+            )
+            guard let detail = toteDetail else { return }
+            toteDetail = ToteDetail(
+                id: detail.id,
+                name: detail.name,
+                location: detail.location,
+                locationNotes: detail.locationNotes,
+                itemCount: detail.itemCount,
+                dateSorted: detail.dateSorted,
+                qrCodeIdentifier: detail.qrCodeIdentifier,
+                notes: detail.notes,
+                photo1Url: slot == 1 ? url : detail.photo1Url,
+                photo2Url: slot == 2 ? url : detail.photo2Url,
+                items: detail.items
+            )
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
     var itemsByCategory: [(categoryName: String, items: [ToteItem])] {
         guard let detail = toteDetail else { return [] }
         var groups: [(String, [ToteItem])] = []
@@ -73,6 +105,8 @@ struct ToteDetailView: View {
 
     @StateObject private var vm = ToteDetailViewModel()
     @State private var showAddItem = false
+    @State private var photoPickerSlot: Int? = nil
+    @State private var selectedPhotoItem: PhotosPickerItem? = nil
 
     var body: some View {
         Group {
@@ -82,8 +116,6 @@ struct ToteDetailView: View {
             } else if let detail = vm.toteDetail {
                 toteContent(detail: detail)
             } else {
-                // Covers both error state and the unlikely case where loading
-                // hasn't started yet — always shows something actionable.
                 ContentUnavailableView {
                     Label("Couldn't Load Tote", systemImage: "exclamationmark.triangle")
                 } description: {
@@ -114,7 +146,6 @@ struct ToteDetailView: View {
                 toteId: toteId,
                 categories: vm.categories
             ) { newItem in
-                // Append the new item and bump count.
                 if let detail = vm.toteDetail {
                     vm.toteDetail = ToteDetail(
                         id: detail.id,
@@ -125,11 +156,32 @@ struct ToteDetailView: View {
                         dateSorted: detail.dateSorted,
                         qrCodeIdentifier: detail.qrCodeIdentifier,
                         notes: detail.notes,
+                        photo1Url: detail.photo1Url,
+                        photo2Url: detail.photo2Url,
                         items: detail.items + [newItem]
                     )
                 }
             }
             .environmentObject(auth)
+        }
+        .photosPicker(
+            isPresented: Binding(
+                get: { photoPickerSlot != nil },
+                set: { if !$0 { photoPickerSlot = nil } }
+            ),
+            selection: $selectedPhotoItem,
+            matching: .images
+        )
+        .onChange(of: selectedPhotoItem) { _, item in
+            guard let item, let slot = photoPickerSlot else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    await vm.uploadPhoto(toteId: toteId, slot: slot, image: image, token: auth.accessToken ?? "")
+                }
+                selectedPhotoItem = nil
+                photoPickerSlot = nil
+            }
         }
         .task { await vm.load(id: toteId, token: auth.accessToken ?? "") }
         .refreshable { await vm.load(id: toteId, token: auth.accessToken ?? "") }
@@ -142,7 +194,7 @@ struct ToteDetailView: View {
     @ViewBuilder
     private func toteContent(detail: ToteDetail) -> some View {
         List {
-            // Location chip header
+            // Location + QR header
             Section {
                 HStack(spacing: 8) {
                     Image(systemName: detail.locationIcon)
@@ -161,6 +213,13 @@ struct ToteDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+            }
+
+            // Photo strip
+            Section {
+                photoStrip(detail: detail)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
             }
 
             // Items grouped by category
@@ -196,6 +255,71 @@ struct ToteDetailView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .overlay {
+            if vm.isUploadingPhoto {
+                ZStack {
+                    Color.black.opacity(0.3).ignoresSafeArea()
+                    ProgressView("Uploading…").padding(24).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func photoStrip(detail: ToteDetail) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                photoSlot(urlString: detail.photo1Url, slot: 1)
+                photoSlot(urlString: detail.photo2Url, slot: 2)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+    }
+
+    @ViewBuilder
+    private func photoSlot(urlString: String?, slot: Int) -> some View {
+        Button {
+            photoPickerSlot = slot
+        } label: {
+            if let urlString, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 120, height: 120)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    case .failure:
+                        placeholderSlot(slot: slot)
+                    default:
+                        ProgressView().frame(width: 120, height: 120)
+                    }
+                }
+            } else {
+                placeholderSlot(slot: slot)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func placeholderSlot(slot: Int) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(.secondarySystemGroupedBackground))
+                .frame(width: 120, height: 120)
+            VStack(spacing: 6) {
+                Image(systemName: "camera.badge.plus")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+                Text("Photo \(slot)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }
 

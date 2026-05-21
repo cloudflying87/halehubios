@@ -41,6 +41,10 @@
 		<key>UIColorName</key>
 		<string></string>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Scan QR codes on totes to quickly find what's inside.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Add photos to your totes so you can see what's inside at a glance.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>HaleHub uses Face ID to protect your financial data.</string>
 	<key>UIRequiresFullScreen</key>

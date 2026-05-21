@@ -109,6 +109,45 @@ actor APIClient {
         _ = try await request(path: path, method: "DELETE", body: nil as Data?, token: token)
     }
 
+    // Multipart photo upload — returns the absolute URL of the saved photo
+    func uploadPhoto(_ path: String, imageData: Data, slot: Int, token: String) async throws -> String {
+        guard let url = URL(string: "\(baseURL)\(path)") else { throw APIError.invalidURL }
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        var body = Data()
+        let crlf = "\r\n"
+        // slot field
+        body.append("--\(boundary)\(crlf)".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"slot\"\(crlf)\(crlf)".data(using: .utf8)!)
+        body.append("\(slot)\(crlf)".data(using: .utf8)!)
+        // photo file
+        body.append("--\(boundary)\(crlf)".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"photo\"; filename=\"photo.jpg\"\(crlf)".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\(crlf)\(crlf)".data(using: .utf8)!)
+        body.append(imageData)
+        body.append(crlf.data(using: .utf8)!)
+        body.append("--\(boundary)--\(crlf)".data(using: .utf8)!)
+        req.httpBody = body
+
+        do {
+            let (data, response) = try await session.data(for: req)
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if code == 401 { throw APIError.unauthorized }
+            if code >= 400 {
+                let msg = String(data: data, encoding: .utf8) ?? ""
+                throw APIError.serverError(code, msg)
+            }
+            struct PhotoResponse: Decodable { let url: String }
+            let parsed = try decoder.decode(PhotoResponse.self, from: data)
+            return parsed.url
+        } catch let e as APIError { throw e }
+        catch { throw APIError.networkError(error) }
+    }
+
     private func request(path: String, method: String, body: Data?, token: String?) async throws -> Data {
         guard let url = URL(string: "\(baseURL)\(path)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
