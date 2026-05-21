@@ -22,6 +22,7 @@
 		4BED8439C68597ED905E5518 /* HaleNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AA1D7CF6070F458F822E505 /* HaleNotification.swift */; };
 		4F3EE32CA697D673557F7F60 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D322D12691A62F28635D061 /* LoginView.swift */; };
 		5153DFD64BF9325FEFC74E64 /* LetterEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EE48589C34175A306051197 /* LetterEditorSheet.swift */; };
+		5153DFD64BF9325FEFC74E65 /* ArchiveHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EE48589C34175A306051198 /* ArchiveHubView.swift */; };
 		574B0D1BD4CBC4B98428F106 /* LocalAuthentication.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C309AC162DA76ACDF7A95C8 /* LocalAuthentication.framework */; };
 		5855076BEE4FCBA24B0E1E16 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC6F675794F03BA9FEA90968 /* AccountView.swift */; };
 		5CCB5B17B30F93AED9AA0484 /* QRBatchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 977944FB66BE48718D1183B2 /* QRBatchSheet.swift */; };
@@ -84,6 +85,7 @@
 		1979192C8C8DBC508631A28E /* ReadingDayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingDayDetailView.swift; sourceTree = "<group>"; };
 		1DA68F684F0A477BD7D1FEB9 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		1EE48589C34175A306051197 /* LetterEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LetterEditorSheet.swift; sourceTree = "<group>"; };
+		1EE48589C34175A306051198 /* ArchiveHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveHubView.swift; sourceTree = "<group>"; };
 		1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesListView.swift; sourceTree = "<group>"; };
 		1FCDF504AF0FF0F7B2F22CC9 /* RecipeEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeEditView.swift; sourceTree = "<group>"; };
 		264657A8853B85BCCFCEA2EA /* CompoundInterestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompoundInterestView.swift; sourceTree = "<group>"; };
@@ -167,6 +169,7 @@
 			children = (
 				BAAD29803F12391B72A484FC /* LetterDetailView.swift */,
 				1EE48589C34175A306051197 /* LetterEditorSheet.swift */,
+				1EE48589C34175A306051198 /* ArchiveHubView.swift */,
 				9A1199889C552A49F7DD3EDC /* ResourceDetailView.swift */,
 				7B850A78801A49015E962D7B /* ResourceEditorSheet.swift */,
 				0C93425E6A35DBEE8FE9ACBA /* ResourcesHubView.swift */,
@@ -483,6 +486,7 @@
 				4BED8439C68597ED905E5518 /* HaleNotification.swift in Sources */,
 				CC498B37E53DB67811F88BAD /* LetterDetailView.swift in Sources */,
 				5153DFD64BF9325FEFC74E64 /* LetterEditorSheet.swift in Sources */,
+				5153DFD64BF9325FEFC74E65 /* ArchiveHubView.swift in Sources */,
 				D5D1582EF5D926ED63EC7881 /* LoanCalculatorView.swift in Sources */,
 				9B9348553D9A7A0E97A6E5C9 /* LogEventSheet.swift in Sources */,
 				4F3EE32CA697D673557F7F60 /* LoginView.swift in Sources */,

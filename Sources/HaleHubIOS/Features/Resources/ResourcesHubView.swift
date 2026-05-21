@@ -27,6 +27,18 @@ class ResourcesHubViewModel: ObservableObject {
         isLoading = false
     }
 
+    func archiveLetter(slug: String, token: String) async {
+        do {
+            struct Req: Encodable { let archived: Bool }
+            let _: LetterDetail = try await APIClient.shared.post(
+                "/letters/\(slug)/archive/", body: Req(archived: true), token: token
+            )
+            letters.removeAll { $0.slug == slug }
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
     func archiveResource(slug: String, archived: Bool, token: String) async {
         do {
             let body = ResourceArchiveRequest(archived: archived)
@@ -47,6 +59,7 @@ struct ResourcesHubView: View {
     @StateObject private var vm = ResourcesHubViewModel()
     @State private var showCreateResource = false
     @State private var showCreateLetter = false
+    @State private var showArchive = false
 
     private var canCreate: Bool {
         vm.resources.first?.canEdit ?? vm.letters.first?.canEdit ?? false
@@ -64,6 +77,11 @@ struct ResourcesHubView: View {
         .navigationTitle("Resources & Letters")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Archive", systemImage: "archivebox") {
+                    showArchive = true
+                }
+            }
             if canCreate {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
@@ -78,6 +96,9 @@ struct ResourcesHubView: View {
                     }
                 }
             }
+        }
+        .navigationDestination(isPresented: $showArchive) {
+            ArchiveHubView().environmentObject(auth)
         }
         .sheet(isPresented: $showCreateResource) {
             ResourceEditorSheet(mode: .create) { _ in
@@ -112,6 +133,14 @@ struct ResourcesHubView: View {
                             destination: LetterDetailView(letter: letter).environmentObject(auth)
                         ) {
                             LetterRow(letter: letter)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            if letter.canEdit {
+                                Button("Archive") {
+                                    Task { await vm.archiveLetter(slug: letter.slug, token: auth.accessToken ?? "") }
+                                }
+                                .tint(.orange)
+                            }
                         }
                     }
                 } header: {
