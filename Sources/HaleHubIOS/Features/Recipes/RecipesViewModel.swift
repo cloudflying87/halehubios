@@ -188,8 +188,23 @@ class RecipesViewModel: ObservableObject {
 
     func importRecipe(url: String, token: String) async throws -> Recipe {
         struct ImportRequest: Encodable, Sendable { let url: String }
-        let body = ImportRequest(url: url)
-        let recipe: Recipe = try await APIClient.shared.post("/recipes/import/", body: body, token: token)
+        let recipe: Recipe = try await APIClient.shared.post(
+            "/recipes/import/", body: ImportRequest(url: url), token: token
+        )
+        recipes.insert(recipe, at: 0)
+        await CacheManager.shared.save(recipes, key: recipeCacheKey)
+        return recipe
+    }
+
+    func importRecipeFromText(_ text: String, token: String) async throws -> Recipe {
+        struct TextImportRequest: Encodable, Sendable {
+            let recipeJson: String
+        }
+        let recipe: Recipe = try await APIClient.shared.post(
+            "/recipes/import/shortcut/",
+            body: TextImportRequest(recipeJson: text),
+            token: token
+        )
         recipes.insert(recipe, at: 0)
         await CacheManager.shared.save(recipes, key: recipeCacheKey)
         return recipe

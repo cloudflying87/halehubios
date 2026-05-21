@@ -99,7 +99,7 @@ struct RecipesListView: View {
     }
 }
 
-// MARK: - Import Recipe from URL Sheet
+// MARK: - Import Recipe Sheet (URL + Paste Text)
 
 struct ImportRecipeFromURLSheet: View {
     @EnvironmentObject var auth: AuthManager
@@ -107,55 +107,85 @@ struct ImportRecipeFromURLSheet: View {
     @ObservedObject var vm: RecipesViewModel
     let onSuccess: (Recipe) -> Void
 
+    enum ImportMode: String, CaseIterable { case url = "URL", text = "Paste Text" }
+
+    @State private var mode: ImportMode = .url
     @State private var urlText = ""
+    @State private var pastedText = ""
     @State private var isImporting = false
     @State private var errorMessage: String?
+
+    private var canImport: Bool {
+        switch mode {
+        case .url:  return !urlText.trimmingCharacters(in: .whitespaces).isEmpty
+        case .text: return !pastedText.trimmingCharacters(in: .whitespaces).isEmpty
+        }
+    }
 
     var body: some View {
         NavigationStack {
             Form {
+                // Mode picker
                 Section {
-                    TextField("https://", text: $urlText)
-                        .keyboardType(.URL)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                } header: {
-                    Text("Recipe URL")
-                } footer: {
-                    Text("Paste the URL of any recipe page to import it automatically.")
+                    Picker("Mode", selection: $mode) {
+                        ForEach(ImportMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowInsets(.init(top: 8, leading: 16, bottom: 8, trailing: 16))
+                }
+                .listRowBackground(Color.clear)
+
+                switch mode {
+                case .url:
+                    Section {
+                        TextField("https://", text: $urlText)
+                            .keyboardType(.URL)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                    } header: {
+                        Text("Recipe URL")
+                    } footer: {
+                        Text("Paste the URL of any recipe website. Most major food sites are supported.")
+                    }
+
+                case .text:
+                    Section {
+                        TextEditor(text: $pastedText)
+                            .frame(minHeight: 200)
+                            .autocorrectionDisabled()
+                    } header: {
+                        Text("Recipe Text")
+                    } footer: {
+                        Text("Paste the recipe — including title, ingredients, and instructions. The more detail you include, the better the import.")
+                    }
                 }
 
                 if isImporting {
                     Section {
-                        HStack {
+                        HStack(spacing: 12) {
                             ProgressView()
-                                .padding(.trailing, 8)
-                            Text("Importing recipe…")
-                                .foregroundStyle(.secondary)
+                            Text("Importing recipe…").foregroundStyle(.secondary)
                         }
                     }
                 }
 
                 if let error = errorMessage {
                     Section {
-                        Text(error)
-                            .foregroundStyle(.red)
-                            .font(.callout)
+                        Text(error).foregroundStyle(.red).font(.callout)
                     }
                 }
             }
-            .navigationTitle("Import from URL")
+            .navigationTitle("Import Recipe")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .disabled(isImporting)
+                    Button("Cancel") { dismiss() }.disabled(isImporting)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Import") {
                         Task { await performImport() }
                     }
-                    .disabled(urlText.trimmingCharacters(in: .whitespaces).isEmpty || isImporting)
+                    .disabled(!canImport || isImporting)
                 }
             }
         }
@@ -163,12 +193,22 @@ struct ImportRecipeFromURLSheet: View {
 
     private func performImport() async {
         guard let token = auth.accessToken else { return }
-        let trimmed = urlText.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
         isImporting = true
         errorMessage = nil
         do {
-            let recipe = try await vm.importRecipe(url: trimmed, token: token)
+            let recipe: Recipe
+            switch mode {
+            case .url:
+                recipe = try await vm.importRecipe(
+                    url: urlText.trimmingCharacters(in: .whitespaces),
+                    token: token
+                )
+            case .text:
+                recipe = try await vm.importRecipeFromText(
+                    pastedText.trimmingCharacters(in: .whitespaces),
+                    token: token
+                )
+            }
             dismiss()
             onSuccess(recipe)
         } catch {
