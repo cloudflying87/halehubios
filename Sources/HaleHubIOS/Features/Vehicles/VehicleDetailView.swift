@@ -31,6 +31,8 @@ struct VehicleDetailView: View {
     @State private var editingEvent: VehicleEvent? = nil
     @State private var detailEvent: VehicleEvent? = nil
     @State private var selectedSchedule: MaintenanceSchedule? = nil
+    @State private var peekEvent: VehicleEvent? = nil
+    @State private var showTrash = false
 
     var dueSchedules: [MaintenanceSchedule] { schedules.filter { $0.isDue } }
     var filteredEvents: [VehicleEvent] {
@@ -146,9 +148,12 @@ struct VehicleDetailView: View {
                                     .padding(.top, 4)
                                     ForEach(monthEvents) { event in
                                         EventCard(event: event, vehicle: vehicle) {
-                                            detailEvent = event
-                                        } onLongPress: {
+                                            // tap → edit
                                             editingEvent = event
+                                        } onLongPress: {
+                                            // long press → peek detail (handled via pressing state below)
+                                        } onPeek: { isPressing in
+                                            peekEvent = isPressing ? event : nil
                                         } onDelete: {
                                             Task { await deleteEvent(event) }
                                         }
@@ -167,6 +172,11 @@ struct VehicleDetailView: View {
             ToolbarItem(placement: .primaryAction) {
                 Button { showLogSheet = true } label: {
                     Label("Log Event", systemImage: "plus")
+                }
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Button("Recently Deleted", systemImage: "trash") {
+                    showTrash = true
                 }
             }
         }
@@ -194,6 +204,19 @@ struct VehicleDetailView: View {
                 Task { await loadData() }
             }
             .environmentObject(auth)
+        }
+        .sheet(isPresented: $showTrash) {
+            TrashView(vehicleId: vehicle.id) {
+                Task { await loadData() }
+            }
+            .environmentObject(auth)
+        }
+        .overlay {
+            if let peek = peekEvent {
+                EventPeekOverlay(event: peek, vehicle: vehicle) {
+                    peekEvent = nil
+                }
+            }
         }
         .task { await loadData() }
     }
@@ -602,6 +625,7 @@ struct EventCard: View {
     let vehicle: Vehicle
     let onTap: () -> Void
     let onLongPress: () -> Void
+    var onPeek: ((Bool) -> Void)? = nil
     var onDelete: (() -> Void)? = nil
 
     @State private var swipeOffset: CGFloat = 0
@@ -664,7 +688,9 @@ struct EventCard: View {
                         onTap()
                     }
                 }
-                .onLongPressGesture { onLongPress() }
+                .onLongPressGesture(minimumDuration: 0.4, pressing: { isPressing in
+                    onPeek?(isPressing)
+                }, perform: { onLongPress() })
         }
         .clipped()
     }
@@ -899,6 +925,91 @@ struct EditEventSheet: View {
             errorMessage = error.localizedDescription
         }
         isSaving = false
+    }
+}
+
+// MARK: - Event Peek Overlay
+
+struct EventPeekOverlay: View {
+    let event: VehicleEvent
+    let vehicle: Vehicle
+    var onDismiss: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture { onDismiss() }
+
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Image(systemName: event.eventIcon)
+                        .font(.title2)
+                        .foregroundStyle(eventColor)
+                    Text(eventTitle)
+                        .font(.headline)
+                    Spacer()
+                    Button { onDismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                            .font(.title3)
+                    }
+                }
+
+                Divider()
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    ForEach(statRows, id: \.0) { label, value in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(label).font(.caption).foregroundStyle(.secondary)
+                            Text(value).font(.subheadline.weight(.medium))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
+                if let notes = event.notes, !notes.isEmpty {
+                    Text(notes).font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            .padding(20)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+            .padding(.horizontal, 20)
+            .shadow(color: .black.opacity(0.2), radius: 20, y: 8)
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+        .animation(.easeOut(duration: 0.18), value: true)
+    }
+
+    private var eventColor: Color {
+        switch event.eventType {
+        case "gas": return .blue
+        case "maintenance": return .orange
+        case "outing": return .green
+        default: return .secondary
+        }
+    }
+
+    private var eventTitle: String {
+        switch event.eventType {
+        case "gas": return "Gas Fill-up"
+        case "maintenance": return event.maintenanceCategoryName ?? "Maintenance"
+        case "outing": return event.locationName ?? "Outing"
+        default: return event.eventType.capitalized
+        }
+    }
+
+    private var statRows: [(String, String)] {
+        var rows: [(String, String)] = []
+        rows.append(("Date", event.date.formatted(.dateTime.month().day().year())))
+        if let miles = event.miles { rows.append(("Odometer", "\(miles) mi")) }
+        if let hours = event.hours { rows.append(("Hours", String(format: "%.1f hr", hours))) }
+        if let gal = event.gallons { rows.append(("Gallons", String(format: "%.3f", gal))) }
+        if let ppg = event.pricePerGallon { rows.append(("Price/gal", String(format: "$%.3f", ppg))) }
+        if let cost = event.totalCost { rows.append(("Total cost", String(format: "$%.2f", cost))) }
+        if let mpg = event.milespergallon { rows.append(("MPG", String(format: "%.1f", mpg))) }
+        if let gph = event.gallonsperhour { rows.append(("GPH", String(format: "%.2f", gph))) }
+        return rows
     }
 }
 

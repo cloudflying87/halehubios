@@ -16,6 +16,7 @@
 		AA1234BB5678CCDD9900EEF1 /* ToteScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9988AA7766554433221100 /* ToteScannerView.swift */; };
 		AA11BB22CC33DD44EE55FF01 /* CreateToteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF66AA01 /* CreateToteSheet.swift */; };
 		CC44DD55EE66FF77AA88BB01 /* EditToteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD55EE66FF77AA88BB99CC01 /* EditToteSheet.swift */; };
+		EE55FF66AA77BB88CC99DD01 /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF66AA77BB88CC99DD00EE01 /* TrashView.swift */; };
 		CC44DD55EE66FF77AA88BB02 /* QRBatchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD55EE66FF77AA88BB99CC02 /* QRBatchSheet.swift */; };
 		CC44DD55EE66FF77AA88BB03 /* LetterEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD55EE66FF77AA88BB99CC03 /* LetterEditorSheet.swift */; };
 		AA11BB22CC33DD44EE55FF02 /* ResourceEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF66AA02 /* ResourceEditorSheet.swift */; };
@@ -120,6 +121,7 @@
 		BB9988AA7766554433221100 /* ToteScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToteScannerView.swift; sourceTree = "<group>"; };
 		BB22CC33DD44EE55FF66AA01 /* CreateToteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateToteSheet.swift; sourceTree = "<group>"; };
 		DD55EE66FF77AA88BB99CC01 /* EditToteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditToteSheet.swift; sourceTree = "<group>"; };
+		FF66AA77BB88CC99DD00EE01 /* TrashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
 		DD55EE66FF77AA88BB99CC02 /* QRBatchSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRBatchSheet.swift; sourceTree = "<group>"; };
 		DD55EE66FF77AA88BB99CC03 /* LetterEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LetterEditorSheet.swift; sourceTree = "<group>"; };
 		BB22CC33DD44EE55FF66AA02 /* ResourceEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceEditorSheet.swift; sourceTree = "<group>"; };
@@ -210,6 +212,7 @@
 			isa = PBXGroup;
 			children = (
 				026B9CBC27B5BDAB71949F45 /* LogEventSheet.swift */,
+				FF66AA77BB88CC99DD00EE01 /* TrashView.swift */,
 				9CD4130D14F56C5404DD4F9D /* MaintenanceHistoryView.swift */,
 				D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */,
 				2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */,
@@ -462,6 +465,7 @@
 				AA11BB22CC33DD44EE55FF02 /* ResourceEditorSheet.swift in Sources */,
 				AA11BB22CC33DD44EE55FF03 /* QRCodeEditSheet.swift in Sources */,
 				CC44DD55EE66FF77AA88BB01 /* EditToteSheet.swift in Sources */,
+				EE55FF66AA77BB88CC99DD01 /* TrashView.swift in Sources */,
 				CC44DD55EE66FF77AA88BB02 /* QRBatchSheet.swift in Sources */,
 				CC44DD55EE66FF77AA88BB03 /* LetterEditorSheet.swift in Sources */,
 				F5311CBEC7A613351D674BAE /* AuthManager.swift in Sources */,

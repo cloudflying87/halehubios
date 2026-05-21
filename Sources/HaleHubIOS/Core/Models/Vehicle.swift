@@ -50,6 +50,8 @@ struct VehicleEvent: Identifiable, Codable, Hashable, Sendable {
     let locationName: String?
     let notes: String?
     let createdAt: Date?
+    let isDeleted: Bool?
+    let deletedAt: Date?
 
     var eventIcon: String {
         switch eventType {
