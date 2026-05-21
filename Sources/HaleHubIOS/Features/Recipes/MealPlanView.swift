@@ -318,8 +318,7 @@ struct ShoppingSessionSheet: View {
             )
             session = s
             signatureChanged = s.signatureChanged ?? false
-            // Pre-select all pending items
-            selectedItemIds = Set(s.pendingItems.map { $0.id.uuidString })
+            selectedItemIds = []   // start unchecked so each store gets only what user picks
             stage = s.isComplete ? .complete : .active
             await loadLists(token: token)
         } catch {
@@ -367,15 +366,7 @@ struct ShoppingSessionSheet: View {
                 token: token
             )
             session = updatedSession
-            // Pre-select all remaining pending items for next round
-            selectedItemIds = Set(updatedSession.pendingItems.map { $0.id.uuidString })
-
-            if updatedSession.pendingItems.isEmpty {
-                // Auto-complete when nothing left
-                let completed = try? await vm.completeSession(planId: plan.id.uuidString, token: token)
-                if let completed { session = completed }
-                stage = .complete
-            }
+            selectedItemIds = []   // clear so next store starts fresh
         } catch {
             errorMessage = error.localizedDescription
         }
