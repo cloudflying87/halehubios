@@ -51,6 +51,7 @@ struct ShoppingSessionSheet: View {
                 }
             }
         }
+        .task { await autoResume() }
     }
 
     // MARK: Configure View (first time / after reset)
@@ -304,6 +305,38 @@ struct ShoppingSessionSheet: View {
     }
 
     // MARK: Actions
+
+    private func autoResume() async {
+        // If a session is already in progress for this plan, skip the configure
+        // screen and jump straight to the active items view.
+        guard let token = auth.accessToken else { return }
+        stage = .loading
+        do {
+            // Use a GET-style probe: POST with default filters — if session exists,
+            // the server returns it unchanged regardless of filter params.
+            let s = try await vm.createOrResumeSession(
+                planId: plan.id.uuidString,
+                skipStaples: skipStaples,
+                skipPantry: skipPantry,
+                token: token
+            )
+            // Only auto-jump if the session was already in progress (has items).
+            // A brand-new session (created just now) goes to configure so the
+            // user can set filters before committing.
+            if !s.items.isEmpty {
+                session = s
+                signatureChanged = s.signatureChanged ?? false
+                selectedItemIds = []
+                stage = s.isComplete ? .complete : .active
+                await loadLists(token: token)
+            } else {
+                stage = .configure
+            }
+        } catch {
+            // No existing session or network error — show configure
+            stage = .configure
+        }
+    }
 
     private func startSession() async {
         guard let token = auth.accessToken else { return }
