@@ -8,30 +8,27 @@
 
 /* Begin PBXBuildFile section */
 		02C04EC24E37CB558298C065 /* FinanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3E0F5A841DEE102A2A748E9 /* FinanceView.swift */; };
+		0B277FF382202D8663836D1A /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5659E674164A8619F674A025 /* TrashView.swift */; };
 		10AA929077617858F9C0033D /* ShoppingListsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 082F8360E610399CB9791E01 /* ShoppingListsView.swift */; };
 		150DF4647E3F54110B019C19 /* VehiclesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */; };
 		197269BDB738EF7DC058D031 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8846379DD0DC0029F8B00B6 /* APIClient.swift */; };
 		28BB62C71B132B865695D054 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 10D050A0AA135EA42867348B /* Assets.xcassets */; };
 		309D4E2822316C8A2AA73276 /* AddToteItemSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E42C92988E41BEC50BEFC7 /* AddToteItemSheet.swift */; };
-		AA1234BB5678CCDD9900EEF1 /* ToteScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9988AA7766554433221100 /* ToteScannerView.swift */; };
-		AA11BB22CC33DD44EE55FF01 /* CreateToteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF66AA01 /* CreateToteSheet.swift */; };
-		CC44DD55EE66FF77AA88BB01 /* EditToteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD55EE66FF77AA88BB99CC01 /* EditToteSheet.swift */; };
-		EE55FF66AA77BB88CC99DD01 /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF66AA77BB88CC99DD00EE01 /* TrashView.swift */; };
-		CC44DD55EE66FF77AA88BB02 /* QRBatchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD55EE66FF77AA88BB99CC02 /* QRBatchSheet.swift */; };
-		CC44DD55EE66FF77AA88BB03 /* LetterEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD55EE66FF77AA88BB99CC03 /* LetterEditorSheet.swift */; };
-		AA11BB22CC33DD44EE55FF02 /* ResourceEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF66AA02 /* ResourceEditorSheet.swift */; };
-		AA11BB22CC33DD44EE55FF03 /* QRCodeEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF66AA03 /* QRCodeEditSheet.swift */; };
 		3D9A70283B1418D66C2EB770 /* Vehicle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9E73A2B5915D0510398991 /* Vehicle.swift */; };
 		3F50CD98FA91662D30597592 /* TotesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C4CCC6D185F3EE25128D029 /* TotesListView.swift */; };
+		4024F5BF62140807257E8FCA /* EditToteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E0D226A300933A7846E042 /* EditToteSheet.swift */; };
 		436A4F3CF403E3EDFC47B773 /* Tote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26CF0181480A7ED66F4D253B /* Tote.swift */; };
 		498E62194638AF42D4D5F4A1 /* HaleHubIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9989920930EEF68FF24A99 /* HaleHubIOSApp.swift */; };
 		4BED8439C68597ED905E5518 /* HaleNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AA1D7CF6070F458F822E505 /* HaleNotification.swift */; };
 		4F3EE32CA697D673557F7F60 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D322D12691A62F28635D061 /* LoginView.swift */; };
+		5153DFD64BF9325FEFC74E64 /* LetterEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EE48589C34175A306051197 /* LetterEditorSheet.swift */; };
 		574B0D1BD4CBC4B98428F106 /* LocalAuthentication.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C309AC162DA76ACDF7A95C8 /* LocalAuthentication.framework */; };
 		5855076BEE4FCBA24B0E1E16 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC6F675794F03BA9FEA90968 /* AccountView.swift */; };
+		5CCB5B17B30F93AED9AA0484 /* QRBatchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 977944FB66BE48718D1183B2 /* QRBatchSheet.swift */; };
 		5D4139CDA8E7C970FFAF15AF /* ResourcesHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C93425E6A35DBEE8FE9ACBA /* ResourcesHubView.swift */; };
 		5D5BAB0D28F39AD5E2F28089 /* RecipeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE837B2ED56DF5798D132C3 /* RecipeDetailView.swift */; };
 		63543260E7AFF283D98B27F7 /* QRCodeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D90AD79C3F6F7C3CC8B97F8 /* QRCodeDetailView.swift */; };
+		6B9745F7E8ADD1F8F0B67D7E /* CreateToteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57F526FD0101A9167FD1673 /* CreateToteSheet.swift */; };
 		6BA53ED787AD869D98668CFF /* FinanceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1AD9D996E827387C9F71922 /* FinanceViewModel.swift */; };
 		70570EDAB2447292C0FE276F /* RecipesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24B721CFDEC7BEE72927514 /* RecipesViewModel.swift */; };
 		7632ECDEF899542D9D899CCC /* ToteDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45ACFCECF85237B26C0F6F99 /* ToteDetailView.swift */; };
@@ -46,12 +43,18 @@
 		91A6E494EED5EEBEADD0A03C /* VehicleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A0DF54CE532F5E9E5E92AE /* VehicleDetailView.swift */; };
 		9280B153050AE4AB40A9730B /* ShoppingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82E07456A55F649FBB9C8448 /* ShoppingViewModel.swift */; };
 		92CB91D03662E6106C02EED7 /* RecipesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38E93521147DA51107C96ABA /* RecipesListView.swift */; };
+		94D27B0D068B8688771F729B /* ResourceEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B850A78801A49015E962D7B /* ResourceEditorSheet.swift */; };
 		9B9348553D9A7A0E97A6E5C9 /* LogEventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 026B9CBC27B5BDAB71949F45 /* LogEventSheet.swift */; };
 		9C3F6E3B9748C95BBB6AAD63 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43CB5F5CE1DA94DB05CEFAB1 /* MainTabView.swift */; };
+		A94D98CBBDCCC001230A0FC1 /* AddReadingEntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D0F8FA6169AFB6A1408AC1 /* AddReadingEntrySheet.swift */; };
+		A9D2FFBFE877D843C3A6F456 /* ReadingDayDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1979192C8C8DBC508631A28E /* ReadingDayDetailView.swift */; };
+		B14F46530706653C689340C6 /* ToteScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12C5A8D410A7C7F5827EFDD /* ToteScannerView.swift */; };
+		B34DAAA824775C2B8FB9EDE7 /* QRCodeEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EE0AA57778F672C50F6FB1B /* QRCodeEditSheet.swift */; };
 		B64A219F2C54619AD786BF54 /* VehiclesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */; };
 		BCDE5F88E2E4D735D3B5F9FB /* MealPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 620CC00F94FEC794D68339CD /* MealPlanView.swift */; };
 		C55ECDB11898418FC61A3DBB /* OutingsAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */; };
 		CC498B37E53DB67811F88BAD /* LetterDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAAD29803F12391B72A484FC /* LetterDetailView.swift */; };
+		D00DF8718C2DD45538075682 /* ReadingCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7FA5E2300153CB3E9C7B100 /* ReadingCalendarView.swift */; };
 		D134B3EE71C1CE50594C9311 /* QRCodeCreateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C6603A1B4CEB94E3C970DF7 /* QRCodeCreateSheet.swift */; };
 		D467E8EA2E3144B396FD8895 /* RecipeEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FCDF504AF0FF0F7B2F22CC9 /* RecipeEditView.swift */; };
 		D4DAB7C569314B2B4EC325EF /* TimeCalculatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54172C50FB914E1F40A7B76E /* TimeCalculatorView.swift */; };
@@ -78,25 +81,32 @@
 		0C93425E6A35DBEE8FE9ACBA /* ResourcesHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourcesHubView.swift; sourceTree = "<group>"; };
 		0D322D12691A62F28635D061 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		10D050A0AA135EA42867348B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1979192C8C8DBC508631A28E /* ReadingDayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingDayDetailView.swift; sourceTree = "<group>"; };
 		1DA68F684F0A477BD7D1FEB9 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		1EE48589C34175A306051197 /* LetterEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LetterEditorSheet.swift; sourceTree = "<group>"; };
 		1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesListView.swift; sourceTree = "<group>"; };
 		1FCDF504AF0FF0F7B2F22CC9 /* RecipeEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeEditView.swift; sourceTree = "<group>"; };
 		264657A8853B85BCCFCEA2EA /* CompoundInterestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompoundInterestView.swift; sourceTree = "<group>"; };
 		26CF0181480A7ED66F4D253B /* Tote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tote.swift; sourceTree = "<group>"; };
 		2AA1D7CF6070F458F822E505 /* HaleNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaleNotification.swift; sourceTree = "<group>"; };
 		2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartsLookupView.swift; sourceTree = "<group>"; };
+		37E0D226A300933A7846E042 /* EditToteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditToteSheet.swift; sourceTree = "<group>"; };
 		38E93521147DA51107C96ABA /* RecipesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipesListView.swift; sourceTree = "<group>"; };
 		43CB5F5CE1DA94DB05CEFAB1 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		45ACFCECF85237B26C0F6F99 /* ToteDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToteDetailView.swift; sourceTree = "<group>"; };
 		4A4007424790D9C4CD3E4E10 /* ShoppingListDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListDetailView.swift; sourceTree = "<group>"; };
 		4C6603A1B4CEB94E3C970DF7 /* QRCodeCreateSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeCreateSheet.swift; sourceTree = "<group>"; };
 		4D91DAB9A1CAE1BD99CF0623 /* CookModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookModeView.swift; sourceTree = "<group>"; };
+		4EE0AA57778F672C50F6FB1B /* QRCodeEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeEditSheet.swift; sourceTree = "<group>"; };
 		4F474D48454B3A561B5D58DA /* QRCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCode.swift; sourceTree = "<group>"; };
 		54172C50FB914E1F40A7B76E /* TimeCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeCalculatorView.swift; sourceTree = "<group>"; };
+		5659E674164A8619F674A025 /* TrashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
+		56D0F8FA6169AFB6A1408AC1 /* AddReadingEntrySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddReadingEntrySheet.swift; sourceTree = "<group>"; };
 		620CC00F94FEC794D68339CD /* MealPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlanView.swift; sourceTree = "<group>"; };
 		6EEFA3D48D7D75683FDAAF83 /* Finance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Finance.swift; sourceTree = "<group>"; };
 		74B687332A40D9FD2B517A53 /* Resource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Resource.swift; sourceTree = "<group>"; };
 		78FB1010716375E4D43CFAC4 /* NotificationsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsViewModel.swift; sourceTree = "<group>"; };
+		7B850A78801A49015E962D7B /* ResourceEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceEditorSheet.swift; sourceTree = "<group>"; };
 		7D90AD79C3F6F7C3CC8B97F8 /* QRCodeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeDetailView.swift; sourceTree = "<group>"; };
 		82E07456A55F649FBB9C8448 /* ShoppingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingViewModel.swift; sourceTree = "<group>"; };
 		875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesViewModel.swift; sourceTree = "<group>"; };
@@ -104,10 +114,13 @@
 		8C4CCC6D185F3EE25128D029 /* TotesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TotesListView.swift; sourceTree = "<group>"; };
 		8F9E73A2B5915D0510398991 /* Vehicle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vehicle.swift; sourceTree = "<group>"; };
 		96E1670807EE686A9B7E7683 /* ShoppingList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingList.swift; sourceTree = "<group>"; };
+		977944FB66BE48718D1183B2 /* QRBatchSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRBatchSheet.swift; sourceTree = "<group>"; };
 		9A1199889C552A49F7DD3EDC /* ResourceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceDetailView.swift; sourceTree = "<group>"; };
 		9BDCABC5B1F3AF0D5B94C773 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		9CD4130D14F56C5404DD4F9D /* MaintenanceHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaintenanceHistoryView.swift; sourceTree = "<group>"; };
 		9FBA0CC3BA5FFC5DB4221961 /* ReadingPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPlan.swift; sourceTree = "<group>"; };
+		A12C5A8D410A7C7F5827EFDD /* ToteScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToteScannerView.swift; sourceTree = "<group>"; };
+		A57F526FD0101A9167FD1673 /* CreateToteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateToteSheet.swift; sourceTree = "<group>"; };
 		A9562ADACDD9013D314DD553 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B5759ACDD003F849257746C0 /* Recipe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recipe.swift; sourceTree = "<group>"; };
 		BAAD29803F12391B72A484FC /* LetterDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LetterDetailView.swift; sourceTree = "<group>"; };
@@ -115,22 +128,15 @@
 		C8846379DD0DC0029F8B00B6 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		D24B721CFDEC7BEE72927514 /* RecipesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipesViewModel.swift; sourceTree = "<group>"; };
 		D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutingsAnalyticsView.swift; sourceTree = "<group>"; };
-		D77C2BBF0F9F154CA449BA91 /* HaleHubIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HaleHubIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D77C2BBF0F9F154CA449BA91 /* HaleHubIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HaleHubIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E1AD9D996E827387C9F71922 /* FinanceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceViewModel.swift; sourceTree = "<group>"; };
 		E2E42C92988E41BEC50BEFC7 /* AddToteItemSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToteItemSheet.swift; sourceTree = "<group>"; };
-		BB9988AA7766554433221100 /* ToteScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToteScannerView.swift; sourceTree = "<group>"; };
-		BB22CC33DD44EE55FF66AA01 /* CreateToteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateToteSheet.swift; sourceTree = "<group>"; };
-		DD55EE66FF77AA88BB99CC01 /* EditToteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditToteSheet.swift; sourceTree = "<group>"; };
-		FF66AA77BB88CC99DD00EE01 /* TrashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
-		DD55EE66FF77AA88BB99CC02 /* QRBatchSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRBatchSheet.swift; sourceTree = "<group>"; };
-		DD55EE66FF77AA88BB99CC03 /* LetterEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LetterEditorSheet.swift; sourceTree = "<group>"; };
-		BB22CC33DD44EE55FF66AA02 /* ResourceEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceEditorSheet.swift; sourceTree = "<group>"; };
-		BB22CC33DD44EE55FF66AA03 /* QRCodeEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeEditSheet.swift; sourceTree = "<group>"; };
 		E3A0DF54CE532F5E9E5E92AE /* VehicleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleDetailView.swift; sourceTree = "<group>"; };
 		EB8B4D5F0F791D89EC2FB3A0 /* LoanCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanCalculatorView.swift; sourceTree = "<group>"; };
 		EBF25113EBEDA00D06F38AC3 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		EC6F675794F03BA9FEA90968 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		EDE837B2ED56DF5798D132C3 /* RecipeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeDetailView.swift; sourceTree = "<group>"; };
+		F7FA5E2300153CB3E9C7B100 /* ReadingCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingCalendarView.swift; sourceTree = "<group>"; };
 		FE9989920930EEF68FF24A99 /* HaleHubIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaleHubIOSApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -160,9 +166,9 @@
 			isa = PBXGroup;
 			children = (
 				BAAD29803F12391B72A484FC /* LetterDetailView.swift */,
-				DD55EE66FF77AA88BB99CC03 /* LetterEditorSheet.swift */,
+				1EE48589C34175A306051197 /* LetterEditorSheet.swift */,
 				9A1199889C552A49F7DD3EDC /* ResourceDetailView.swift */,
-				BB22CC33DD44EE55FF66AA02 /* ResourceEditorSheet.swift */,
+				7B850A78801A49015E962D7B /* ResourceEditorSheet.swift */,
 				0C93425E6A35DBEE8FE9ACBA /* ResourcesHubView.swift */,
 			);
 			path = Resources;
@@ -198,11 +204,11 @@
 			isa = PBXGroup;
 			children = (
 				E2E42C92988E41BEC50BEFC7 /* AddToteItemSheet.swift */,
-				BB22CC33DD44EE55FF66AA01 /* CreateToteSheet.swift */,
-				DD55EE66FF77AA88BB99CC01 /* EditToteSheet.swift */,
-				DD55EE66FF77AA88BB99CC02 /* QRBatchSheet.swift */,
+				A57F526FD0101A9167FD1673 /* CreateToteSheet.swift */,
+				37E0D226A300933A7846E042 /* EditToteSheet.swift */,
+				977944FB66BE48718D1183B2 /* QRBatchSheet.swift */,
 				45ACFCECF85237B26C0F6F99 /* ToteDetailView.swift */,
-				BB9988AA7766554433221100 /* ToteScannerView.swift */,
+				A12C5A8D410A7C7F5827EFDD /* ToteScannerView.swift */,
 				8C4CCC6D185F3EE25128D029 /* TotesListView.swift */,
 			);
 			path = Totes;
@@ -212,10 +218,10 @@
 			isa = PBXGroup;
 			children = (
 				026B9CBC27B5BDAB71949F45 /* LogEventSheet.swift */,
-				FF66AA77BB88CC99DD00EE01 /* TrashView.swift */,
 				9CD4130D14F56C5404DD4F9D /* MaintenanceHistoryView.swift */,
 				D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */,
 				2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */,
+				5659E674164A8619F674A025 /* TrashView.swift */,
 				E3A0DF54CE532F5E9E5E92AE /* VehicleDetailView.swift */,
 				1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */,
 				875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */,
@@ -377,7 +383,7 @@
 			children = (
 				4C6603A1B4CEB94E3C970DF7 /* QRCodeCreateSheet.swift */,
 				7D90AD79C3F6F7C3CC8B97F8 /* QRCodeDetailView.swift */,
-				BB22CC33DD44EE55FF66AA03 /* QRCodeEditSheet.swift */,
+				4EE0AA57778F672C50F6FB1B /* QRCodeEditSheet.swift */,
 				8B6C595536292C2EDCFD5728 /* QRCodesView.swift */,
 			);
 			path = QRCodes;
@@ -386,6 +392,9 @@
 		FE35827F02002831CB9DA466 /* Reading */ = {
 			isa = PBXGroup;
 			children = (
+				56D0F8FA6169AFB6A1408AC1 /* AddReadingEntrySheet.swift */,
+				F7FA5E2300153CB3E9C7B100 /* ReadingCalendarView.swift */,
+				1979192C8C8DBC508631A28E /* ReadingDayDetailView.swift */,
 				040BCD9171AD5B0D521CFD48 /* ReadingView.swift */,
 			);
 			path = Reading;
@@ -421,6 +430,8 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = 3B3D8606F7461AA679980847 /* Build configuration list for PBXProject "HaleHubIOS" */;
 			developmentRegion = en;
@@ -459,25 +470,21 @@
 			files = (
 				197269BDB738EF7DC058D031 /* APIClient.swift in Sources */,
 				5855076BEE4FCBA24B0E1E16 /* AccountView.swift in Sources */,
+				A94D98CBBDCCC001230A0FC1 /* AddReadingEntrySheet.swift in Sources */,
 				309D4E2822316C8A2AA73276 /* AddToteItemSheet.swift in Sources */,
-				AA1234BB5678CCDD9900EEF1 /* ToteScannerView.swift in Sources */,
-				AA11BB22CC33DD44EE55FF01 /* CreateToteSheet.swift in Sources */,
-				AA11BB22CC33DD44EE55FF02 /* ResourceEditorSheet.swift in Sources */,
-				AA11BB22CC33DD44EE55FF03 /* QRCodeEditSheet.swift in Sources */,
-				CC44DD55EE66FF77AA88BB01 /* EditToteSheet.swift in Sources */,
-				EE55FF66AA77BB88CC99DD01 /* TrashView.swift in Sources */,
-				CC44DD55EE66FF77AA88BB02 /* QRBatchSheet.swift in Sources */,
-				CC44DD55EE66FF77AA88BB03 /* LetterEditorSheet.swift in Sources */,
 				F5311CBEC7A613351D674BAE /* AuthManager.swift in Sources */,
 				823F50914D9327257F393EA2 /* CacheManager.swift in Sources */,
 				EEAB2FADBDA87D90CA2F7687 /* CompoundInterestView.swift in Sources */,
 				DE32D7A36A038D9603EA2763 /* CookModeView.swift in Sources */,
+				6B9745F7E8ADD1F8F0B67D7E /* CreateToteSheet.swift in Sources */,
+				4024F5BF62140807257E8FCA /* EditToteSheet.swift in Sources */,
 				8B6ED2837A457F2220C99BE7 /* Finance.swift in Sources */,
 				02C04EC24E37CB558298C065 /* FinanceView.swift in Sources */,
 				6BA53ED787AD869D98668CFF /* FinanceViewModel.swift in Sources */,
 				498E62194638AF42D4D5F4A1 /* HaleHubIOSApp.swift in Sources */,
 				4BED8439C68597ED905E5518 /* HaleNotification.swift in Sources */,
 				CC498B37E53DB67811F88BAD /* LetterDetailView.swift in Sources */,
+				5153DFD64BF9325FEFC74E64 /* LetterEditorSheet.swift in Sources */,
 				D5D1582EF5D926ED63EC7881 /* LoanCalculatorView.swift in Sources */,
 				9B9348553D9A7A0E97A6E5C9 /* LogEventSheet.swift in Sources */,
 				4F3EE32CA697D673557F7F60 /* LoginView.swift in Sources */,
@@ -489,10 +496,14 @@
 				D54E2E36A819178621728593 /* NotificationsViewModel.swift in Sources */,
 				C55ECDB11898418FC61A3DBB /* OutingsAnalyticsView.swift in Sources */,
 				89A04B5E9B416B66376FBC9E /* PartsLookupView.swift in Sources */,
+				5CCB5B17B30F93AED9AA0484 /* QRBatchSheet.swift in Sources */,
 				FEF7F2DD496245122391D452 /* QRCode.swift in Sources */,
 				D134B3EE71C1CE50594C9311 /* QRCodeCreateSheet.swift in Sources */,
 				63543260E7AFF283D98B27F7 /* QRCodeDetailView.swift in Sources */,
+				B34DAAA824775C2B8FB9EDE7 /* QRCodeEditSheet.swift in Sources */,
 				F87A49ECB07BF9E37E5D1260 /* QRCodesView.swift in Sources */,
+				D00DF8718C2DD45538075682 /* ReadingCalendarView.swift in Sources */,
+				A9D2FFBFE877D843C3A6F456 /* ReadingDayDetailView.swift in Sources */,
 				87A636885F295E76F4D96781 /* ReadingPlan.swift in Sources */,
 				E939161D079481F668443B56 /* ReadingView.swift in Sources */,
 				F83EA4C8B97FAAF83529BB10 /* Recipe.swift in Sources */,
@@ -502,6 +513,7 @@
 				70570EDAB2447292C0FE276F /* RecipesViewModel.swift in Sources */,
 				E5F537F0BD6951338006BB07 /* Resource.swift in Sources */,
 				DF6FD95B813D135A81B599C7 /* ResourceDetailView.swift in Sources */,
+				94D27B0D068B8688771F729B /* ResourceEditorSheet.swift in Sources */,
 				5D4139CDA8E7C970FFAF15AF /* ResourcesHubView.swift in Sources */,
 				88708811D5F23C9ACB63CCFF /* ShoppingList.swift in Sources */,
 				781EE9C9FD1BF73B1123495B /* ShoppingListDetailView.swift in Sources */,
@@ -510,7 +522,9 @@
 				D4DAB7C569314B2B4EC325EF /* TimeCalculatorView.swift in Sources */,
 				436A4F3CF403E3EDFC47B773 /* Tote.swift in Sources */,
 				7632ECDEF899542D9D899CCC /* ToteDetailView.swift in Sources */,
+				B14F46530706653C689340C6 /* ToteScannerView.swift in Sources */,
 				3F50CD98FA91662D30597592 /* TotesListView.swift in Sources */,
+				0B277FF382202D8663836D1A /* TrashView.swift in Sources */,
 				3D9A70283B1418D66C2EB770 /* Vehicle.swift in Sources */,
 				91A6E494EED5EEBEADD0A03C /* VehicleDetailView.swift in Sources */,
 				B64A219F2C54619AD786BF54 /* VehiclesListView.swift in Sources */,
@@ -555,7 +569,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -584,7 +598,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 473M622LJJ;
 				INFOPLIST_FILE = Sources/HaleHubIOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -631,7 +644,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -667,7 +680,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 473M622LJJ;
 				INFOPLIST_FILE = Sources/HaleHubIOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (

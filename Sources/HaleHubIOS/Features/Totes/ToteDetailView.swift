@@ -128,6 +128,7 @@ struct ToteDetailView: View {
     @State private var showPhotoActionSheet = false
     @State private var photoActionSlot: Int = 1
     @State private var showCamera = false
+    @State private var expandedPhoto: ExpandedPhoto? = nil
 
     var body: some View {
         Group {
@@ -243,6 +244,11 @@ struct ToteDetailView: View {
                                            set: { if !$0 { vm.error = nil } })) {
             Button("OK") { vm.error = nil }
         } message: { Text(vm.error ?? "") }
+        .fullScreenCover(item: $expandedPhoto) { photo in
+            ExpandedPhotoView(urlString: photo.url) {
+                expandedPhoto = nil
+            }
+        }
     }
 
     @ViewBuilder
@@ -347,6 +353,11 @@ struct ToteDetailView: View {
                             .frame(width: 120, height: 120)
                             .clipped()
                             .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .simultaneousGesture(
+                                LongPressGesture(minimumDuration: 0.5).onEnded { _ in
+                                    expandedPhoto = ExpandedPhoto(url: urlString)
+                                }
+                            )
                     case .failure:
                         placeholderSlot(slot: slot)
                     default:
@@ -373,6 +384,53 @@ struct ToteDetailView: View {
                 Text("Photo \(slot)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+// MARK: - Expanded Photo
+
+private struct ExpandedPhoto: Identifiable {
+    let id = UUID()
+    let url: String
+}
+
+private struct ExpandedPhotoView: View {
+    let urlString: String
+    let onDismiss: () -> Void
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Color.black.ignoresSafeArea()
+
+            if let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    case .failure:
+                        Image(systemName: "photo.slash")
+                            .font(.system(size: 56))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    default:
+                        ProgressView()
+                            .tint(.white)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+            }
+
+            Button(action: onDismiss) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.white)
+                    .shadow(radius: 4)
+                    .padding(20)
             }
         }
     }

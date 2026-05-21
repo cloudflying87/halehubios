@@ -65,3 +65,30 @@ struct ReadingToggleResponse: Codable, Sendable {
     let daysBehind: Int?
     let currentDayNumber: Int?
 }
+
+struct BibleBook: Identifiable, Codable, Sendable, Hashable {
+    let id: Int
+    let name: String
+    let abbreviation: String
+    let testament: String  // "OT" or "NT"
+
+    static func == (lhs: BibleBook, rhs: BibleBook) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+struct ChunkedDaysResponse: Codable, Sendable {
+    let chunk: Int
+    let totalChunks: Int
+    let totalDays: Int
+    let daysPerChunk: Int
+    let days: [ReadingDay]
+}
+
+struct AddReadingEntryRequest: Encodable, Sendable {
+    let bookId: Int
+    let chapterStart: Int
+    let verseStart: Int
+    let chapterEnd: Int
+    let verseEnd: Int
+    let notes: String
+}
