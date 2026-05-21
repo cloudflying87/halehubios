@@ -54,6 +54,7 @@ struct LetterDetailView: View {
     @State private var rsvpNotes = ""
     @State private var showRSVPForm = false
     @State private var selectedPhoto: LetterPhoto?
+    @State private var showEdit = false
 
     var body: some View {
         Group {
@@ -79,8 +80,23 @@ struct LetterDetailView: View {
         }
         .navigationTitle(letter.title)
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            if let detail = vm.detail, detail.canEdit {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Edit") { showEdit = true }
+                }
+            }
+        }
         .sheet(item: $selectedPhoto) { photo in
             PhotoFullScreenView(photo: photo)
+        }
+        .sheet(isPresented: $showEdit) {
+            if let detail = vm.detail {
+                LetterEditorSheet(mode: .edit(detail)) { updated in
+                    vm.detail = updated
+                }
+                .environmentObject(auth)
+            }
         }
         .task { await vm.load(slug: letter.slug, token: auth.accessToken ?? "") }
     }

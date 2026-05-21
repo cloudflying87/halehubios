@@ -52,6 +52,23 @@ class ToteDetailViewModel: ObservableObject {
         }
     }
 
+    func updateTote(id: String, updated: Tote, token: String) async {
+        guard let detail = toteDetail else { return }
+        toteDetail = ToteDetail(
+            id: detail.id,
+            name: updated.name,
+            location: updated.location,
+            locationNotes: updated.locationNotes,
+            itemCount: detail.itemCount,
+            dateSorted: detail.dateSorted,
+            qrCodeIdentifier: detail.qrCodeIdentifier,
+            notes: updated.notes,
+            photo1Url: detail.photo1Url,
+            photo2Url: detail.photo2Url,
+            items: detail.items
+        )
+    }
+
     func uploadPhoto(toteId: String, slot: Int, image: UIImage, token: String) async {
         guard let jpeg = image.jpegData(compressionQuality: 0.85) else { return }
         isUploadingPhoto = true
@@ -105,6 +122,7 @@ struct ToteDetailView: View {
 
     @StateObject private var vm = ToteDetailViewModel()
     @State private var showAddItem = false
+    @State private var showEdit = false
     @State private var photoPickerSlot: Int? = nil
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
 
@@ -132,12 +150,27 @@ struct ToteDetailView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showAddItem = true
-                } label: {
-                    Image(systemName: "plus")
+                HStack {
+                    if vm.toteDetail != nil {
+                        Button { showEdit = true } label: {
+                            Image(systemName: "pencil")
+                        }
+                    }
+                    Button {
+                        showAddItem = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .disabled(vm.categories.isEmpty)
                 }
-                .disabled(vm.categories.isEmpty)
+            }
+        }
+        .sheet(isPresented: $showEdit) {
+            if let detail = vm.toteDetail {
+                EditToteSheet(tote: detail) { updated in
+                    Task { await vm.updateTote(id: detail.id, updated: updated, token: auth.accessToken ?? "") }
+                }
+                .environmentObject(auth)
             }
         }
         .sheet(isPresented: $showAddItem) {

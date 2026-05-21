@@ -29,6 +29,8 @@ struct TotesListView: View {
     @State private var searchLocation: String = "all"
     @State private var showScanner = false
     @State private var scannedTote: Tote? = nil
+    @State private var showCreate = false
+    @State private var showQRBatch = false
 
     // Ordered location slugs that have at least one tote.
     private var presentLocations: [String] {
@@ -147,12 +149,34 @@ struct TotesListView: View {
                 }
                 .accessibilityLabel("Scan tote QR code")
             }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button("New Tote", systemImage: "shippingbox.badge.plus") {
+                        showCreate = true
+                    }
+                    Button("Print Blank QR Codes", systemImage: "printer") {
+                        showQRBatch = true
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
         }
         .sheet(isPresented: $showScanner) {
             ToteScannerSheet { tote in
                 scannedTote = tote
             }
             .environmentObject(auth)
+        }
+        .sheet(isPresented: $showCreate) {
+            CreateToteSheet(qrIdentifier: nil) { newTote in
+                vm.totes.insert(newTote, at: 0)
+                showCreate = false
+            }
+            .environmentObject(auth)
+        }
+        .sheet(isPresented: $showQRBatch) {
+            QRBatchSheet().environmentObject(auth)
         }
         .navigationDestination(item: $scannedTote) { tote in
             ToteDetailView(toteId: tote.id, toteName: tote.name)

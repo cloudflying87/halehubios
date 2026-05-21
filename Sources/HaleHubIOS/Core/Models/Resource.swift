@@ -96,6 +96,29 @@ struct ResourceArchiveRequest: Encodable, Sendable {
     let archived: Bool
 }
 
+// MARK: - Letter request bodies
+
+struct LetterDraft: Encodable, Sendable {
+    let title: String
+    let year: Int
+    let greetingMessage: String
+    let hasRsvp: Bool
+    let eventDate: String?
+    let eventTime: String
+    let eventLocation: String
+    let isActive: Bool
+}
+
+struct LetterPatch: Encodable, Sendable {
+    let title: String
+    let greetingMessage: String
+    let year: Int
+    let hasRsvp: Bool
+    let eventDate: String?
+    let eventTime: String
+    let eventLocation: String
+}
+
 // MARK: - Letter
 
 struct Letter: Identifiable, Codable, Sendable {

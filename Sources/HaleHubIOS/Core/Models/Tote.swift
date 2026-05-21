@@ -90,6 +90,15 @@ struct ToteScanResponse: Decodable, Sendable {
     }
 }
 
+// MARK: - Request body for PATCH /api/totes/{id}/
+
+struct EditToteRequest: Encodable, Sendable {
+    let name: String
+    let location: String
+    let locationNotes: String
+    let notes: String
+}
+
 // MARK: - Request body for POST /api/totes/
 
 struct CreateToteRequest: Encodable, Sendable {

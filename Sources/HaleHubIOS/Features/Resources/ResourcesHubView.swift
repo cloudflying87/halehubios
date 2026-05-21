@@ -46,9 +46,9 @@ struct ResourcesHubView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm = ResourcesHubViewModel()
     @State private var showCreateResource = false
+    @State private var showCreateLetter = false
 
-    // True if any resource allows editing (i.e., user is owner/adult)
-    private var canCreateResource: Bool {
+    private var canCreate: Bool {
         vm.resources.first?.canEdit ?? vm.letters.first?.canEdit ?? false
     }
 
@@ -64,9 +64,16 @@ struct ResourcesHubView: View {
         .navigationTitle("Resources & Letters")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            if canCreateResource {
+            if canCreate {
                 ToolbarItem(placement: .primaryAction) {
-                    Button { showCreateResource = true } label: {
+                    Menu {
+                        Button("New Resource", systemImage: "doc.text.badge.plus") {
+                            showCreateResource = true
+                        }
+                        Button("New Letter", systemImage: "envelope.badge.plus") {
+                            showCreateLetter = true
+                        }
+                    } label: {
                         Image(systemName: "plus")
                     }
                 }
@@ -74,6 +81,12 @@ struct ResourcesHubView: View {
         }
         .sheet(isPresented: $showCreateResource) {
             ResourceEditorSheet(mode: .create) { _ in
+                Task { await vm.load(token: auth.accessToken ?? "") }
+            }
+            .environmentObject(auth)
+        }
+        .sheet(isPresented: $showCreateLetter) {
+            LetterEditorSheet(mode: .create) { _ in
                 Task { await vm.load(token: auth.accessToken ?? "") }
             }
             .environmentObject(auth)

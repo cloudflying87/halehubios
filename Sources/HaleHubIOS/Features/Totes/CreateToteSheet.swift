@@ -2,9 +2,9 @@ import SwiftUI
 
 struct CreateToteSheet: View {
     @EnvironmentObject var auth: AuthManager
-    var qrIdentifier: String
+    var qrIdentifier: String?       // nil when creating without a scanned QR
     var onCreated: (Tote) -> Void
-    var onCancel: () -> Void
+    var onCancel: (() -> Void)?     // nil when presented as a regular sheet (dismiss handles it)
 
     @State private var name = ""
     @State private var location = "other"
@@ -27,23 +27,25 @@ struct CreateToteSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    HStack(spacing: 10) {
-                        Image(systemName: "qrcode")
-                            .foregroundStyle(Color.accentColor)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("QR Code Scanned")
-                                .font(.subheadline.weight(.medium))
-                            Text(qrIdentifier)
-                                .font(.caption.monospaced())
-                                .foregroundStyle(.secondary)
+                if let qr = qrIdentifier, !qr.isEmpty {
+                    Section {
+                        HStack(spacing: 10) {
+                            Image(systemName: "qrcode")
+                                .foregroundStyle(Color.accentColor)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("QR Code Scanned")
+                                    .font(.subheadline.weight(.medium))
+                                Text(qr)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        .padding(.vertical, 4)
+                    } header: {
+                        Text("New Tote")
+                    } footer: {
+                        Text("This QR code isn't linked to a tote yet. Fill in the details below to create one.")
                     }
-                    .padding(.vertical, 4)
-                } header: {
-                    Text("New Tote")
-                } footer: {
-                    Text("This QR code isn't linked to a tote yet. Fill in the details below to create one.")
                 }
 
                 Section("Name") {
@@ -77,7 +79,7 @@ struct CreateToteSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { onCancel() }
+                    Button("Cancel") { onCancel?() ?? dismiss() }
                         .disabled(isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -99,12 +101,13 @@ struct CreateToteSheet: View {
         isSaving = true
         error = nil
 
+        let trimmedQR = qrIdentifier?.trimmingCharacters(in: .whitespaces)
         let body = CreateToteRequest(
             name: name.trimmingCharacters(in: .whitespaces),
             location: location,
             locationNotes: locationNotes.trimmingCharacters(in: .whitespaces),
             notes: notes.trimmingCharacters(in: .whitespaces),
-            qrCodeIdentifier: qrIdentifier.isEmpty ? nil : qrIdentifier
+            qrCodeIdentifier: (trimmedQR?.isEmpty == false) ? trimmedQR : nil
         )
 
         do {
