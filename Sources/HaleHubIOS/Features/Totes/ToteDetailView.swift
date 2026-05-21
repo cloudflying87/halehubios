@@ -125,6 +125,9 @@ struct ToteDetailView: View {
     @State private var showEdit = false
     @State private var photoPickerSlot: Int? = nil
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
+    @State private var showPhotoActionSheet = false
+    @State private var photoActionSlot: Int = 1
+    @State private var showCamera = false
 
     var body: some View {
         Group {
@@ -197,6 +200,16 @@ struct ToteDetailView: View {
             }
             .environmentObject(auth)
         }
+        .confirmationDialog("Add Photo", isPresented: $showPhotoActionSheet, titleVisibility: .visible) {
+            Button("Take Photo") {
+                photoActionSlot = photoActionSlot   // already set
+                showCamera = true
+            }
+            Button("Choose from Library") {
+                photoPickerSlot = photoActionSlot
+            }
+            Button("Cancel", role: .cancel) {}
+        }
         .photosPicker(
             isPresented: Binding(
                 get: { photoPickerSlot != nil },
@@ -205,6 +218,14 @@ struct ToteDetailView: View {
             selection: $selectedPhotoItem,
             matching: .images
         )
+        .sheet(isPresented: $showCamera) {
+            let slot = photoActionSlot
+            CameraPickerView { image in
+                Task {
+                    await vm.uploadPhoto(toteId: toteId, slot: slot, image: image, token: auth.accessToken ?? "")
+                }
+            }
+        }
         .onChange(of: selectedPhotoItem) { _, item in
             guard let item, let slot = photoPickerSlot else { return }
             Task {
@@ -313,7 +334,8 @@ struct ToteDetailView: View {
     @ViewBuilder
     private func photoSlot(urlString: String?, slot: Int) -> some View {
         Button {
-            photoPickerSlot = slot
+            photoActionSlot = slot
+            showPhotoActionSheet = true
         } label: {
             if let urlString, let url = URL(string: urlString) {
                 AsyncImage(url: url) { phase in
@@ -381,6 +403,40 @@ struct ToteItemRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+}
+
+// MARK: - Camera picker (UIImagePickerController wrapper)
+
+struct CameraPickerView: UIViewControllerRepresentable {
+    var onImage: (UIImage) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onImage: onImage) }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ vc: UIImagePickerController, context: Context) {}
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let onImage: (UIImage) -> Void
+        init(onImage: @escaping (UIImage) -> Void) { self.onImage = onImage }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.editedImage] as? UIImage ?? info[.originalImage] as? UIImage {
+                onImage(image)
+            }
+            picker.dismiss(animated: true)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
+        }
     }
 }
 

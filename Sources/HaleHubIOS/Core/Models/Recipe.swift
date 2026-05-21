@@ -46,7 +46,7 @@ struct Recipe: Identifiable, Codable, Sendable {
     let sugar: Double?
     let saturatedFat: Double?
     let cholesterol: Double?
-    let ovenTemp: Int?
+    let ovenTemp: String?   // CharField on server e.g. "350°F"
 
     var parsedSteps: [String] {
         guard let text = instructions, !text.isEmpty else { return [] }
