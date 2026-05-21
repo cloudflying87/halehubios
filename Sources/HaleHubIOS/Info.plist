@@ -36,6 +36,10 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Used to take photos of tote contents for easy identification.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Used to attach photos to totes from your photo library.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

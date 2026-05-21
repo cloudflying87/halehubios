@@ -40,5 +40,7 @@ targets:
           - CFBundleURLSchemes:
               - halehub
             CFBundleURLName: com.halefamily.halehubios
+        NSCameraUsageDescription: "Used to take photos of tote contents for easy identification."
+        NSPhotoLibraryUsageDescription: "Used to attach photos to totes from your photo library."
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
