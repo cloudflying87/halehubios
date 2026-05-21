@@ -37,7 +37,7 @@ struct ToteItem: Identifiable, Codable, Sendable {
     let itemTypeName: String
     let quantity: String
     let notes: String
-    let createdAt: Date
+    let createdAt: Date?   // optional — some items may lack a created_at timestamp
 }
 
 // MARK: - Category / item-type hierarchy (returned by GET /api/totes/categories/)

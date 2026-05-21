@@ -76,16 +76,18 @@ struct ToteDetailView: View {
 
     var body: some View {
         Group {
-            if vm.isLoading && vm.toteDetail == nil {
+            if vm.isLoading {
                 ProgressView("Loading…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let detail = vm.toteDetail {
                 toteContent(detail: detail)
-            } else if let errorMsg = vm.error {
+            } else {
+                // Covers both error state and the unlikely case where loading
+                // hasn't started yet — always shows something actionable.
                 ContentUnavailableView {
                     Label("Couldn't Load Tote", systemImage: "exclamationmark.triangle")
                 } description: {
-                    Text(errorMsg)
+                    Text(vm.error ?? "Tap Retry to load this tote.")
                 } actions: {
                     Button("Retry") {
                         Task { await vm.load(id: toteId, token: auth.accessToken ?? "") }
@@ -131,7 +133,8 @@ struct ToteDetailView: View {
         }
         .task { await vm.load(id: toteId, token: auth.accessToken ?? "") }
         .refreshable { await vm.load(id: toteId, token: auth.accessToken ?? "") }
-        .alert("Error", isPresented: .constant(vm.error != nil && vm.toteDetail != nil)) {
+        .alert("Error", isPresented: .init(get: { vm.error != nil && vm.toteDetail != nil },
+                                           set: { if !$0 { vm.error = nil } })) {
             Button("OK") { vm.error = nil }
         } message: { Text(vm.error ?? "") }
     }
