@@ -27,6 +27,8 @@ struct TotesListView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm = TotesViewModel()
     @State private var searchLocation: String = "all"
+    @State private var showScanner = false
+    @State private var scannedTote: Tote? = nil
 
     // Ordered location slugs that have at least one tote.
     private var presentLocations: [String] {
@@ -136,6 +138,25 @@ struct TotesListView: View {
         .alert("Error", isPresented: .constant(vm.error != nil && !vm.totes.isEmpty)) {
             Button("OK") { vm.error = nil }
         } message: { Text(vm.error ?? "") }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showScanner = true
+                } label: {
+                    Image(systemName: "qrcode.viewfinder")
+                }
+                .accessibilityLabel("Scan tote QR code")
+            }
+        }
+        .sheet(isPresented: $showScanner) {
+            ToteScannerSheet { tote in
+                scannedTote = tote
+            }
+            .environmentObject(auth)
+        }
+        .navigationDestination(item: $scannedTote) { tote in
+            ToteDetailView(toteId: tote.id, toteName: tote.name)
+        }
     }
 }
 
