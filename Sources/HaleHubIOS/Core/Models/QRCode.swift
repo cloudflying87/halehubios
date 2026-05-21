@@ -1,13 +1,16 @@
 import Foundation
 
 struct QRCode: Identifiable, Codable, Sendable {
-    let id: String          // UUID string from server
+    let id: String
     let name: String
     let qrType: String      // "text"|"url"|"wifi"|"email"|"phone"|"sms"
     let isDynamic: Bool
     let shortCode: String
     let qrImageUrl: String? // absolute URL to PNG
+    let qrUrl: String?      // what's encoded in the QR image
+    let resolvedTarget: String? // where it ultimately points
     let scanCount: Int
+    let uniqueScanCount: Int
     let isActive: Bool
     let createdAt: Date
     var contentData: QRContentData

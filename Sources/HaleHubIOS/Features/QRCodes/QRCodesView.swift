@@ -12,10 +12,7 @@ class QRCodesViewModel: ObservableObject {
         isLoading = true
         error = nil
         do {
-            let response: PaginatedResponse<QRCode> = try await APIClient.shared.get(
-                "/qr-codes/", token: token
-            )
-            qrCodes = response.results
+            qrCodes = try await APIClient.shared.get("/qr-codes/", token: token)
         } catch {
             self.error = error.localizedDescription
         }
