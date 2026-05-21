@@ -273,6 +273,45 @@ class RecipesViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Shopping Session
+
+    func createOrResumeSession(
+        planId: String,
+        skipStaples: Bool = true,
+        skipPantry: Bool = false,
+        token: String
+    ) async throws -> ShoppingSession {
+        struct CreateRequest: Encodable, Sendable { let skipStaples: Bool; let skipPantry: Bool }
+        return try await APIClient.shared.post(
+            "/meal-plans/\(planId)/shopping-session/",
+            body: CreateRequest(skipStaples: skipStaples, skipPantry: skipPantry),
+            token: token
+        )
+    }
+
+    func dispatchSessionItems(
+        planId: String, itemIds: [String], listId: String, token: String
+    ) async throws -> ShoppingSession {
+        struct DispatchRequest: Encodable, Sendable { let itemIds: [String]; let listId: String }
+        return try await APIClient.shared.post(
+            "/meal-plans/\(planId)/shopping-session/dispatch/",
+            body: DispatchRequest(itemIds: itemIds, listId: listId),
+            token: token
+        )
+    }
+
+    func completeSession(planId: String, token: String) async throws -> ShoppingSession {
+        return try await APIClient.shared.postEmpty(
+            "/meal-plans/\(planId)/shopping-session/complete/", token: token
+        )
+    }
+
+    func resetSession(planId: String, token: String) async throws {
+        try await APIClient.shared.delete(
+            "/meal-plans/\(planId)/shopping-session/", token: token
+        )
+    }
+
     // MARK: - All Plans
 
     func loadAllPlans(token: String) async {

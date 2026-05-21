@@ -119,6 +119,35 @@ struct ShoppingPreviewResponse: Codable, Sendable {
     let items: [ShoppingPreviewItemData]
 }
 
+struct ShoppingSessionItem: Identifiable, Codable, Sendable {
+    let id: UUID
+    let name: String
+    let recipeSource: String?
+    let isSide: Bool
+    let isPantryStaple: Bool
+    let sentToList: UUID?
+    let sentToListName: String?
+    let isSkipped: Bool
+    let sortOrder: Int
+
+    var isPending: Bool { sentToList == nil && !isSkipped }
+}
+
+struct ShoppingSession: Identifiable, Codable, Sendable {
+    let id: UUID
+    let isComplete: Bool
+    let contentSignature: String?
+    let createdAt: Date?
+    let updatedAt: Date?
+    let items: [ShoppingSessionItem]
+    let pendingCount: Int
+    let sentCount: Int
+    let signatureChanged: Bool?
+
+    var pendingItems: [ShoppingSessionItem] { items.filter(\.isPending) }
+    var sentItems: [ShoppingSessionItem] { items.filter { $0.sentToList != nil } }
+}
+
 struct PaginatedResponse<T: Decodable & Sendable>: Decodable, Sendable {
     let count: Int
     let next: String?

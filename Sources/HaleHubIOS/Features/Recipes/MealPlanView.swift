@@ -1,114 +1,71 @@
 import SwiftUI
 
-// MARK: - Shopping Preview Sheet
+// MARK: - Shopping Session Sheet
 
-struct SelectableItem: Identifiable {
-    let id = UUID()
-    let name: String
-    let recipeSource: String?
-    let isStaple: Bool
-    var isSelected: Bool = true
-}
-
-struct ShoppingPreviewSheet: View {
+struct ShoppingSessionSheet: View {
     @EnvironmentObject var auth: AuthManager
     @Environment(\.dismiss) private var dismiss
     let plan: MealPlan
     @ObservedObject var vm: RecipesViewModel
-    var onNavigate: ((ShoppingList) -> Void)? = nil
 
-    // Config
+    enum Stage { case configure, loading, active, complete }
+    @State private var stage: Stage = .configure
+
+    // Config (used only at session creation)
     @State private var skipStaples = true
     @State private var skipPantry = false
+
+    // Session state
+    @State private var session: ShoppingSession?
+    @State private var selectedItemIds: Set<String> = []
+    @State private var signatureChanged = false
 
     // Lists
     @State private var shoppingLists: [ShoppingList] = []
     @State private var selectedListId = ""
+    @State private var isLoadingLists = false
     @State private var isCreatingNew = false
     @State private var newListName = ""
-    @State private var isLoadingLists = false
 
-    // Preview
-    @State private var items: [SelectableItem] = []
-    @State private var isLoadingPreview = false
-    @State private var showPreview = false
-
-    // Adding
-    @State private var isAdding = false
+    // Actions
+    @State private var isDispatching = false
     @State private var errorMessage: String?
 
-    var selectedCount: Int { items.filter(\.isSelected).count }
+    var pendingItems: [ShoppingSessionItem] { session?.pendingItems ?? [] }
+    var sentItems: [ShoppingSessionItem] { session?.sentItems ?? [] }
+    var selectedCount: Int { selectedItemIds.count }
 
-    var generateDisabled: Bool {
-        isCreatingNew || shoppingLists.isEmpty
-            ? newListName.trimmingCharacters(in: .whitespaces).isEmpty
-            : selectedListId.isEmpty
+    var dispatchDisabled: Bool {
+        selectedCount == 0 || isDispatching || isLoadingLists ||
+        (isCreatingNew ? newListName.trimmingCharacters(in: .whitespaces).isEmpty : selectedListId.isEmpty)
     }
 
     var body: some View {
         NavigationStack {
-            if showPreview {
-                previewView
-            } else {
-                configureView
+            Group {
+                switch stage {
+                case .configure: configureView
+                case .loading: loadingView
+                case .active: activeView
+                case .complete: completeView
+                }
             }
         }
     }
 
-    // MARK: Configure View
+    // MARK: Configure View (first time / after reset)
 
     var configureView: some View {
         Form {
-            if isLoadingLists {
-                Section {
-                    HStack { ProgressView().padding(.trailing, 8); Text("Loading lists…").foregroundStyle(.secondary) }
-                }
-            } else {
-                if !shoppingLists.isEmpty {
-                    Section("Choose a Shopping List") {
-                        ForEach(shoppingLists) { list in
-                            Button {
-                                selectedListId = list.id.uuidString
-                                isCreatingNew = false
-                            } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(list.name).foregroundStyle(.primary)
-                                        Text("\(list.itemCount) items").font(.caption).foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    if selectedListId == list.id.uuidString && !isCreatingNew {
-                                        Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
-                                    }
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        Button {
-                            isCreatingNew = true; selectedListId = ""
-                        } label: {
-                            HStack {
-                                Label("Create New List", systemImage: "plus.circle")
-                                Spacer()
-                                if isCreatingNew { Image(systemName: "checkmark").foregroundStyle(Color.accentColor) }
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-                if isCreatingNew || shoppingLists.isEmpty {
-                    Section("New List Name") {
-                        TextField("e.g. Weekly Groceries", text: $newListName).autocorrectionDisabled()
-                    }
-                }
-
-                Section("Filters") {
-                    Toggle("Skip staples (tsp, tbsp, pinch…)", isOn: $skipStaples)
-                    Toggle("Skip items I already have", isOn: $skipPantry)
-                }
+            Section("Filters") {
+                Toggle("Skip staples (tsp, tbsp, pinch…)", isOn: $skipStaples)
+                Toggle("Skip items I already have", isOn: $skipPantry)
             }
-
+            Section {
+                Text("Items will be loaded from all recipes and sides in the meal plan.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             if let error = errorMessage {
                 Section { Text(error).foregroundStyle(.red).font(.callout) }
             }
@@ -118,56 +75,95 @@ struct ShoppingPreviewSheet: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             ToolbarItem(placement: .confirmationAction) {
-                if isLoadingPreview { ProgressView() }
-                else {
-                    Button("Preview →") { Task { await loadPreview() } }
-                        .disabled(generateDisabled || isLoadingLists)
-                }
+                Button("Start") { Task { await startSession() } }
             }
         }
-        .task { await loadLists() }
     }
 
-    // MARK: Preview View
-
-    var groupedItems: [(String, [Int])] {
-        // Group by recipeSource, preserving insertion order
-        var order: [String] = []
-        var groups: [String: [Int]] = [:]
-        for (i, item) in items.enumerated() {
-            let key = item.recipeSource ?? "Sides & extras"
-            if groups[key] == nil { order.append(key); groups[key] = [] }
-            groups[key]!.append(i)
+    var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+            Text("Loading items…").foregroundStyle(.secondary)
         }
-        return order.map { ($0, groups[$0] ?? []) }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationTitle("Shopping List")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+        }
     }
 
-    var previewView: some View {
+    // MARK: Active View
+
+    var activeView: some View {
         List {
-            // Select / deselect all
-            Section {
-                Button(selectedCount == items.count ? "Deselect All" : "Select All (\(items.count))") {
-                    let allSelected = selectedCount == items.count
-                    for i in items.indices { items[i].isSelected = !allSelected }
+            // Changed plan warning
+            if signatureChanged {
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Meal plan changed", systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                            .font(.subheadline.bold())
+                        Text("Items may not match the current plan. Reset to regenerate.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Button("Reset & Restart") { Task { await resetAndRestart() } }
+                            .font(.caption)
+                            .buttonStyle(.bordered)
+                            .tint(.orange)
+                    }
+                    .padding(.vertical, 4)
                 }
-                .foregroundStyle(Color.accentColor)
             }
 
-            ForEach(groupedItems, id: \.0) { source, indices in
+            // Summary header
+            Section {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(pendingItems.count) items remaining")
+                            .font(.subheadline.bold())
+                        if session?.sentCount ?? 0 > 0 {
+                            Text("\(session!.sentCount) already sent")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer()
+                    Button(selectedCount == pendingItems.count ? "Deselect All" : "Select All") {
+                        if selectedCount == pendingItems.count {
+                            selectedItemIds.removeAll()
+                        } else {
+                            selectedItemIds = Set(pendingItems.map { $0.id.uuidString })
+                        }
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            // Pending items grouped by recipe
+            let grouped = groupedPendingItems()
+            ForEach(grouped, id: \.0) { source, items in
                 Section(source) {
-                    ForEach(indices, id: \.self) { i in
+                    ForEach(items) { item in
+                        let itemId = item.id.uuidString
                         Button {
-                            items[i].isSelected.toggle()
+                            if selectedItemIds.contains(itemId) {
+                                selectedItemIds.remove(itemId)
+                            } else {
+                                selectedItemIds.insert(itemId)
+                            }
                         } label: {
                             HStack(spacing: 12) {
-                                Image(systemName: items[i].isSelected ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(items[i].isSelected ? Color.accentColor : Color.secondary)
+                                Image(systemName: selectedItemIds.contains(itemId)
+                                    ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(selectedItemIds.contains(itemId)
+                                        ? Color.accentColor : Color.secondary)
                                     .font(.title3)
-                                Text(items[i].name)
-                                    .foregroundStyle(items[i].isSelected ? .primary : .secondary)
-                                    .strikethrough(!items[i].isSelected)
+                                Text(item.name)
+                                    .foregroundStyle(.primary)
                                 Spacer()
-                                if items[i].isStaple {
+                                if item.isPantryStaple {
                                     Text("staple").font(.caption2).foregroundStyle(.tertiary)
                                 }
                             }
@@ -177,30 +173,162 @@ struct ShoppingPreviewSheet: View {
                 }
             }
 
+            // Already-sent items (collapsed disclosure)
+            if !sentItems.isEmpty {
+                Section {
+                    DisclosureGroup("Already sent (\(sentItems.count))") {
+                        ForEach(sentItems) { item in
+                            HStack(spacing: 10) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                    .font(.subheadline)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(item.name).foregroundStyle(.secondary)
+                                    if let listName = item.sentToListName {
+                                        Text("→ \(listName)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Destination picker
+            if !isLoadingLists {
+                Section("Add selected to…") {
+                    if !shoppingLists.isEmpty {
+                        ForEach(shoppingLists) { list in
+                            Button {
+                                selectedListId = list.id.uuidString
+                                isCreatingNew = false
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(list.name).foregroundStyle(.primary)
+                                        Text("\(list.itemCount) items")
+                                            .font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    if selectedListId == list.id.uuidString && !isCreatingNew {
+                                        Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    Button {
+                        isCreatingNew = true; selectedListId = ""
+                    } label: {
+                        HStack {
+                            Label("Create New List", systemImage: "plus.circle")
+                            Spacer()
+                            if isCreatingNew { Image(systemName: "checkmark").foregroundStyle(Color.accentColor) }
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    if isCreatingNew {
+                        TextField("List name (e.g. Costco Run)", text: $newListName)
+                            .autocorrectionDisabled()
+                    }
+                }
+            }
+
             if let error = errorMessage {
                 Section { Text(error).foregroundStyle(.red).font(.callout) }
             }
+
+            // Mark complete button (when nothing left to select)
+            if pendingItems.isEmpty {
+                Section {
+                    Button("Mark Shopping Complete") { Task { await markComplete() } }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .foregroundStyle(.green)
+                }
+            }
         }
-        .navigationTitle("\(selectedCount) of \(items.count) items")
+        .navigationTitle("\(selectedCount) selected")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("← Back") { showPreview = false }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                if isAdding { ProgressView() }
+            ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+            ToolbarItem(placement: .primaryAction) {
+                if isDispatching { ProgressView() }
                 else {
-                    Button("Add \(selectedCount)") { Task { await addSelected() } }
-                        .disabled(selectedCount == 0)
+                    Button("Add \(selectedCount)") { Task { await dispatch() } }
+                        .disabled(dispatchDisabled)
+                        .fontWeight(.semibold)
                 }
             }
         }
     }
 
+    // MARK: Complete View
+
+    var completeView: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 64))
+                .foregroundStyle(.green)
+            Text("Shopping list complete!")
+                .font(.title2.bold())
+            if let s = session {
+                Text("\(s.sentCount) items sent across your lists.")
+                    .foregroundStyle(.secondary)
+            }
+            Button("Start Over") { Task { await resetAndRestart() } }
+                .buttonStyle(.bordered)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationTitle("Done")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+        }
+    }
+
+    // MARK: Helpers
+
+    func groupedPendingItems() -> [(String, [ShoppingSessionItem])] {
+        var order: [String] = []
+        var groups: [String: [ShoppingSessionItem]] = [:]
+        for item in pendingItems {
+            let key = item.recipeSource ?? "Sides & extras"
+            if groups[key] == nil { order.append(key); groups[key] = [] }
+            groups[key]!.append(item)
+        }
+        return order.map { ($0, groups[$0] ?? []) }
+    }
+
     // MARK: Actions
 
-    private func loadLists() async {
+    private func startSession() async {
         guard let token = auth.accessToken else { return }
+        stage = .loading
+        errorMessage = nil
+        do {
+            let s = try await vm.createOrResumeSession(
+                planId: plan.id.uuidString,
+                skipStaples: skipStaples,
+                skipPantry: skipPantry,
+                token: token
+            )
+            session = s
+            signatureChanged = s.signatureChanged ?? false
+            // Pre-select all pending items
+            selectedItemIds = Set(s.pendingItems.map { $0.id.uuidString })
+            stage = s.isComplete ? .complete : .active
+            await loadLists(token: token)
+        } catch {
+            errorMessage = error.localizedDescription
+            stage = .configure
+        }
+    }
+
+    private func loadLists(token: String) async {
         isLoadingLists = true
         do {
             let response: PaginatedResponse<ShoppingList> = try await APIClient.shared.get("/shopping/", token: token)
@@ -213,56 +341,69 @@ struct ShoppingPreviewSheet: View {
         isLoadingLists = false
     }
 
-    private func loadPreview() async {
-        guard let token = auth.accessToken else { return }
+    private func dispatch() async {
+        guard let token = auth.accessToken, !selectedItemIds.isEmpty else { return }
         errorMessage = nil
-        isLoadingPreview = true
-        do {
-            let raw = try await vm.fetchShoppingPreview(
-                planId: plan.id.uuidString,
-                skipStaples: skipStaples,
-                skipPantry: skipPantry,
-                token: token
-            )
-            items = raw.map { SelectableItem(name: $0.name, recipeSource: $0.recipeSource, isStaple: $0.isStaple) }
-            showPreview = true
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-        isLoadingPreview = false
-    }
-
-    private func addSelected() async {
-        guard let token = auth.accessToken else { return }
-        errorMessage = nil
-        isAdding = true
+        isDispatching = true
 
         do {
             var listId = selectedListId
-
-            if isCreatingNew || shoppingLists.isEmpty {
+            if isCreatingNew {
                 let trimmed = newListName.trimmingCharacters(in: .whitespaces)
-                guard !trimmed.isEmpty else { isAdding = false; return }
+                guard !trimmed.isEmpty else { isDispatching = false; return }
                 let body = CreateShoppingListRequest(name: trimmed, store: nil)
                 let created: ShoppingList = try await APIClient.shared.post("/shopping/", body: body, token: token)
                 listId = created.id.uuidString
+                newListName = ""
+                isCreatingNew = false
+                await loadLists(token: token)
+                selectedListId = listId
             }
 
-            let names = items.filter(\.isSelected).map(\.name)
-            try await vm.addItemsToList(names: names, listId: listId, token: token)
+            let updatedSession = try await vm.dispatchSessionItems(
+                planId: plan.id.uuidString,
+                itemIds: Array(selectedItemIds),
+                listId: listId,
+                token: token
+            )
+            session = updatedSession
+            // Pre-select all remaining pending items for next round
+            selectedItemIds = Set(updatedSession.pendingItems.map { $0.id.uuidString })
 
-            // Fetch the updated list to navigate to
-            if let _ = UUID(uuidString: listId) {
-                let updatedList: ShoppingList = try await APIClient.shared.get("/shopping/\(listId)/", token: token)
-                dismiss()
-                onNavigate?(updatedList)
-            } else {
-                dismiss()
+            if updatedSession.pendingItems.isEmpty {
+                // Auto-complete when nothing left
+                let completed = try? await vm.completeSession(planId: plan.id.uuidString, token: token)
+                if let completed { session = completed }
+                stage = .complete
             }
         } catch {
             errorMessage = error.localizedDescription
         }
-        isAdding = false
+        isDispatching = false
+    }
+
+    private func markComplete() async {
+        guard let token = auth.accessToken else { return }
+        do {
+            let s = try await vm.completeSession(planId: plan.id.uuidString, token: token)
+            session = s
+            stage = .complete
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func resetAndRestart() async {
+        guard let token = auth.accessToken else { return }
+        do {
+            try await vm.resetSession(planId: plan.id.uuidString, token: token)
+            session = nil
+            selectedItemIds = []
+            signatureChanged = false
+            stage = .configure
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
 
@@ -539,10 +680,8 @@ struct MealPlanContent: View {
             }
         }
         .sheet(isPresented: $showGenerateSheet) {
-            ShoppingPreviewSheet(plan: plan, vm: vm) { list in
-                navigateToShoppingList = list
-            }
-            .environmentObject(auth)
+            ShoppingSessionSheet(plan: plan, vm: vm)
+                .environmentObject(auth)
         }
         .navigationDestination(item: $navigateToShoppingList) { list in
             ShoppingListDetailView(list: list)
