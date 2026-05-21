@@ -221,7 +221,7 @@ private struct ResourceRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: resource.isActive ? "doc.text" : "archivebox")
+            Image(systemName: resource.isActive ? (resource.contentType == "react" ? "safari" : "doc.text") : "archivebox")
                 .foregroundStyle(resource.isActive ? Color.accentColor : .orange)
                 .frame(width: 24)
 

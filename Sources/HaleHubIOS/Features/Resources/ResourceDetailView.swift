@@ -121,24 +121,31 @@ struct ResourceDetailView: View {
         }
 
         if detail.contentType == "react" {
-            // React source shown as raw monospaced text on iOS
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    if !detail.description.isEmpty {
-                        Text(detail.description)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    Label("React component — source view only on iOS", systemImage: "info.circle")
-                        .font(.caption)
+            // React components can't run on iOS — show a friendly link to the web version
+            VStack(spacing: 24) {
+                Spacer()
+                Image(systemName: "safari")
+                    .font(.system(size: 56))
+                    .foregroundStyle(Color.accentColor)
+                VStack(spacing: 8) {
+                    Text("View in Browser")
+                        .font(.title3.weight(.semibold))
+                    Text("This content uses interactive components\nthat are only available on the web.")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Text(detail.content)
-                        .font(.body.monospaced())
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .multilineTextAlignment(.center)
                 }
-                .padding(20)
+                if let url = URL(string: "https://flyhomemn.com/blog/\(detail.slug)/") {
+                    Link(destination: url) {
+                        Label("Open \(detail.title)", systemImage: "arrow.up.right.square")
+                            .frame(maxWidth: 280)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                }
+                Spacer()
             }
+            .frame(maxWidth: .infinity)
         } else if let html = detail.contentHtml, !html.isEmpty {
             HTMLWebView(html: html)
         } else {

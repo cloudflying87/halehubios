@@ -7,13 +7,16 @@ struct Resource: Identifiable, Codable, Sendable {
     let title: String
     let slug: String
     let description: String
+    let contentType: String   // "markdown" | "react"
     let isPublic: Bool
     let isActive: Bool
     let canEdit: Bool
     let createdAt: Date
 
+    var isReact: Bool { contentType == "react" }
+
     enum CodingKeys: String, CodingKey {
-        case id, title, slug, description, isPublic, isActive, canEdit, createdAt
+        case id, title, slug, description, contentType, isPublic, isActive, canEdit, createdAt
     }
 
     init(from decoder: Decoder) throws {
@@ -26,6 +29,7 @@ struct Resource: Identifiable, Codable, Sendable {
         title = try c.decode(String.self, forKey: .title)
         slug = try c.decode(String.self, forKey: .slug)
         description = (try? c.decode(String.self, forKey: .description)) ?? ""
+        contentType = (try? c.decode(String.self, forKey: .contentType)) ?? "markdown"
         isPublic = (try? c.decode(Bool.self, forKey: .isPublic)) ?? true
         isActive = (try? c.decode(Bool.self, forKey: .isActive)) ?? true
         canEdit = (try? c.decode(Bool.self, forKey: .canEdit)) ?? false
