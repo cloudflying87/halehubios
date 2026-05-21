@@ -171,7 +171,6 @@ struct TotesListView: View {
         .sheet(isPresented: $showCreate) {
             CreateToteSheet(qrIdentifier: nil) { newTote in
                 vm.totes.insert(newTote, at: 0)
-                showCreate = false
             }
             .environmentObject(auth)
         }

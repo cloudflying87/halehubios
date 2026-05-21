@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CreateToteSheet: View {
     @EnvironmentObject var auth: AuthManager
+    @Environment(\.dismiss) private var dismiss
     var qrIdentifier: String?       // nil when creating without a scanned QR
     var onCreated: (Tote) -> Void
     var onCancel: (() -> Void)?     // nil when presented as a regular sheet (dismiss handles it)
@@ -79,8 +80,10 @@ struct CreateToteSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { onCancel?() ?? dismiss() }
-                        .disabled(isSaving)
+                    Button("Cancel") {
+                        if let onCancel { onCancel() } else { dismiss() }
+                    }
+                    .disabled(isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if isSaving {
@@ -113,6 +116,7 @@ struct CreateToteSheet: View {
         do {
             let newTote: Tote = try await APIClient.shared.post("/totes/", body: body, token: token)
             onCreated(newTote)
+            dismiss()
         } catch {
             self.error = error.localizedDescription
             isSaving = false
