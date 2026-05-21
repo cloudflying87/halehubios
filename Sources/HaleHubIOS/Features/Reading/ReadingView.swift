@@ -322,7 +322,7 @@ struct ReadingEntryRow: View {
                 Circle()
                     .fill(Color.accentColor.opacity(0.12))
                     .frame(width: 36, height: 36)
-                Text(entry.bookAbbrev.prefix(3))
+                Text((entry.bookAbbrev ?? entry.reference).prefix(3))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.accentColor)
             }
@@ -331,14 +331,16 @@ struct ReadingEntryRow: View {
                 Text(entry.reference)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                Text(entry.bookName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if let book = entry.bookName, !book.isEmpty {
+                    Text(book)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
 
-            Text("Ch. \(entry.chapterStart)–\(entry.chapterEnd)")
+            Text("Ch. \(entry.chapterStart ?? 0)–\(entry.chapterEnd ?? 0)")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .monospacedDigit()

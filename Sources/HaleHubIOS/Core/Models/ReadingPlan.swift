@@ -35,7 +35,7 @@ struct ReadingDay: Codable, Sendable {
     let date: String        // "YYYY-MM-DD"
     let isCompleted: Bool
     let entries: [ReadingEntry]
-    let notes: String
+    let notes: String?      // optional — API may omit on older server versions
 }
 
 struct ReadingDaySummary: Codable, Sendable {
@@ -49,13 +49,13 @@ struct ReadingDaySummary: Codable, Sendable {
 struct ReadingEntry: Identifiable, Codable, Sendable {
     let id: String
     let reference: String   // e.g. "Genesis 1:1-2:3"
-    let bookName: String
-    let bookAbbrev: String
-    let chapterStart: Int
-    let verseStart: Int
-    let chapterEnd: Int
-    let verseEnd: Int
-    let notes: String
+    let bookName: String?   // optional — nil if entry has no linked book
+    let bookAbbrev: String?
+    let chapterStart: Int?
+    let verseStart: Int?
+    let chapterEnd: Int?
+    let verseEnd: Int?
+    let notes: String?
 }
 
 struct ReadingToggleResponse: Codable, Sendable {
