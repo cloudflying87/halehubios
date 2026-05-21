@@ -248,6 +248,31 @@ class RecipesViewModel: ObservableObject {
         )
     }
 
+    func fetchShoppingPreview(
+        planId: String,
+        skipStaples: Bool = false,
+        skipPantry: Bool = false,
+        token: String
+    ) async throws -> [ShoppingPreviewItemData] {
+        let path = "/meal-plans/\(planId)/shopping-preview/?skip_staples=\(skipStaples)&skip_pantry=\(skipPantry)"
+        let response: ShoppingPreviewResponse = try await APIClient.shared.get(path, token: token)
+        return response.items
+    }
+
+    func addItemsToList(names: [String], listId: String, token: String) async throws {
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for name in names {
+                group.addTask {
+                    let body = AddItemRequest(name: name, quantity: "", notes: "")
+                    let _: ShoppingItem = try await APIClient.shared.post(
+                        "/shopping/\(listId)/items/", body: body, token: token
+                    )
+                }
+            }
+            try await group.waitForAll()
+        }
+    }
+
     // MARK: - All Plans
 
     func loadAllPlans(token: String) async {

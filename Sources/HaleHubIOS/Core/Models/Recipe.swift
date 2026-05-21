@@ -109,6 +109,16 @@ struct MarkCookedResponse: Decodable, Sendable {
     let lastCooked: Date?
 }
 
+struct ShoppingPreviewItemData: Codable, Sendable {
+    let name: String
+    let recipeSource: String?
+    let isStaple: Bool
+}
+
+struct ShoppingPreviewResponse: Codable, Sendable {
+    let items: [ShoppingPreviewItemData]
+}
+
 struct PaginatedResponse<T: Decodable & Sendable>: Decodable, Sendable {
     let count: Int
     let next: String?

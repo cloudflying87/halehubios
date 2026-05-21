@@ -6,6 +6,7 @@ struct RecipeDetailView: View {
 
     @State private var fullRecipe: Recipe?
     @State private var loadError: String?
+    @State private var isLoadingFull = false
     @State private var showCookedToast = false
     @State private var showCookMode = false
     @State private var showAddToMealPlan = false
@@ -78,6 +79,27 @@ struct RecipeDetailView: View {
                     }
 
                     Divider()
+
+                    // Loading / error state while fetching full recipe
+                    if isLoadingFull {
+                        HStack {
+                            ProgressView()
+                            Text("Loading details…").foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 8)
+                    }
+                    if let err = loadError {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Couldn't load full recipe: \(err)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Button("Retry") { Task { fullRecipe = nil; await loadFull() } }
+                                .font(.caption)
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
+                        }
+                        .padding(.vertical, 4)
+                    }
 
                     // Nutrition
                     if displayed.calories != nil || displayed.protein != nil {
@@ -180,18 +202,17 @@ struct RecipeDetailView: View {
             .environmentObject(auth)
         }
         .task { await loadFull() }
-        .alert("Load Error", isPresented: .init(get: { loadError != nil }, set: { if !$0 { loadError = nil } })) {
-            Button("OK") { }
-        } message: { Text(loadError ?? "") }
     }
 
     private func loadFull() async {
         guard let token = auth.accessToken, fullRecipe == nil else { return }
+        isLoadingFull = true
         do {
             fullRecipe = try await APIClient.shared.get("/recipes/\(recipe.id)/", token: token)
         } catch {
             loadError = error.localizedDescription
         }
+        isLoadingFull = false
     }
 
     private func markCooked() async {

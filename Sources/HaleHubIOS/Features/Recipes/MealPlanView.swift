@@ -1,124 +1,203 @@
 import SwiftUI
 
-// MARK: - Generate Shopping List Sheet
+// MARK: - Shopping Preview Sheet
 
-struct GenerateShoppingListSheet: View {
+struct SelectableItem: Identifiable {
+    let id = UUID()
+    let name: String
+    let recipeSource: String?
+    let isStaple: Bool
+    var isSelected: Bool = true
+}
+
+struct ShoppingPreviewSheet: View {
     @EnvironmentObject var auth: AuthManager
     @Environment(\.dismiss) private var dismiss
     let plan: MealPlan
     @ObservedObject var vm: RecipesViewModel
     var onNavigate: ((ShoppingList) -> Void)? = nil
 
-    @State private var shoppingLists: [ShoppingList] = []
-    @State private var selectedListId: String = ""
-    @State private var isLoadingLists = false
-    @State private var isGenerating = false
-    @State private var newListName = ""
-    @State private var isCreatingNew = false
+    // Config
     @State private var skipStaples = true
     @State private var skipPantry = false
+
+    // Lists
+    @State private var shoppingLists: [ShoppingList] = []
+    @State private var selectedListId = ""
+    @State private var isCreatingNew = false
+    @State private var newListName = ""
+    @State private var isLoadingLists = false
+
+    // Preview
+    @State private var items: [SelectableItem] = []
+    @State private var isLoadingPreview = false
+    @State private var showPreview = false
+
+    // Adding
+    @State private var isAdding = false
     @State private var errorMessage: String?
+
+    var selectedCount: Int { items.filter(\.isSelected).count }
+
+    var generateDisabled: Bool {
+        isCreatingNew || shoppingLists.isEmpty
+            ? newListName.trimmingCharacters(in: .whitespaces).isEmpty
+            : selectedListId.isEmpty
+    }
 
     var body: some View {
         NavigationStack {
-            Form {
-                if isLoadingLists {
-                    Section {
-                        HStack {
-                            ProgressView().padding(.trailing, 8)
-                            Text("Loading lists…").foregroundStyle(.secondary)
-                        }
-                    }
-                } else {
-                    // Existing lists picker
-                    if !shoppingLists.isEmpty {
-                        Section("Choose a Shopping List") {
-                            ForEach(shoppingLists) { list in
-                                Button {
-                                    selectedListId = list.id.uuidString
-                                    isCreatingNew = false
-                                } label: {
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(list.name).foregroundStyle(.primary)
-                                            Text("\(list.itemCount) items")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Spacer()
-                                        if selectedListId == list.id.uuidString && !isCreatingNew {
-                                            Image(systemName: "checkmark")
-                                                .foregroundStyle(Color.accentColor)
-                                        }
-                                    }
-                                }
-                                .buttonStyle(.plain)
-                            }
+            if showPreview {
+                previewView
+            } else {
+                configureView
+            }
+        }
+    }
 
+    // MARK: Configure View
+
+    var configureView: some View {
+        Form {
+            if isLoadingLists {
+                Section {
+                    HStack { ProgressView().padding(.trailing, 8); Text("Loading lists…").foregroundStyle(.secondary) }
+                }
+            } else {
+                if !shoppingLists.isEmpty {
+                    Section("Choose a Shopping List") {
+                        ForEach(shoppingLists) { list in
                             Button {
-                                isCreatingNew = true
-                                selectedListId = ""
+                                selectedListId = list.id.uuidString
+                                isCreatingNew = false
                             } label: {
                                 HStack {
-                                    Label("Create New List", systemImage: "plus.circle")
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(list.name).foregroundStyle(.primary)
+                                        Text("\(list.itemCount) items").font(.caption).foregroundStyle(.secondary)
+                                    }
                                     Spacer()
-                                    if isCreatingNew {
-                                        Image(systemName: "checkmark")
-                                            .foregroundStyle(Color.accentColor)
+                                    if selectedListId == list.id.uuidString && !isCreatingNew {
+                                        Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
                                     }
                                 }
                             }
                             .buttonStyle(.plain)
                         }
-                    }
-
-                    // Create new list inline
-                    if isCreatingNew || shoppingLists.isEmpty {
-                        Section("New List Name") {
-                            TextField("e.g. Weekly Groceries", text: $newListName)
-                                .autocorrectionDisabled()
+                        Button {
+                            isCreatingNew = true; selectedListId = ""
+                        } label: {
+                            HStack {
+                                Label("Create New List", systemImage: "plus.circle")
+                                Spacer()
+                                if isCreatingNew { Image(systemName: "checkmark").foregroundStyle(Color.accentColor) }
+                            }
                         }
-                    }
-
-                    Section("Filters") {
-                        Toggle("Skip staples (tsp, tbsp, pinch…)", isOn: $skipStaples)
-                        Toggle("Skip items I already have", isOn: $skipPantry)
+                        .buttonStyle(.plain)
                     }
                 }
 
-                if let error = errorMessage {
-                    Section {
-                        Text(error).foregroundStyle(.red).font(.callout)
+                if isCreatingNew || shoppingLists.isEmpty {
+                    Section("New List Name") {
+                        TextField("e.g. Weekly Groceries", text: $newListName).autocorrectionDisabled()
+                    }
+                }
+
+                Section("Filters") {
+                    Toggle("Skip staples (tsp, tbsp, pinch…)", isOn: $skipStaples)
+                    Toggle("Skip items I already have", isOn: $skipPantry)
+                }
+            }
+
+            if let error = errorMessage {
+                Section { Text(error).foregroundStyle(.red).font(.callout) }
+            }
+        }
+        .navigationTitle("Shopping List")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) {
+                if isLoadingPreview { ProgressView() }
+                else {
+                    Button("Preview →") { Task { await loadPreview() } }
+                        .disabled(generateDisabled || isLoadingLists)
+                }
+            }
+        }
+        .task { await loadLists() }
+    }
+
+    // MARK: Preview View
+
+    var groupedItems: [(String, [Int])] {
+        // Group by recipeSource, preserving insertion order
+        var order: [String] = []
+        var groups: [String: [Int]] = [:]
+        for (i, item) in items.enumerated() {
+            let key = item.recipeSource ?? "Sides & extras"
+            if groups[key] == nil { order.append(key); groups[key] = [] }
+            groups[key]!.append(i)
+        }
+        return order.map { ($0, groups[$0] ?? []) }
+    }
+
+    var previewView: some View {
+        List {
+            // Select / deselect all
+            Section {
+                Button(selectedCount == items.count ? "Deselect All" : "Select All (\(items.count))") {
+                    let allSelected = selectedCount == items.count
+                    for i in items.indices { items[i].isSelected = !allSelected }
+                }
+                .foregroundStyle(Color.accentColor)
+            }
+
+            ForEach(groupedItems, id: \.0) { source, indices in
+                Section(source) {
+                    ForEach(indices, id: \.self) { i in
+                        Button {
+                            items[i].isSelected.toggle()
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: items[i].isSelected ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(items[i].isSelected ? Color.accentColor : Color.secondary)
+                                    .font(.title3)
+                                Text(items[i].name)
+                                    .foregroundStyle(items[i].isSelected ? .primary : .secondary)
+                                    .strikethrough(!items[i].isSelected)
+                                Spacer()
+                                if items[i].isStaple {
+                                    Text("staple").font(.caption2).foregroundStyle(.tertiary)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
-            .navigationTitle("Generate Shopping List")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    if isGenerating {
-                        ProgressView()
-                    } else {
-                        Button("Generate") {
-                            Task { await performGenerate() }
-                        }
-                        .disabled(generateButtonDisabled)
-                    }
+
+            if let error = errorMessage {
+                Section { Text(error).foregroundStyle(.red).font(.callout) }
+            }
+        }
+        .navigationTitle("\(selectedCount) of \(items.count) items")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("← Back") { showPreview = false }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                if isAdding { ProgressView() }
+                else {
+                    Button("Add \(selectedCount)") { Task { await addSelected() } }
+                        .disabled(selectedCount == 0)
                 }
             }
-            .task { await loadLists() }
         }
     }
 
-    private var generateButtonDisabled: Bool {
-        if isCreatingNew || shoppingLists.isEmpty {
-            return newListName.trimmingCharacters(in: .whitespaces).isEmpty
-        }
-        return selectedListId.isEmpty
-    }
+    // MARK: Actions
 
     private func loadLists() async {
         guard let token = auth.accessToken else { return }
@@ -126,45 +205,64 @@ struct GenerateShoppingListSheet: View {
         do {
             let response: PaginatedResponse<ShoppingList> = try await APIClient.shared.get("/shopping/", token: token)
             shoppingLists = response.results
-            if let first = shoppingLists.first {
-                selectedListId = first.id.uuidString
-            } else {
-                isCreatingNew = true
-            }
+            if let first = shoppingLists.first { selectedListId = first.id.uuidString }
+            else { isCreatingNew = true }
         } catch {
             errorMessage = error.localizedDescription
         }
         isLoadingLists = false
     }
 
-    private func performGenerate() async {
+    private func loadPreview() async {
         guard let token = auth.accessToken else { return }
         errorMessage = nil
-        isGenerating = true
+        isLoadingPreview = true
+        do {
+            let raw = try await vm.fetchShoppingPreview(
+                planId: plan.id.uuidString,
+                skipStaples: skipStaples,
+                skipPantry: skipPantry,
+                token: token
+            )
+            items = raw.map { SelectableItem(name: $0.name, recipeSource: $0.recipeSource, isStaple: $0.isStaple) }
+            showPreview = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoadingPreview = false
+    }
+
+    private func addSelected() async {
+        guard let token = auth.accessToken else { return }
+        errorMessage = nil
+        isAdding = true
 
         do {
             var listId = selectedListId
 
-            // Create a new list first if needed
             if isCreatingNew || shoppingLists.isEmpty {
                 let trimmed = newListName.trimmingCharacters(in: .whitespaces)
-                guard !trimmed.isEmpty else { isGenerating = false; return }
+                guard !trimmed.isEmpty else { isAdding = false; return }
                 let body = CreateShoppingListRequest(name: trimmed, store: nil)
                 let created: ShoppingList = try await APIClient.shared.post("/shopping/", body: body, token: token)
                 listId = created.id.uuidString
             }
 
-            let result = try await vm.generateShoppingList(
-                planId: plan.id.uuidString, listId: listId,
-                skipStaples: skipStaples, skipPantry: skipPantry,
-                token: token
-            )
-            dismiss()
-            onNavigate?(result)
+            let names = items.filter(\.isSelected).map(\.name)
+            try await vm.addItemsToList(names: names, listId: listId, token: token)
+
+            // Fetch the updated list to navigate to
+            if let _ = UUID(uuidString: listId) {
+                let updatedList: ShoppingList = try await APIClient.shared.get("/shopping/\(listId)/", token: token)
+                dismiss()
+                onNavigate?(updatedList)
+            } else {
+                dismiss()
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
-        isGenerating = false
+        isAdding = false
     }
 }
 
@@ -441,7 +539,7 @@ struct MealPlanContent: View {
             }
         }
         .sheet(isPresented: $showGenerateSheet) {
-            GenerateShoppingListSheet(plan: plan, vm: vm) { list in
+            ShoppingPreviewSheet(plan: plan, vm: vm) { list in
                 navigateToShoppingList = list
             }
             .environmentObject(auth)
