@@ -146,9 +146,9 @@ struct VehicleDetailView: View {
                                     .padding(.top, 4)
                                     ForEach(monthEvents) { event in
                                         EventCard(event: event, vehicle: vehicle) {
-                                            editingEvent = event
-                                        } onLongPress: {
                                             detailEvent = event
+                                        } onLongPress: {
+                                            editingEvent = event
                                         } onDelete: {
                                             Task { await deleteEvent(event) }
                                         }
@@ -190,7 +190,10 @@ struct VehicleDetailView: View {
             .environmentObject(auth)
         }
         .sheet(item: $detailEvent) { event in
-            EventDetailSheet(event: event, vehicle: vehicle)
+            EventDetailSheet(event: event, vehicle: vehicle) {
+                Task { await loadData() }
+            }
+            .environmentObject(auth)
         }
         .task { await loadData() }
     }
@@ -601,6 +604,9 @@ struct EventCard: View {
     let onLongPress: () -> Void
     var onDelete: (() -> Void)? = nil
 
+    @State private var swipeOffset: CGFloat = 0
+    private let deleteRevealWidth: CGFloat = 76
+
     var accentColor: Color {
         switch event.eventType {
         case "gas": return .blue
@@ -611,6 +617,59 @@ struct EventCard: View {
     }
 
     var body: some View {
+        ZStack(alignment: .trailing) {
+            // Delete button revealed by swipe
+            if onDelete != nil {
+                Button(role: .destructive) {
+                    withAnimation(.spring(response: 0.25)) { swipeOffset = 0 }
+                    onDelete?()
+                } label: {
+                    Image(systemName: "trash.fill")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.white)
+                        .frame(width: deleteRevealWidth)
+                        .frame(maxHeight: .infinity)
+                }
+                .background(Color.red, in: RoundedRectangle(cornerRadius: 10))
+                // Slide in from trailing edge as card moves left
+                .offset(x: deleteRevealWidth + swipeOffset)
+            }
+
+            // Card content
+            cardContent
+                .offset(x: swipeOffset)
+                .gesture(
+                    DragGesture(minimumDistance: 12, coordinateSpace: .local)
+                        .onChanged { g in
+                            // Only respond to mostly-horizontal drags
+                            guard abs(g.translation.width) > abs(g.translation.height) else { return }
+                            let t = g.translation.width
+                            if t < 0 {
+                                swipeOffset = max(t, onDelete != nil ? -deleteRevealWidth : 0)
+                            } else {
+                                swipeOffset = min(0, swipeOffset + t)
+                            }
+                        }
+                        .onEnded { g in
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                swipeOffset = (g.translation.width < -36 && onDelete != nil)
+                                    ? -deleteRevealWidth : 0
+                            }
+                        }
+                )
+                .onTapGesture {
+                    if swipeOffset != 0 {
+                        withAnimation(.spring(response: 0.25)) { swipeOffset = 0 }
+                    } else {
+                        onTap()
+                    }
+                }
+                .onLongPressGesture { onLongPress() }
+        }
+        .clipped()
+    }
+
+    private var cardContent: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: event.eventIcon)
                 .font(.subheadline)
@@ -644,8 +703,7 @@ struct EventCard: View {
                             HStack {
                                 Text(item.categoryName ?? "Service")
                                 if !item.description.isEmpty {
-                                    Text("· \(item.description)")
-                                        .foregroundStyle(.secondary)
+                                    Text("· \(item.description)").foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 if item.cost > 0 {
@@ -663,15 +721,6 @@ struct EventCard: View {
         .padding(10)
         .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
         .contentShape(RoundedRectangle(cornerRadius: 10))
-        .onTapGesture { onTap() }
-        .onLongPressGesture { onLongPress() }
-        .swipeActions(edge: .trailing) {
-            if let onDelete {
-                Button(role: .destructive, action: onDelete) {
-                    Label("Delete", systemImage: "trash")
-                }
-            }
-        }
     }
 
     var eventTitle: String {
@@ -858,7 +907,10 @@ struct EditEventSheet: View {
 struct EventDetailSheet: View {
     let event: VehicleEvent
     let vehicle: Vehicle
+    var onRefresh: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var auth: AuthManager
+    @State private var showEditSheet = false
 
     var body: some View {
         NavigationStack {
@@ -929,10 +981,23 @@ struct EventDetailSheet: View {
             .navigationTitle(eventTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Edit") { showEditSheet = true }
                 }
             }
+        }
+        .sheet(isPresented: $showEditSheet) {
+            EditEventSheet(event: event, vehicle: vehicle, onSaved: {
+                onRefresh?()
+                dismiss()
+            }, onDeleted: {
+                onRefresh?()
+                dismiss()
+            })
+            .environmentObject(auth)
         }
     }
 
