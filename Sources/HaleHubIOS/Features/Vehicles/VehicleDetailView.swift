@@ -1,4 +1,5 @@
 import Charts
+import PhotosUI
 import SwiftUI
 
 enum EventTypeFilter: String, CaseIterable, Identifiable {
@@ -33,6 +34,13 @@ struct VehicleDetailView: View {
     @State private var selectedSchedule: MaintenanceSchedule? = nil
     @State private var peekEvent: VehicleEvent? = nil
     @State private var showTrash = false
+    @State private var showPhotoActionSheet = false
+    @State private var showCamera = false
+    @State private var showPhotoPicker = false
+    @State private var photoPickerItem: PhotosPickerItem? = nil
+    @State private var isUploadingPhoto = false
+    @State private var vehiclePhotoUrl: String?
+    @State private var isUpdatingStatus = false
 
     var dueSchedules: [MaintenanceSchedule] { schedules.filter { $0.isDue } }
     var filteredEvents: [VehicleEvent] {
@@ -54,8 +62,13 @@ struct VehicleDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                // Hero image
-                VehicleHeroImage(url: vehicle.photoUrl, icon: vehicle.typeIcon)
+                // Hero image — tap to change photo
+                Button {
+                    showPhotoActionSheet = true
+                } label: {
+                    VehicleHeroImage(url: vehiclePhotoUrl ?? vehicle.photoUrl, icon: vehicle.typeIcon)
+                }
+                .buttonStyle(.plain)
 
                 VStack(alignment: .leading, spacing: 20) {
                     // Title
@@ -72,12 +85,34 @@ struct VehicleDetailView: View {
                         StatsRow(vehicle: vehicle, stats: s, selectedChart: $selectedChart)
                     }
 
+                    // Guest vehicle banner
+                    if vehicle.status == "guest" {
+                        HStack(spacing: 10) {
+                            Image(systemName: "person.fill.questionmark")
+                                .foregroundStyle(.teal)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Guest Vehicle")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.teal)
+                                Text("You can log outings only. Gas and maintenance are tracked by the owner.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.teal.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.teal.opacity(0.2)))
+                    }
+
                     // Dynamic chart based on selected stat pill
                     let gasEvents = events.filter { $0.eventType == "gas" }
-                    VehicleChartSection(events: gasEvents, vehicle: vehicle, mode: selectedChart)
+                    if vehicle.status != "guest" {
+                        VehicleChartSection(events: gasEvents, vehicle: vehicle, mode: selectedChart)
+                    }
 
                     // Maintenance due
-                    if !dueSchedules.isEmpty {
+                    if vehicle.status != "guest" && !dueSchedules.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Label("Due Now", systemImage: "exclamationmark.triangle.fill")
                                 .font(.headline)
@@ -90,14 +125,16 @@ struct VehicleDetailView: View {
                         .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
                     }
 
-                    // Maintenance schedule
-                    let okSchedules = schedules.filter { !$0.isDue }
-                    if !okSchedules.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Maintenance Schedule")
-                                .font(.headline)
-                            ForEach(okSchedules) { s in
-                                MaintenanceRow(schedule: s)
+                    // Maintenance schedule (hidden for guest vehicles)
+                    if vehicle.status != "guest" {
+                        let okSchedules = schedules.filter { !$0.isDue }
+                        if !okSchedules.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Maintenance Schedule")
+                                    .font(.headline)
+                                ForEach(okSchedules) { s in
+                                    MaintenanceRow(schedule: s)
+                                }
                             }
                         }
                     }
@@ -175,14 +212,68 @@ struct VehicleDetailView: View {
                 }
             }
             ToolbarItem(placement: .secondaryAction) {
-                Button("Recently Deleted", systemImage: "trash") {
-                    showTrash = true
+                Menu {
+                    // Photo
+                    Button("Change Photo", systemImage: "camera") {
+                        showPhotoActionSheet = true
+                    }
+                    Divider()
+                    // Status
+                    if vehicle.status == "guest" {
+                        Button("Mark as My Vehicle", systemImage: "person.fill.checkmark") {
+                            Task { await updateStatus("active") }
+                        }
+                    } else {
+                        Button("Mark as Guest Vehicle", systemImage: "person.fill.questionmark") {
+                            Task { await updateStatus("guest") }
+                        }
+                    }
+                    Divider()
+                    Button("Recently Deleted", systemImage: "trash") {
+                        showTrash = true
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
             }
         }
         .sheet(isPresented: $showLogSheet) {
-            LogEventSheet(vehicle: vehicle) {
+            LogEventSheet(
+                vehicle: vehicle,
+                lockedEventType: vehicle.status == "guest" ? "outing" : nil
+            ) {
                 Task { await loadData() }
+            }
+        }
+        .confirmationDialog("Vehicle Photo", isPresented: $showPhotoActionSheet, titleVisibility: .visible) {
+            Button("Take Photo") { showCamera = true }
+            Button("Choose from Library") { showPhotoPicker = true }
+            Button("Cancel", role: .cancel) {}
+        }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $photoPickerItem, matching: .images)
+        .sheet(isPresented: $showCamera) {
+            CameraPickerView { image in
+                Task { await uploadPhoto(image) }
+            }
+        }
+        .onChange(of: photoPickerItem) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    await uploadPhoto(image)
+                }
+                photoPickerItem = nil
+            }
+        }
+        .overlay {
+            if isUploadingPhoto || isUpdatingStatus {
+                ZStack {
+                    Color.black.opacity(0.3).ignoresSafeArea()
+                    ProgressView(isUploadingPhoto ? "Uploading photo…" : "Updating…")
+                        .padding(24)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                }
             }
         }
         .sheet(item: $selectedSchedule) { schedule in
@@ -224,6 +315,30 @@ struct VehicleDetailView: View {
     private func deleteEvent(_ event: VehicleEvent) async {
         guard let token = auth.accessToken else { return }
         try? await APIClient.shared.delete("/vehicles/events/\(event.id)/", token: token)
+        await loadData()
+    }
+
+    private func uploadPhoto(_ image: UIImage) async {
+        guard let token = auth.accessToken,
+              let jpeg = image.jpegData(compressionQuality: 0.85) else { return }
+        isUploadingPhoto = true
+        do {
+            let url = try await APIClient.shared.uploadVehiclePhoto(
+                "/vehicles/\(vehicle.id)/photo/", imageData: jpeg, token: token
+            )
+            vehiclePhotoUrl = url
+        } catch { }
+        isUploadingPhoto = false
+    }
+
+    private func updateStatus(_ newStatus: String) async {
+        guard let token = auth.accessToken else { return }
+        isUpdatingStatus = true
+        struct StatusPatch: Encodable { let status: String }
+        let _: Vehicle? = try? await APIClient.shared.patch(
+            "/vehicles/\(vehicle.id)/update/", body: StatusPatch(status: newStatus), token: token
+        )
+        isUpdatingStatus = false
         await loadData()
     }
 

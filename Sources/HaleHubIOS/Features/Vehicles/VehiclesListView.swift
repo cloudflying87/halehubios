@@ -66,7 +66,17 @@ struct VehicleRow: View {
             VehicleThumbnail(url: vehicle.photoUrl, icon: vehicle.typeIcon)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(vehicle.name).font(.headline)
+                HStack(spacing: 6) {
+                    Text(vehicle.name).font(.headline)
+                    if vehicle.status == "guest" {
+                        Text("Guest")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.teal)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.teal.opacity(0.12), in: Capsule())
+                    }
+                }
 
                 if !vehicle.subtitle.isEmpty {
                     Text(vehicle.subtitle)

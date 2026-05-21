@@ -6,6 +6,7 @@ struct LogEventSheet: View {
 
     let vehicle: Vehicle
     var prefilledCategoryId: Int? = nil
+    var lockedEventType: String? = nil   // set to "outing" for guest vehicles
     let onSaved: () -> Void
 
     @State private var eventType = "gas"
@@ -64,13 +65,20 @@ struct LogEventSheet: View {
             } else {
                 Form {
                 Section("Type") {
-                    Picker("Event Type", selection: $eventType) {
-                        ForEach(eventTypes, id: \.self) {
-                            Text($0 == "maintenance" ? "Service" : $0.capitalized).tag($0)
+                    if lockedEventType != nil {
+                        // Guest vehicle — show locked type, no picker
+                        Label("Outing", systemImage: "map.fill")
+                            .font(.body)
+                            .foregroundStyle(.teal)
+                    } else {
+                        Picker("Event Type", selection: $eventType) {
+                            ForEach(eventTypes, id: \.self) {
+                                Text($0 == "maintenance" ? "Service" : $0.capitalized).tag($0)
+                            }
                         }
+                        .pickerStyle(.segmented)
+                        .onChange(of: eventType) { _, _ in serviceItems = [ServiceItem()] }
                     }
-                    .pickerStyle(.segmented)
-                    .onChange(of: eventType) { _, _ in serviceItems = [ServiceItem()] }
 
                     DatePicker("Date", selection: $date, displayedComponents: .date)
                 }
@@ -170,7 +178,9 @@ struct LogEventSheet: View {
         .task {
             await loadCategories()
             await loadLocations()
-            if let catId = prefilledCategoryId {
+            if let locked = lockedEventType {
+                eventType = locked
+            } else if let catId = prefilledCategoryId {
                 eventType = "maintenance"
                 var prefilled = ServiceItem()
                 prefilled.categoryId = catId
