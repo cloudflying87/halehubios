@@ -1,5 +1,5 @@
 import SwiftUI
-import AVFoundation
+@preconcurrency import AVFoundation
 
 // MARK: - QR Scanner Sheet
 
@@ -12,6 +12,8 @@ struct ToteScannerSheet: View {
     @State private var isLooking = false
     @State private var errorMessage: String?
     @State private var torchOn = false
+    @State private var showCreate = false
+    @State private var unboundIdentifier: String?
 
     var body: some View {
         NavigationStack {
@@ -26,7 +28,6 @@ struct ToteScannerSheet: View {
                 )
                 .ignoresSafeArea()
 
-                // Viewfinder overlay
                 VStack {
                     Spacer()
                     RoundedRectangle(cornerRadius: 16)
@@ -60,9 +61,7 @@ struct ToteScannerSheet: View {
                         .foregroundStyle(.white)
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        torchOn.toggle()
-                    } label: {
+                    Button { torchOn.toggle() } label: {
                         Image(systemName: torchOn ? "flashlight.on.fill" : "flashlight.off.fill")
                             .foregroundStyle(.white)
                     }
@@ -70,6 +69,31 @@ struct ToteScannerSheet: View {
             }
             .toolbarBackground(.clear, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .sheet(isPresented: $showCreate, onDismiss: {
+                // Resume scanning if user cancelled create without saving
+                if unboundIdentifier != nil {
+                    unboundIdentifier = nil
+                    isScanning = true
+                }
+            }) {
+                if let identifier = unboundIdentifier {
+                    CreateToteSheet(
+                        qrIdentifier: identifier,
+                        onCreated: { newTote in
+                            showCreate = false
+                            unboundIdentifier = nil
+                            dismiss()
+                            onToteFound(newTote)
+                        },
+                        onCancel: {
+                            showCreate = false
+                            unboundIdentifier = nil
+                            isScanning = true
+                        }
+                    )
+                    .environmentObject(auth)
+                }
+            }
         }
     }
 
@@ -79,22 +103,28 @@ struct ToteScannerSheet: View {
         isLooking = true
         errorMessage = nil
 
-        // Extract QR identifier from either format:
-        // - halehub://tote/IDENTIFIER
-        // - https://flyhomemn.com/lists/totes/scan/IDENTIFIER/
-        // - raw IDENTIFIER string
-        let identifier = extractIdentifier(from: code)
+        let identifier = extractToteIdentifier(from: code)
 
         do {
-            let tote: Tote = try await APIClient.shared.get(
+            let response: ToteScanResponse = try await APIClient.shared.get(
                 "/totes/scan/\(identifier)/", token: token
             )
-            dismiss()
-            onToteFound(tote)
+            isLooking = false
+            if response.bound, let tote = response.asTote() {
+                dismiss()
+                onToteFound(tote)
+            } else if response.claimedByOtherUser == true {
+                errorMessage = "This QR code is already in use on another account."
+                try? await Task.sleep(for: .seconds(3))
+                isScanning = true
+            } else {
+                // Unbound — offer to create a new tote with this identifier
+                unboundIdentifier = response.qrCodeIdentifier ?? identifier
+                showCreate = true
+            }
         } catch let err as APIError {
             errorMessage = err.errorDescription ?? "Tote not found. Try scanning again."
             isLooking = false
-            // Re-enable scanning after a delay
             try? await Task.sleep(for: .seconds(2))
             isScanning = true
         } catch {
@@ -105,20 +135,19 @@ struct ToteScannerSheet: View {
         }
     }
 
-    private func extractIdentifier(from code: String) -> String {
-        // halehub://tote/IDENTIFIER
+    private func extractToteIdentifier(from code: String) -> String {
         if let url = URL(string: code), url.scheme == "halehub", url.host == "tote" {
-            return String(url.path.dropFirst())  // drop leading /
+            return String(url.path.dropFirst())
         }
-        // https://flyhomemn.com/lists/totes/scan/IDENTIFIER/
         if let url = URL(string: code),
-           let host = url.host, host.contains("flyhomemn"),
-           url.pathComponents.count >= 2 {
-            let last = url.pathComponents.last(where: { !$0.isEmpty && $0 != "/" }) ?? ""
-            if !last.isEmpty { return last }
+           let host = url.host, host.contains("flyhomemn") {
+            let parts = url.pathComponents.filter { $0 != "/" && !$0.isEmpty }
+            // /lists/totes/scan/IDENTIFIER/
+            if parts.count >= 4, parts[0] == "lists", parts[1] == "totes", parts[2] == "scan" {
+                return parts[3].uppercased()
+            }
         }
-        // Raw identifier
-        return code.trimmingCharacters(in: .whitespacesAndNewlines)
+        return code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
     }
 }
 
@@ -136,11 +165,7 @@ struct CameraPreviewWrapper: UIViewRepresentable {
     }
 
     func updateUIView(_ view: CameraPreviewView, context: Context) {
-        if isScanning {
-            view.startScanning()
-        } else {
-            view.stopScanning()
-        }
+        if isScanning { view.startScanning() } else { view.stopScanning() }
         view.setTorch(on: torchOn)
     }
 }
@@ -177,12 +202,12 @@ final class CameraPreviewView: UIView {
         previewLayer = preview
         captureSession = session
 
+        // AVCaptureSession.startRunning() must be called off the main thread.
+        // @preconcurrency import AVFoundation suppresses the Sendable warning here.
         DispatchQueue.global(qos: .userInitiated).async { session.startRunning() }
     }
 
-    func stopScanning() {
-        captureSession?.stopRunning()
-    }
+    func stopScanning() { captureSession?.stopRunning() }
 
     func setTorch(on: Bool) {
         guard let device = AVCaptureDevice.default(for: .video), device.hasTorch else { return }

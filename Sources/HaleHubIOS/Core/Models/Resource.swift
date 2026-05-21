@@ -8,10 +8,12 @@ struct Resource: Identifiable, Codable, Sendable {
     let slug: String
     let description: String
     let isPublic: Bool
+    let isActive: Bool
+    let canEdit: Bool
     let createdAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, title, slug, description, isPublic, createdAt
+        case id, title, slug, description, isPublic, isActive, canEdit, createdAt
     }
 
     init(from decoder: Decoder) throws {
@@ -23,9 +25,11 @@ struct Resource: Identifiable, Codable, Sendable {
         }
         title = try c.decode(String.self, forKey: .title)
         slug = try c.decode(String.self, forKey: .slug)
-        description = try c.decode(String.self, forKey: .description)
-        isPublic = try c.decode(Bool.self, forKey: .isPublic)
-        createdAt = try c.decode(Date.self, forKey: .createdAt)
+        description = (try? c.decode(String.self, forKey: .description)) ?? ""
+        isPublic = (try? c.decode(Bool.self, forKey: .isPublic)) ?? true
+        isActive = (try? c.decode(Bool.self, forKey: .isActive)) ?? true
+        canEdit = (try? c.decode(Bool.self, forKey: .canEdit)) ?? false
+        createdAt = (try? c.decode(Date.self, forKey: .createdAt)) ?? Date()
     }
 }
 
@@ -34,13 +38,20 @@ struct ResourceDetail: Codable, Sendable {
     let title: String
     let slug: String
     let description: String
-    let contentType: String  // "markdown" | "react"
-    let content: String      // raw markdown text
+    let contentType: String   // "markdown" | "react"
+    let content: String       // raw source
+    let contentHtml: String?  // server-rendered HTML (markdown only)
     let isPublic: Bool
+    let isActive: Bool
+    let canEdit: Bool
     let createdAt: Date
+    let updatedAt: Date?
 
     enum CodingKeys: String, CodingKey {
-        case id, title, slug, description, contentType, content, isPublic, createdAt
+        case id, title, slug, description
+        case contentType, content, contentHtml
+        case isPublic, isActive, canEdit
+        case createdAt, updatedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -52,32 +63,57 @@ struct ResourceDetail: Codable, Sendable {
         }
         title = try c.decode(String.self, forKey: .title)
         slug = try c.decode(String.self, forKey: .slug)
-        description = try c.decode(String.self, forKey: .description)
-        contentType = try c.decode(String.self, forKey: .contentType)
-        content = try c.decode(String.self, forKey: .content)
-        isPublic = try c.decode(Bool.self, forKey: .isPublic)
-        createdAt = try c.decode(Date.self, forKey: .createdAt)
+        description = (try? c.decode(String.self, forKey: .description)) ?? ""
+        contentType = (try? c.decode(String.self, forKey: .contentType)) ?? "markdown"
+        content = (try? c.decode(String.self, forKey: .content)) ?? ""
+        contentHtml = try? c.decode(String.self, forKey: .contentHtml)
+        isPublic = (try? c.decode(Bool.self, forKey: .isPublic)) ?? true
+        isActive = (try? c.decode(Bool.self, forKey: .isActive)) ?? true
+        canEdit = (try? c.decode(Bool.self, forKey: .canEdit)) ?? false
+        createdAt = (try? c.decode(Date.self, forKey: .createdAt)) ?? Date()
+        updatedAt = try? c.decode(Date.self, forKey: .updatedAt)
     }
+}
+
+// MARK: - Resource request bodies
+
+struct ResourceDraft: Encodable, Sendable {
+    let title: String
+    let description: String
+    let content: String
+    let contentType: String
+    let isPublic: Bool
+}
+
+struct ResourcePatch: Encodable, Sendable {
+    let title: String
+    let description: String
+    let content: String
+    let isPublic: Bool
+}
+
+struct ResourceArchiveRequest: Encodable, Sendable {
+    let archived: Bool
 }
 
 // MARK: - Letter
 
 struct Letter: Identifiable, Codable, Sendable {
-    let id: String       // UUID string
+    let id: String
     let title: String
     let slug: String
     let year: Int
     let hasRsvp: Bool
-    let eventDate: String?   // "YYYY-MM-DD" or null
+    let eventDate: String?
     let photoCount: Int
+    let canEdit: Bool
 
     enum CodingKeys: String, CodingKey {
-        case id, title, slug, year, hasRsvp, eventDate, photoCount
+        case id, title, slug, year, hasRsvp, eventDate, photoCount, canEdit
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        // Letters use UUID PKs — always String; guard against Int just in case
         if let intId = try? c.decode(Int.self, forKey: .id) {
             id = String(intId)
         } else {
@@ -86,9 +122,10 @@ struct Letter: Identifiable, Codable, Sendable {
         title = try c.decode(String.self, forKey: .title)
         slug = try c.decode(String.self, forKey: .slug)
         year = try c.decode(Int.self, forKey: .year)
-        hasRsvp = try c.decode(Bool.self, forKey: .hasRsvp)
+        hasRsvp = (try? c.decode(Bool.self, forKey: .hasRsvp)) ?? false
         eventDate = try? c.decode(String.self, forKey: .eventDate)
         photoCount = (try? c.decode(Int.self, forKey: .photoCount)) ?? 0
+        canEdit = (try? c.decode(Bool.self, forKey: .canEdit)) ?? false
     }
 }
 
@@ -97,7 +134,8 @@ struct LetterDetail: Codable, Sendable {
     let title: String
     let slug: String
     let year: Int
-    let greetingMessage: String  // raw markdown
+    let greetingMessage: String
+    let greetingMessageHtml: String   // server-rendered HTML
     let hasRsvp: Bool
     let eventDate: String?
     let eventTime: String
@@ -109,13 +147,15 @@ struct LetterDetail: Codable, Sendable {
     let rsvpShowGuestCount: Bool
     let rsvpShowNotes: Bool
     let photos: [LetterPhoto]
+    let canEdit: Bool
 
     enum CodingKeys: String, CodingKey {
-        case id, title, slug, year, greetingMessage, hasRsvp, eventDate
-        case eventTime, eventLocation
+        case id, title, slug, year
+        case greetingMessage, greetingMessageHtml
+        case hasRsvp, eventDate, eventTime, eventLocation
         case rsvpTitle, rsvpSubtitle
         case rsvpShowEmail, rsvpShowPhone, rsvpShowGuestCount, rsvpShowNotes
-        case photos
+        case photos, canEdit
     }
 
     init(from decoder: Decoder) throws {
@@ -129,7 +169,8 @@ struct LetterDetail: Codable, Sendable {
         slug = try c.decode(String.self, forKey: .slug)
         year = try c.decode(Int.self, forKey: .year)
         greetingMessage = (try? c.decode(String.self, forKey: .greetingMessage)) ?? ""
-        hasRsvp = try c.decode(Bool.self, forKey: .hasRsvp)
+        greetingMessageHtml = (try? c.decode(String.self, forKey: .greetingMessageHtml)) ?? ""
+        hasRsvp = (try? c.decode(Bool.self, forKey: .hasRsvp)) ?? false
         eventDate = try? c.decode(String.self, forKey: .eventDate)
         eventTime = (try? c.decode(String.self, forKey: .eventTime)) ?? ""
         eventLocation = (try? c.decode(String.self, forKey: .eventLocation)) ?? ""
@@ -140,6 +181,7 @@ struct LetterDetail: Codable, Sendable {
         rsvpShowGuestCount = (try? c.decode(Bool.self, forKey: .rsvpShowGuestCount)) ?? true
         rsvpShowNotes = (try? c.decode(Bool.self, forKey: .rsvpShowNotes)) ?? false
         photos = (try? c.decode([LetterPhoto].self, forKey: .photos)) ?? []
+        canEdit = (try? c.decode(Bool.self, forKey: .canEdit)) ?? false
     }
 }
 
@@ -147,6 +189,10 @@ struct LetterPhoto: Codable, Sendable {
     let url: String
     let caption: String
     let order: Int
+}
+
+extension LetterPhoto: Identifiable {
+    var id: String { url }
 }
 
 // MARK: - RSVP

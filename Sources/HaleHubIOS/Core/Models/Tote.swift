@@ -63,6 +63,43 @@ struct ToteItemType: Identifiable, Codable, Sendable, Hashable, Equatable {
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
+// MARK: - Scan response (GET /api/totes/scan/{identifier}/)
+
+struct ToteScanResponse: Decodable, Sendable {
+    let bound: Bool
+    let claimedByOtherUser: Bool?
+    // Present when bound == true
+    let id: String?
+    let name: String?
+    let location: String?
+    let locationNotes: String?
+    let itemCount: Int?
+    let dateSorted: String?
+    let qrCodeIdentifier: String?
+    let notes: String?
+    let photo1Url: String?
+    let photo2Url: String?
+
+    func asTote() -> Tote? {
+        guard bound, let id, let name, let location,
+              let locationNotes, let itemCount, let notes else { return nil }
+        return Tote(id: id, name: name, location: location,
+                    locationNotes: locationNotes, itemCount: itemCount,
+                    dateSorted: dateSorted, qrCodeIdentifier: qrCodeIdentifier,
+                    notes: notes, photo1Url: photo1Url, photo2Url: photo2Url)
+    }
+}
+
+// MARK: - Request body for POST /api/totes/
+
+struct CreateToteRequest: Encodable, Sendable {
+    let name: String
+    let location: String
+    let locationNotes: String
+    let notes: String
+    let qrCodeIdentifier: String?
+}
+
 // MARK: - Request body for POST /api/totes/{id}/items/
 
 struct AddToteItemRequest: Encodable, Sendable {

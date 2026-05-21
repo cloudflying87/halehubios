@@ -26,6 +26,18 @@ class ResourcesHubViewModel: ObservableObject {
 
         isLoading = false
     }
+
+    func archiveResource(slug: String, archived: Bool, token: String) async {
+        do {
+            let body = ResourceArchiveRequest(archived: archived)
+            let _: ResourceDetail = try await APIClient.shared.post(
+                "/resources/\(slug)/archive/", body: body, token: token
+            )
+            await load(token: token)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
 }
 
 // MARK: - Hub View
@@ -33,6 +45,12 @@ class ResourcesHubViewModel: ObservableObject {
 struct ResourcesHubView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm = ResourcesHubViewModel()
+    @State private var showCreateResource = false
+
+    // True if any resource allows editing (i.e., user is owner/adult)
+    private var canCreateResource: Bool {
+        vm.resources.first?.canEdit ?? vm.letters.first?.canEdit ?? false
+    }
 
     var body: some View {
         Group {
@@ -40,64 +58,95 @@ struct ResourcesHubView: View {
                 ProgressView("Loading…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List {
-                    if let errorMessage = vm.error {
-                        Section {
-                            Label(errorMessage, systemImage: "exclamationmark.triangle")
-                                .foregroundStyle(.red)
-                                .font(.callout)
-                        }
-                    }
-
-                    // MARK: Family Letters Section
-                    if !vm.letters.isEmpty {
-                        Section {
-                            ForEach(vm.letters) { letter in
-                                NavigationLink(
-                                    destination: LetterDetailView(letter: letter)
-                                        .environmentObject(auth)
-                                ) {
-                                    LetterRow(letter: letter)
-                                }
-                            }
-                        } header: {
-                            Label("Family Letters", systemImage: "envelope.open.fill")
-                        }
-                    }
-
-                    // MARK: Resources Section
-                    if !vm.resources.isEmpty {
-                        Section {
-                            ForEach(vm.resources) { resource in
-                                NavigationLink(
-                                    destination: ResourceDetailView(resource: resource)
-                                        .environmentObject(auth)
-                                ) {
-                                    ResourceRow(resource: resource)
-                                }
-                            }
-                        } header: {
-                            Label("Resources", systemImage: "doc.text.fill")
-                        }
-                    }
-
-                    if vm.resources.isEmpty && vm.letters.isEmpty && !vm.isLoading {
-                        Section {
-                            ContentUnavailableView(
-                                "Nothing Here Yet",
-                                systemImage: "doc.text.magnifyingglass",
-                                description: Text("Resources and family letters will appear here.")
-                            )
-                        }
-                    }
-                }
-                .listStyle(.insetGrouped)
-                .refreshable { await vm.load(token: auth.accessToken ?? "") }
+                list
             }
         }
         .navigationTitle("Resources & Letters")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            if canCreateResource {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { showCreateResource = true } label: {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showCreateResource) {
+            ResourceEditorSheet(mode: .create) { _ in
+                Task { await vm.load(token: auth.accessToken ?? "") }
+            }
+            .environmentObject(auth)
+        }
         .task { await vm.load(token: auth.accessToken ?? "") }
+    }
+
+    private var list: some View {
+        List {
+            if let errorMessage = vm.error {
+                Section {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                        .font(.callout)
+                }
+            }
+
+            // Family Letters
+            if !vm.letters.isEmpty {
+                Section {
+                    ForEach(vm.letters) { letter in
+                        NavigationLink(
+                            destination: LetterDetailView(letter: letter).environmentObject(auth)
+                        ) {
+                            LetterRow(letter: letter)
+                        }
+                    }
+                } header: {
+                    Label("Family Letters", systemImage: "envelope.open.fill")
+                }
+            }
+
+            // Resources
+            if !vm.resources.isEmpty {
+                Section {
+                    ForEach(vm.resources) { resource in
+                        NavigationLink(
+                            destination: ResourceDetailView(resource: resource).environmentObject(auth)
+                        ) {
+                            ResourceRow(resource: resource)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            if resource.canEdit {
+                                Button(resource.isActive ? "Archive" : "Restore") {
+                                    Task {
+                                        await vm.archiveResource(
+                                            slug: resource.slug,
+                                            archived: resource.isActive,
+                                            token: auth.accessToken ?? ""
+                                        )
+                                    }
+                                }
+                                .tint(resource.isActive ? .orange : .green)
+                            }
+                        }
+                    }
+                } header: {
+                    Label("Resources", systemImage: "doc.text.fill")
+                }
+            }
+
+            if vm.resources.isEmpty && vm.letters.isEmpty && !vm.isLoading {
+                Section {
+                    ContentUnavailableView(
+                        "Nothing Here Yet",
+                        systemImage: "doc.text.magnifyingglass",
+                        description: Text("Resources and family letters will appear here.")
+                    )
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .refreshable { await vm.load(token: auth.accessToken ?? "") }
     }
 }
 
@@ -108,7 +157,6 @@ private struct LetterRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Year badge
             Text(String(letter.year))
                 .font(.caption.bold())
                 .foregroundStyle(.white)
@@ -129,8 +177,7 @@ private struct LetterRow: View {
                             .foregroundStyle(.secondary)
                     }
                     if letter.photoCount > 0 {
-                        Label("\(letter.photoCount) photo\(letter.photoCount == 1 ? "" : "s")",
-                              systemImage: "photo.on.rectangle")
+                        Label("\(letter.photoCount)", systemImage: "photo.on.rectangle")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -150,7 +197,6 @@ private struct LetterRow: View {
         formatter.dateFormat = "yyyy-MM-dd"
         guard let date = formatter.date(from: dateString) else { return dateString }
         formatter.dateStyle = .medium
-        formatter.timeStyle = .none
         return formatter.string(from: date)
     }
 }
@@ -161,23 +207,36 @@ private struct ResourceRow: View {
     let resource: Resource
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(resource.title)
-                    .font(.headline)
-                    .lineLimit(1)
-                Spacer()
-                if resource.isPublic {
-                    Image(systemName: "globe")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        HStack(spacing: 12) {
+            Image(systemName: resource.isActive ? "doc.text" : "archivebox")
+                .foregroundStyle(resource.isActive ? Color.accentColor : .orange)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(resource.title)
+                        .font(.headline)
+                        .lineLimit(1)
+                    if !resource.isActive {
+                        Text("Archived")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.orange.opacity(0.1), in: Capsule())
+                    }
+                    if !resource.isPublic {
+                        Image(systemName: "lock.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-            }
-            if !resource.description.isEmpty {
-                Text(resource.description)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                if !resource.description.isEmpty {
+                    Text(resource.description)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
             }
         }
         .padding(.vertical, 4)

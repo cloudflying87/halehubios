@@ -1,4 +1,5 @@
 import SwiftUI
+import WebKit
 
 // MARK: - ViewModel
 
@@ -27,14 +28,10 @@ class LetterDetailViewModel: ObservableObject {
         rsvpError = nil
         do {
             let response: RSVPResponse = try await APIClient.shared.post(
-                "/letters/\(slug)/rsvp/",
-                body: rsvp,
-                token: token
+                "/letters/\(slug)/rsvp/", body: rsvp, token: token
             )
             rsvpSuccess = response.success
-            if !response.success {
-                rsvpError = response.message
-            }
+            if !response.success { rsvpError = response.message }
         } catch {
             rsvpError = error.localizedDescription
         }
@@ -56,7 +53,6 @@ struct LetterDetailView: View {
     @State private var rsvpGuestCount = 1
     @State private var rsvpNotes = ""
     @State private var showRSVPForm = false
-
     @State private var selectedPhoto: LetterPhoto?
 
     var body: some View {
@@ -76,53 +72,9 @@ struct LetterDetailView: View {
                     .buttonStyle(.bordered)
                 }
             } else if let detail = vm.detail {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-
-                        // MARK: Event Info Banner
-                        if let eventDate = detail.eventDate, !eventDate.isEmpty {
-                            EventInfoBanner(detail: detail)
-                        }
-
-                        // MARK: Greeting Message
-                        if !detail.greetingMessage.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) {
-                                MarkdownContentView(content: detail.greetingMessage)
-                            }
-                        }
-
-                        // MARK: Photo Gallery
-                        if !detail.photos.isEmpty {
-                            PhotoGallerySection(photos: detail.photos, onTap: { photo in
-                                selectedPhoto = photo
-                            })
-                        }
-
-                        // MARK: RSVP Section
-                        if detail.hasRsvp {
-                            RSVPSection(
-                                detail: detail,
-                                vm: vm,
-                                showRSVPForm: $showRSVPForm,
-                                rsvpName: $rsvpName,
-                                rsvpEmail: $rsvpEmail,
-                                rsvpPhone: $rsvpPhone,
-                                rsvpGuestCount: $rsvpGuestCount,
-                                rsvpNotes: $rsvpNotes,
-                                onSubmit: {
-                                    Task { await submitRSVP(detail: detail) }
-                                }
-                            )
-                        }
-
-                        Spacer(minLength: 40)
-                    }
-                    .padding(20)
-                }
+                contentView(detail: detail)
             } else {
-                // detail is nil but not loading — shouldn't happen, but handle gracefully
-                ProgressView("Loading…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .navigationTitle(letter.title)
@@ -131,6 +83,51 @@ struct LetterDetailView: View {
             PhotoFullScreenView(photo: photo)
         }
         .task { await vm.load(slug: letter.slug, token: auth.accessToken ?? "") }
+    }
+
+    @ViewBuilder
+    private func contentView(detail: LetterDetail) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+
+                // Event Info Banner
+                if let eventDate = detail.eventDate, !eventDate.isEmpty {
+                    EventInfoBanner(detail: detail)
+                }
+
+                // Greeting Message — server-rendered HTML in WKWebView
+                if !detail.greetingMessageHtml.isEmpty {
+                    HTMLWebView(html: detail.greetingMessageHtml)
+                        .frame(minHeight: 200)
+                } else if !detail.greetingMessage.isEmpty {
+                    // Fallback: AttributedString markdown
+                    MarkdownContentView(content: detail.greetingMessage)
+                }
+
+                // Photo Gallery
+                if !detail.photos.isEmpty {
+                    PhotoGallerySection(photos: detail.photos, onTap: { selectedPhoto = $0 })
+                }
+
+                // RSVP Section
+                if detail.hasRsvp {
+                    RSVPSection(
+                        detail: detail,
+                        vm: vm,
+                        showRSVPForm: $showRSVPForm,
+                        rsvpName: $rsvpName,
+                        rsvpEmail: $rsvpEmail,
+                        rsvpPhone: $rsvpPhone,
+                        rsvpGuestCount: $rsvpGuestCount,
+                        rsvpNotes: $rsvpNotes,
+                        onSubmit: { Task { await submitRSVP(detail: detail) } }
+                    )
+                }
+
+                Spacer(minLength: 40)
+            }
+            .padding(20)
+        }
     }
 
     private func submitRSVP(detail: LetterDetail) async {
@@ -143,9 +140,7 @@ struct LetterDetailView: View {
             notes: rsvpNotes.trimmingCharacters(in: .whitespaces)
         )
         await vm.submitRSVP(slug: detail.slug, rsvp: rsvp, token: token)
-        if vm.rsvpSuccess {
-            showRSVPForm = false
-        }
+        if vm.rsvpSuccess { showRSVPForm = false }
     }
 }
 
@@ -162,54 +157,42 @@ private struct EventInfoBanner: View {
             }
             if !detail.eventTime.isEmpty {
                 Label(detail.eventTime, systemImage: "clock")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline).foregroundStyle(.secondary)
             }
             if !detail.eventLocation.isEmpty {
                 Label(detail.eventLocation, systemImage: "mappin.and.ellipse")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline).foregroundStyle(.secondary)
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.accentColor.opacity(0.2), lineWidth: 1)
-        )
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.accentColor.opacity(0.2), lineWidth: 1))
     }
 
     private func formattedDate(_ dateString: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let date = formatter.date(from: dateString) else { return dateString }
-        formatter.dateStyle = .long
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        guard let date = fmt.date(from: dateString) else { return dateString }
+        fmt.dateStyle = .long
+        return fmt.string(from: date)
     }
 }
 
-// MARK: - Photo Gallery Section
+// MARK: - Photo Gallery
 
 private struct PhotoGallerySection: View {
     let photos: [LetterPhoto]
     let onTap: (LetterPhoto) -> Void
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 4),
-        GridItem(.flexible(), spacing: 4),
-    ]
+    private let columns = [GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4)]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Photos")
-                .font(.headline)
-
+            Text("Photos").font(.headline)
             LazyVGrid(columns: columns, spacing: 4) {
-                ForEach(photos.sorted { $0.order < $1.order }, id: \.url) { photo in
-                    PhotoThumbnail(photo: photo)
-                        .onTapGesture { onTap(photo) }
+                ForEach(photos.sorted { $0.order < $1.order }) { photo in
+                    PhotoThumbnail(photo: photo).onTapGesture { onTap(photo) }
                 }
             }
         }
@@ -224,20 +207,12 @@ private struct PhotoThumbnail: View {
             if let url = URL(string: photo.url) {
                 AsyncImage(url: url) { phase in
                     switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    case .failure:
-                        photoPlaceholder
-                    default:
-                        Color(.systemGray5)
-                            .overlay(ProgressView())
+                    case .success(let image): image.resizable().scaledToFill()
+                    case .failure: placeholder
+                    default: Color(.systemGray5).overlay(ProgressView())
                     }
                 }
-            } else {
-                photoPlaceholder
-            }
+            } else { placeholder }
         }
         .frame(maxWidth: .infinity)
         .aspectRatio(1, contentMode: .fill)
@@ -245,13 +220,10 @@ private struct PhotoThumbnail: View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
-    private var photoPlaceholder: some View {
-        Color(.systemGray5)
-            .overlay(
-                Image(systemName: "photo")
-                    .foregroundStyle(.tertiary)
-                    .font(.title2)
-            )
+    private var placeholder: some View {
+        Color(.systemGray5).overlay(
+            Image(systemName: "photo").foregroundStyle(.tertiary).font(.title2)
+        )
     }
 }
 
@@ -265,35 +237,21 @@ private struct PhotoFullScreenView: View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
-
                 if let url = URL(string: photo.url) {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFit()
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        case .failure:
-                            Image(systemName: "photo.slash")
-                                .font(.largeTitle)
-                                .foregroundStyle(.white.opacity(0.5))
+                            image.resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
                         default:
-                            ProgressView()
-                                .tint(.white)
+                            Image(systemName: "photo.slash").font(.largeTitle).foregroundStyle(.white.opacity(0.5))
                         }
                     }
-                } else {
-                    Image(systemName: "photo.slash")
-                        .font(.largeTitle)
-                        .foregroundStyle(.white.opacity(0.5))
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(.white)
+                    Button("Done") { dismiss() }.foregroundStyle(.white)
                 }
             }
             .toolbarBackground(.black, for: .navigationBar)
@@ -301,11 +259,9 @@ private struct PhotoFullScreenView: View {
             .safeAreaInset(edge: .bottom) {
                 if !photo.caption.isEmpty {
                     Text(photo.caption)
-                        .font(.caption)
-                        .foregroundStyle(.white)
+                        .font(.caption).foregroundStyle(.white)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
+                        .padding(.horizontal, 20).padding(.vertical, 12)
                         .frame(maxWidth: .infinity)
                         .background(.black.opacity(0.6))
                 }
@@ -329,46 +285,32 @@ private struct RSVPSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            // Section header
             VStack(alignment: .leading, spacing: 4) {
-                Text(detail.rsvpTitle.isEmpty ? "RSVP" : detail.rsvpTitle)
-                    .font(.headline)
+                Text(detail.rsvpTitle.isEmpty ? "RSVP" : detail.rsvpTitle).font(.headline)
                 if !detail.rsvpSubtitle.isEmpty {
-                    Text(detail.rsvpSubtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    Text(detail.rsvpSubtitle).font(.subheadline).foregroundStyle(.secondary)
                 }
             }
 
             if vm.rsvpSuccess {
-                // Success state
                 HStack(spacing: 10) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    Text("You're on the list! See you there.")
-                        .font(.subheadline)
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                    Text("You're on the list! See you there.").font(.subheadline)
                 }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14).frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.green.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
             } else if !showRSVPForm {
-                Button {
-                    showRSVPForm = true
-                } label: {
+                Button { showRSVPForm = true } label: {
                     Label("Submit RSVP", systemImage: "person.crop.circle.badge.plus")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
             } else {
                 RSVPFormFields(
-                    detail: detail,
-                    vm: vm,
-                    rsvpName: $rsvpName,
-                    rsvpEmail: $rsvpEmail,
-                    rsvpPhone: $rsvpPhone,
-                    rsvpGuestCount: $rsvpGuestCount,
-                    rsvpNotes: $rsvpNotes,
-                    onSubmit: onSubmit
+                    detail: detail, vm: vm,
+                    rsvpName: $rsvpName, rsvpEmail: $rsvpEmail,
+                    rsvpPhone: $rsvpPhone, rsvpGuestCount: $rsvpGuestCount,
+                    rsvpNotes: $rsvpNotes, onSubmit: onSubmit
                 )
             }
         }
@@ -387,97 +329,48 @@ private struct RSVPFormFields: View {
     @Binding var rsvpNotes: String
     let onSubmit: () -> Void
 
-    var isFormValid: Bool {
-        !rsvpName.trimmingCharacters(in: .whitespaces).isEmpty
-    }
+    var isFormValid: Bool { !rsvpName.trimmingCharacters(in: .whitespaces).isEmpty }
 
     var body: some View {
         VStack(spacing: 12) {
-            // Name — always shown
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Name")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                TextField("Your name", text: $rsvpName)
-                    .textContentType(.name)
-                    .padding(10)
-                    .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 8))
+            field("Name") {
+                TextField("Your name", text: $rsvpName).textContentType(.name)
             }
-
-            // Email — conditional
             if detail.rsvpShowEmail {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Email")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
+                field("Email") {
                     TextField("email@example.com", text: $rsvpEmail)
-                        .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .padding(10)
-                        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 8))
+                        .textContentType(.emailAddress).keyboardType(.emailAddress)
+                        .autocorrectionDisabled().textInputAutocapitalization(.never)
                 }
             }
-
-            // Phone — conditional
             if detail.rsvpShowPhone {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Phone")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
+                field("Phone") {
                     TextField("(555) 000-0000", text: $rsvpPhone)
-                        .textContentType(.telephoneNumber)
-                        .keyboardType(.phonePad)
-                        .padding(10)
-                        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 8))
+                        .textContentType(.telephoneNumber).keyboardType(.phonePad)
                 }
             }
-
-            // Guest count — conditional
             if detail.rsvpShowGuestCount {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Number of Guests")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
+                field("Guests") {
                     Stepper("\(rsvpGuestCount) guest\(rsvpGuestCount == 1 ? "" : "s")",
                             value: $rsvpGuestCount, in: 1...20)
-                        .padding(10)
-                        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 8))
                 }
             }
-
-            // Notes — conditional
             if detail.rsvpShowNotes {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Notes")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                    TextField("Any notes or questions…", text: $rsvpNotes, axis: .vertical)
+                field("Notes") {
+                    TextField("Any questions…", text: $rsvpNotes, axis: .vertical)
                         .lineLimit(3, reservesSpace: true)
-                        .padding(10)
-                        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 8))
                 }
             }
-
-            // Error message
             if let rsvpError = vm.rsvpError {
-                Text(rsvpError)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(rsvpError).font(.caption).foregroundStyle(.red).frame(maxWidth: .infinity, alignment: .leading)
             }
-
-            // Submit button
             Button {
                 onSubmit()
             } label: {
                 Group {
                     if vm.isSubmittingRSVP {
                         HStack(spacing: 8) {
-                            ProgressView()
-                                .tint(.white)
-                                .controlSize(.small)
+                            ProgressView().tint(.white).controlSize(.small)
                             Text("Submitting…")
                         }
                     } else {
@@ -490,10 +383,13 @@ private struct RSVPFormFields: View {
             .disabled(!isFormValid || vm.isSubmittingRSVP)
         }
     }
-}
 
-// MARK: - LetterPhoto Identifiable conformance for sheet(item:)
-
-extension LetterPhoto: Identifiable {
-    var id: String { url }
+    private func field<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).font(.caption.weight(.medium)).foregroundStyle(.secondary)
+            content()
+                .padding(10)
+                .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import WebKit
 
 // MARK: - ViewModel
 
@@ -6,6 +7,7 @@ import SwiftUI
 class ResourceDetailViewModel: ObservableObject {
     @Published var detail: ResourceDetail?
     @Published var isLoading = false
+    @Published var isSaving = false
     @Published var error: String?
 
     func load(slug: String, token: String) async {
@@ -18,6 +20,20 @@ class ResourceDetailViewModel: ObservableObject {
         }
         isLoading = false
     }
+
+    func archive(slug: String, archived: Bool, token: String) async {
+        isSaving = true
+        do {
+            let body = ResourceArchiveRequest(archived: archived)
+            let updated: ResourceDetail = try await APIClient.shared.post(
+                "/resources/\(slug)/archive/", body: body, token: token
+            )
+            detail = updated
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isSaving = false
+    }
 }
 
 // MARK: - View
@@ -27,6 +43,8 @@ struct ResourceDetailView: View {
     let resource: Resource
 
     @StateObject private var vm = ResourceDetailViewModel()
+    @State private var showEditor = false
+    @State private var showDeleteConfirm = false
 
     var body: some View {
         Group {
@@ -44,42 +62,159 @@ struct ResourceDetailView: View {
                     }
                     .buttonStyle(.bordered)
                 }
+            } else if let detail = vm.detail {
+                contentView(detail: detail)
             } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // Description subtitle
-                        if !resource.description.isEmpty {
-                            Text(resource.description)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.bottom, 4)
-                        }
-
-                        Divider()
-
-                        // Markdown content
-                        if let detail = vm.detail {
-                            MarkdownContentView(content: detail.content)
-                        } else {
-                            // Skeleton while content loads after detail is nil (first render)
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                    .padding(20)
-                }
+                ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .navigationTitle(resource.title)
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            if let detail = vm.detail, detail.canEdit {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button("Edit", systemImage: "pencil") { showEditor = true }
+                        Divider()
+                        Button(
+                            detail.isActive ? "Archive" : "Restore",
+                            systemImage: detail.isActive ? "archivebox" : "arrow.uturn.backward"
+                        ) {
+                            Task {
+                                await vm.archive(
+                                    slug: detail.slug,
+                                    archived: detail.isActive,
+                                    token: auth.accessToken ?? ""
+                                )
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showEditor) {
+            if let detail = vm.detail {
+                ResourceEditorSheet(mode: .edit(detail)) { _ in
+                    Task { await vm.load(slug: detail.slug, token: auth.accessToken ?? "") }
+                }
+                .environmentObject(auth)
+            }
+        }
         .task { await vm.load(slug: resource.slug, token: auth.accessToken ?? "") }
+    }
+
+    @ViewBuilder
+    private func contentView(detail: ResourceDetail) -> some View {
+        if !detail.isActive {
+            // Archived banner
+            HStack(spacing: 8) {
+                Image(systemName: "archivebox")
+                Text("Archived")
+            }
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(.orange)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(Color.orange.opacity(0.1))
+        }
+
+        if detail.contentType == "react" {
+            // React source shown as raw monospaced text on iOS
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if !detail.description.isEmpty {
+                        Text(detail.description)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Label("React component — source view only on iOS", systemImage: "info.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(detail.content)
+                        .font(.body.monospaced())
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(20)
+            }
+        } else if let html = detail.contentHtml, !html.isEmpty {
+            HTMLWebView(html: html)
+        } else {
+            // Fallback for older API responses without contentHtml
+            ScrollView {
+                MarkdownContentView(content: detail.content)
+                    .padding(20)
+            }
+        }
     }
 }
 
-// MARK: - Markdown Content
+// MARK: - WKWebView wrapper
 
-/// Renders Markdown using AttributedString with a plain-text fallback.
+struct HTMLWebView: UIViewRepresentable {
+    let html: String
+
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.scrollView.showsHorizontalScrollIndicator = false
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        let css = """
+        <style>
+        :root { color-scheme: light dark; }
+        body {
+            font-family: -apple-system, sans-serif;
+            font-size: 17px;
+            line-height: 1.6;
+            padding: 16px;
+            margin: 0;
+            word-break: break-word;
+        }
+        h1, h2, h3, h4 { color: #1E4D6B; margin-top: 1.2em; }
+        a { color: #1E4D6B; }
+        img { max-width: 100%; height: auto; border-radius: 8px; }
+        code {
+            background: rgba(127,127,127,0.15);
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: ui-monospace, monospace;
+            font-size: 0.875em;
+        }
+        pre {
+            background: rgba(127,127,127,0.1);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        pre code { background: none; padding: 0; }
+        blockquote {
+            border-left: 4px solid #1E4D6B;
+            margin: 1em 0;
+            padding-left: 12px;
+            color: #666;
+        }
+        ul, ol { padding-left: 1.5em; }
+        li { margin-bottom: 4px; }
+        input[type=checkbox] { accent-color: #1E4D6B; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid rgba(127,127,127,0.3); padding: 8px; text-align: left; }
+        th { background: rgba(127,127,127,0.1); }
+        @media (prefers-color-scheme: dark) {
+            blockquote { color: #aaa; }
+        }
+        </style>
+        """
+        webView.loadHTMLString(css + html, baseURL: URL(string: "https://flyhomemn.com"))
+    }
+}
+
+// MARK: - Markdown Content (fallback)
+
 struct MarkdownContentView: View {
     let content: String
 
@@ -95,7 +230,6 @@ struct MarkdownContentView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
         } else {
-            // Plain-text fallback — no crash if markdown parsing fails
             Text(content)
                 .font(.body)
                 .frame(maxWidth: .infinity, alignment: .leading)

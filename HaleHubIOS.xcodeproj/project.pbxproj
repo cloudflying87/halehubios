@@ -14,6 +14,9 @@
 		28BB62C71B132B865695D054 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 10D050A0AA135EA42867348B /* Assets.xcassets */; };
 		309D4E2822316C8A2AA73276 /* AddToteItemSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E42C92988E41BEC50BEFC7 /* AddToteItemSheet.swift */; };
 		AA1234BB5678CCDD9900EEF1 /* ToteScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9988AA7766554433221100 /* ToteScannerView.swift */; };
+		AA11BB22CC33DD44EE55FF01 /* CreateToteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF66AA01 /* CreateToteSheet.swift */; };
+		AA11BB22CC33DD44EE55FF02 /* ResourceEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF66AA02 /* ResourceEditorSheet.swift */; };
+		AA11BB22CC33DD44EE55FF03 /* QRCodeEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF66AA03 /* QRCodeEditSheet.swift */; };
 		3D9A70283B1418D66C2EB770 /* Vehicle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9E73A2B5915D0510398991 /* Vehicle.swift */; };
 		3F50CD98FA91662D30597592 /* TotesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C4CCC6D185F3EE25128D029 /* TotesListView.swift */; };
 		436A4F3CF403E3EDFC47B773 /* Tote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26CF0181480A7ED66F4D253B /* Tote.swift */; };
@@ -112,6 +115,9 @@
 		E1AD9D996E827387C9F71922 /* FinanceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceViewModel.swift; sourceTree = "<group>"; };
 		E2E42C92988E41BEC50BEFC7 /* AddToteItemSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToteItemSheet.swift; sourceTree = "<group>"; };
 		BB9988AA7766554433221100 /* ToteScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToteScannerView.swift; sourceTree = "<group>"; };
+		BB22CC33DD44EE55FF66AA01 /* CreateToteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateToteSheet.swift; sourceTree = "<group>"; };
+		BB22CC33DD44EE55FF66AA02 /* ResourceEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceEditorSheet.swift; sourceTree = "<group>"; };
+		BB22CC33DD44EE55FF66AA03 /* QRCodeEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeEditSheet.swift; sourceTree = "<group>"; };
 		E3A0DF54CE532F5E9E5E92AE /* VehicleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleDetailView.swift; sourceTree = "<group>"; };
 		EB8B4D5F0F791D89EC2FB3A0 /* LoanCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanCalculatorView.swift; sourceTree = "<group>"; };
 		EBF25113EBEDA00D06F38AC3 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
@@ -147,6 +153,7 @@
 			children = (
 				BAAD29803F12391B72A484FC /* LetterDetailView.swift */,
 				9A1199889C552A49F7DD3EDC /* ResourceDetailView.swift */,
+				BB22CC33DD44EE55FF66AA02 /* ResourceEditorSheet.swift */,
 				0C93425E6A35DBEE8FE9ACBA /* ResourcesHubView.swift */,
 			);
 			path = Resources;
@@ -182,6 +189,7 @@
 			isa = PBXGroup;
 			children = (
 				E2E42C92988E41BEC50BEFC7 /* AddToteItemSheet.swift */,
+				BB22CC33DD44EE55FF66AA01 /* CreateToteSheet.swift */,
 				45ACFCECF85237B26C0F6F99 /* ToteDetailView.swift */,
 				BB9988AA7766554433221100 /* ToteScannerView.swift */,
 				8C4CCC6D185F3EE25128D029 /* TotesListView.swift */,
@@ -357,6 +365,7 @@
 			children = (
 				4C6603A1B4CEB94E3C970DF7 /* QRCodeCreateSheet.swift */,
 				7D90AD79C3F6F7C3CC8B97F8 /* QRCodeDetailView.swift */,
+				BB22CC33DD44EE55FF66AA03 /* QRCodeEditSheet.swift */,
 				8B6C595536292C2EDCFD5728 /* QRCodesView.swift */,
 			);
 			path = QRCodes;
@@ -440,6 +449,9 @@
 				5855076BEE4FCBA24B0E1E16 /* AccountView.swift in Sources */,
 				309D4E2822316C8A2AA73276 /* AddToteItemSheet.swift in Sources */,
 				AA1234BB5678CCDD9900EEF1 /* ToteScannerView.swift in Sources */,
+				AA11BB22CC33DD44EE55FF01 /* CreateToteSheet.swift in Sources */,
+				AA11BB22CC33DD44EE55FF02 /* ResourceEditorSheet.swift in Sources */,
+				AA11BB22CC33DD44EE55FF03 /* QRCodeEditSheet.swift in Sources */,
 				F5311CBEC7A613351D674BAE /* AuthManager.swift in Sources */,
 				823F50914D9327257F393EA2 /* CacheManager.swift in Sources */,
 				EEAB2FADBDA87D90CA2F7687 /* CompoundInterestView.swift in Sources */,

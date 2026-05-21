@@ -40,3 +40,9 @@ struct CreateQRCodeRequest: Encodable, Sendable {
     let isDynamic: Bool
     let contentData: QRContentData
 }
+
+struct UpdateQRCodeRequest: Encodable, Sendable {
+    let name: String
+    let isActive: Bool
+    let contentData: QRContentData
+}

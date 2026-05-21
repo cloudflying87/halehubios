@@ -2,11 +2,12 @@ import SwiftUI
 
 struct QRCodeDetailView: View {
     @EnvironmentObject var auth: AuthManager
-    let qrCode: QRCode
+    @State var qrCode: QRCode
 
     @State private var showShareSheet = false
     @State private var copiedText: String?
     @State private var showCopiedToast = false
+    @State private var showEdit = false
 
     var body: some View {
         ScrollView {
@@ -65,6 +66,17 @@ struct QRCodeDetailView: View {
         }
         .navigationTitle("QR Code")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Edit") { showEdit = true }
+            }
+        }
+        .sheet(isPresented: $showEdit) {
+            QRCodeEditSheet(qrCode: qrCode) { updated in
+                qrCode = updated
+            }
+            .environmentObject(auth)
+        }
         .overlay(alignment: .bottom) {
             if showCopiedToast {
                 copiedToast

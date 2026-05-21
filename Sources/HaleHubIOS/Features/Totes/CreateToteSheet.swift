@@ -1,0 +1,118 @@
+import SwiftUI
+
+struct CreateToteSheet: View {
+    @EnvironmentObject var auth: AuthManager
+    var qrIdentifier: String
+    var onCreated: (Tote) -> Void
+    var onCancel: () -> Void
+
+    @State private var name = ""
+    @State private var location = "other"
+    @State private var locationNotes = ""
+    @State private var notes = ""
+    @State private var isSaving = false
+    @State private var error: String?
+
+    private let locations: [(slug: String, label: String)] = [
+        ("basement", "Basement"),
+        ("attic", "Attic"),
+        ("garage", "Garage"),
+        ("storage_unit", "Storage Unit"),
+        ("bedroom_closet", "Bedroom Closet"),
+        ("guest_room", "Guest Room"),
+        ("shed", "Shed"),
+        ("other", "Other"),
+    ]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    HStack(spacing: 10) {
+                        Image(systemName: "qrcode")
+                            .foregroundStyle(Color.accentColor)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("QR Code Scanned")
+                                .font(.subheadline.weight(.medium))
+                            Text(qrIdentifier)
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    Text("New Tote")
+                } footer: {
+                    Text("This QR code isn't linked to a tote yet. Fill in the details below to create one.")
+                }
+
+                Section("Name") {
+                    TextField("e.g. Winter Clothes, Baby Items", text: $name)
+                        .autocorrectionDisabled()
+                }
+
+                Section("Location") {
+                    Picker("Location", selection: $location) {
+                        ForEach(locations, id: \.slug) { loc in
+                            Text(loc.label).tag(loc.slug)
+                        }
+                    }
+                    TextField("Details (e.g. Top shelf, Left corner)", text: $locationNotes)
+                }
+
+                Section("Notes (optional)") {
+                    TextField("Any additional notes…", text: $notes, axis: .vertical)
+                        .lineLimit(3, reservesSpace: true)
+                }
+
+                if let error {
+                    Section {
+                        Text(error)
+                            .foregroundStyle(.red)
+                            .font(.subheadline)
+                    }
+                }
+            }
+            .navigationTitle("Create Tote")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onCancel() }
+                        .disabled(isSaving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if isSaving {
+                        ProgressView().scaleEffect(0.8)
+                    } else {
+                        Button("Create") {
+                            Task { await save() }
+                        }
+                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        guard let token = auth.accessToken else { return }
+        isSaving = true
+        error = nil
+
+        let body = CreateToteRequest(
+            name: name.trimmingCharacters(in: .whitespaces),
+            location: location,
+            locationNotes: locationNotes.trimmingCharacters(in: .whitespaces),
+            notes: notes.trimmingCharacters(in: .whitespaces),
+            qrCodeIdentifier: qrIdentifier.isEmpty ? nil : qrIdentifier
+        )
+
+        do {
+            let newTote: Tote = try await APIClient.shared.post("/totes/", body: body, token: token)
+            onCreated(newTote)
+        } catch {
+            self.error = error.localizedDescription
+            isSaving = false
+        }
+    }
+}
