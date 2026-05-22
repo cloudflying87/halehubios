@@ -9,6 +9,8 @@ struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var importedRecipeId: String? = nil
     @State private var navigateToImported = false
+    @State private var importDraftId: String? = nil
+    @State private var showImportReview = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -55,17 +57,31 @@ struct MainTabView: View {
         .onOpenURL { url in
             handleURL(url)
         }
+        .sheet(isPresented: $showImportReview) {
+            if let id = importDraftId {
+                RecipeImportDraftSheet(importId: id) { recipe in
+                    showImportReview = false
+                    importedRecipeId = recipe.id.uuidString
+                    navigateToImported = true
+                }
+                .environmentObject(auth)
+            }
+        }
     }
 
     private func handleURL(_ url: URL) {
-        // halehub://recipes — open Meals tab
-        // halehub://recipes/<id> — open Meals tab and navigate to specific recipe
+        // halehub://recipes               — open Meals tab
+        // halehub://recipes/<uuid>        — open Meals tab, navigate to recipe
+        // halehub://recipes/review/<id>   — open Meals tab, show import review sheet
         guard url.scheme == "halehub" else { return }
         switch url.host {
         case "recipes":
             selectedTab = 1
-            let pathId = url.pathComponents.dropFirst().first
-            if let id = pathId, !id.isEmpty {
+            let parts = url.pathComponents.dropFirst()
+            if parts.first == "review", let id = parts.dropFirst().first, !id.isEmpty {
+                importDraftId = id
+                showImportReview = true
+            } else if let id = parts.first, !id.isEmpty {
                 importedRecipeId = id
                 navigateToImported = true
             }

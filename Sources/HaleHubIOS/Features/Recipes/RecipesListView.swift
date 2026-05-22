@@ -383,6 +383,54 @@ private struct OptionalIntField: View {
     }
 }
 
+// MARK: - Import Draft Sheet (opened via deep link from shortcut)
+
+struct RecipeImportDraftSheet: View {
+    @EnvironmentObject var auth: AuthManager
+    let importId: String
+    let onSuccess: (Recipe) -> Void
+
+    @StateObject private var vm = RecipesViewModel()
+    @State private var parsed: ParsedRecipeData?
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if isLoading {
+                    ProgressView("Loading recipe…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let p = parsed {
+                    RecipeImportReviewView(vm: vm, parsed: p, onSuccess: onSuccess)
+                        .environmentObject(auth)
+                } else {
+                    ContentUnavailableView {
+                        Label("Draft Expired", systemImage: "clock.badge.xmark")
+                    } description: {
+                        Text(errorMessage ?? "This import link has expired. Please import the recipe again.")
+                    }
+                }
+            }
+            .navigationTitle("Review Recipe")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .task { await loadDraft() }
+    }
+
+    private func loadDraft() async {
+        guard let token = auth.accessToken else { isLoading = false; return }
+        do {
+            parsed = try await APIClient.shared.get(
+                "/recipes/import/draft/\(importId)/", token: token
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+}
+
 // MARK: - Filter Bar
 
 struct FilterBar: View {
