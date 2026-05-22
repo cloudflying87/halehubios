@@ -23,17 +23,22 @@ class VehiclesViewModel: ObservableObject {
     @Published var vehicles: [Vehicle] = []
     @Published var maintenanceCategories: [MaintenanceCategory] = []
     @Published var typeFilter: VehicleTypeFilter = .all
+    @Published var showGuestVehicles = false
     @Published var isLoading = false
     @Published var error: String?
 
+    var guestVehicles: [Vehicle] { vehicles.filter { $0.status == "guest" } }
+    var activeVehicles: [Vehicle] { vehicles.filter { $0.status != "guest" } }
+
     var filtered: [Vehicle] {
-        guard typeFilter != .all, let typeVal = typeFilter.queryValue else { return vehicles }
-        return vehicles.filter { $0.vehicleType == typeVal }
+        let base = activeVehicles
+        guard typeFilter != .all, let typeVal = typeFilter.queryValue else { return base }
+        return base.filter { $0.vehicleType == typeVal }
     }
 
-    // Only show filter chips for types actually present in the list
+    // Only show filter chips for types present among active vehicles
     var availableFilters: [VehicleTypeFilter] {
-        let types = Set(vehicles.map { $0.vehicleType })
+        let types = Set(activeVehicles.map { $0.vehicleType })
         return VehicleTypeFilter.allCases.filter { filter in
             filter == .all || types.contains(filter.queryValue ?? "")
         }

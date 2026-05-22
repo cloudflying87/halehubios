@@ -32,9 +32,43 @@ struct VehiclesListView: View {
                         .padding(.vertical, 8)
                         Divider()
                     }
-                    List(vm.filtered) { vehicle in
-                        NavigationLink(destination: VehicleDetailView(vehicle: vehicle)) {
-                            VehicleRow(vehicle: vehicle)
+                    List {
+                        ForEach(vm.filtered) { vehicle in
+                            NavigationLink(destination: VehicleDetailView(vehicle: vehicle)) {
+                                VehicleRow(vehicle: vehicle)
+                            }
+                        }
+
+                        if !vm.guestVehicles.isEmpty {
+                            if vm.showGuestVehicles {
+                                Section {
+                                    ForEach(vm.guestVehicles) { vehicle in
+                                        NavigationLink(destination: VehicleDetailView(vehicle: vehicle)) {
+                                            VehicleRow(vehicle: vehicle)
+                                        }
+                                    }
+                                } header: {
+                                    HStack {
+                                        Text("Guest Vehicles")
+                                        Spacer()
+                                        Button("Hide") { vm.showGuestVehicles = false }
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            } else {
+                                Button {
+                                    vm.showGuestVehicles = true
+                                } label: {
+                                    Label(
+                                        "Show \(vm.guestVehicles.count) guest vehicle\(vm.guestVehicles.count == 1 ? "" : "s")",
+                                        systemImage: "person.badge.clock"
+                                    )
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                }
+                                .listRowSeparator(.hidden)
+                            }
                         }
                     }
                     .listStyle(.plain)
