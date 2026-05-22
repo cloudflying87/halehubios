@@ -127,36 +127,7 @@ struct VehicleDetailView: View {
 
                     // Maintenance schedule links (hidden for guest vehicles)
                     if vehicle.status != "guest" {
-                        VStack(spacing: 8) {
-                            NavigationLink(destination: MaintenanceScheduleManagerView(vehicle: vehicle).environmentObject(auth)) {
-                                HStack {
-                                    Label("Maintenance Schedule", systemImage: "wrench.and.screwdriver")
-                                        .font(.headline)
-                                    Spacer()
-                                    Text("\(schedules.count)")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                }
-                            }
-                            .buttonStyle(.plain)
-
-                            NavigationLink(destination: MaintenanceHistoryView(vehicle: vehicle).environmentObject(auth)) {
-                                HStack {
-                                    Label("Service History", systemImage: "clock.arrow.circlepath")
-                                        .font(.headline)
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(14)
-                        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+                        MaintenanceNavLinks(vehicle: vehicle, scheduleCount: schedules.count)
                     }
 
                     Divider()
@@ -1254,6 +1225,54 @@ struct EventDetailSheet: View {
         case "outing": return event.locationName ?? "Outing"
         default: return event.eventType.capitalized
         }
+    }
+}
+
+// MARK: - Maintenance Nav Links
+
+private struct MaintenanceNavLinks: View {
+    @EnvironmentObject var auth: AuthManager
+    let vehicle: Vehicle
+    let scheduleCount: Int
+
+    var body: some View {
+        VStack(spacing: 8) {
+            scheduleLink
+            historyLink
+        }
+        .padding(14)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var scheduleLink: some View {
+        NavigationLink(destination: MaintenanceScheduleManagerView(vehicle: vehicle).environmentObject(auth)) {
+            HStack {
+                Label("Maintenance Schedule", systemImage: "wrench.and.screwdriver")
+                    .font(.headline)
+                Spacer()
+                Text("\(scheduleCount)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var historyLink: some View {
+        NavigationLink(destination: MaintenanceHistoryView(vehicle: vehicle).environmentObject(auth)) {
+            HStack {
+                Label("Service History", systemImage: "clock.arrow.circlepath")
+                    .font(.headline)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 

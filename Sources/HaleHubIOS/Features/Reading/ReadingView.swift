@@ -158,11 +158,20 @@ struct ReadingView: View {
                     RecentDaysStrip(days: detail.recentDays, currentDayNumber: detail.currentDayNumber)
                 }
 
-                // Section 3b: View All Days button
+                // Section 3b: View All Days button + Bible Progress
                 if let detail = vm.primaryPlanDetail,
                    let summary = vm.plans.first(where: { $0.id == detail.id }) ?? vm.plans.first {
                     NavigationLink(destination: ReadingCalendarView(plan: summary).environmentObject(auth)) {
                         Label("View All \(detail.totalDays) Days", systemImage: "calendar")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                if let detail = vm.primaryPlanDetail {
+                    NavigationLink(destination: BibleProgressView(planId: detail.id).environmentObject(auth)) {
+                        Label("Bible Progress", systemImage: "books.vertical")
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
                     }

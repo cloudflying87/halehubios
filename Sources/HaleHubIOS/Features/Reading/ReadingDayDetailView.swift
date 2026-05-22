@@ -79,6 +79,27 @@ class ReadingDayDetailViewModel: ObservableObject {
             )
         }
     }
+
+    func updateNotes(notes: String, token: String) async {
+        do {
+            let req = UpdateDayNotesRequest(notes: notes)
+            let _: ReadingDay = try await APIClient.shared.patch(
+                "/reading/plans/\(planId)/days/\(dayNumber)/",
+                body: req, token: token
+            )
+            if let d = day {
+                day = ReadingDay(
+                    dayNumber: d.dayNumber,
+                    date: d.date,
+                    isCompleted: d.isCompleted,
+                    entries: d.entries,
+                    notes: notes
+                )
+            }
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
 }
 
 // MARK: - View
@@ -91,6 +112,8 @@ struct ReadingDayDetailView: View {
 
     @StateObject private var vm: ReadingDayDetailViewModel
     @State private var showAddEntry = false
+    @State private var editingNotes = false
+    @State private var notesText = ""
 
     init(planId: String, dayNumber: Int, dateString: String) {
         self.planId = planId
@@ -151,6 +174,10 @@ struct ReadingDayDetailView: View {
             .environmentObject(auth)
         }
         .task { await vm.load(token: auth.accessToken ?? "") }
+        .onAppear { notesText = vm.day?.notes ?? "" }
+        .onChange(of: vm.day?.notes) { _, newValue in
+            if !editingNotes { notesText = newValue ?? "" }
+        }
         .alert("Error", isPresented: .init(
             get: { vm.error != nil && vm.day != nil },
             set: { if !$0 { vm.error = nil } }
@@ -230,12 +257,44 @@ struct ReadingDayDetailView: View {
                 Text("Readings")
             }
 
-            // Notes (if any)
-            if let notes = day.notes, !notes.isEmpty {
-                Section("Notes") {
-                    Text(notes)
-                        .font(.subheadline)
+            // Notes — always shown, editable
+            Section("Notes") {
+                if editingNotes {
+                    TextEditor(text: $notesText)
+                        .frame(minHeight: 80)
+                    HStack {
+                        Button("Cancel") {
+                            editingNotes = false
+                            notesText = day.notes ?? ""
+                        }
                         .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Save") {
+                            Task {
+                                await vm.updateNotes(
+                                    notes: notesText,
+                                    token: auth.accessToken ?? ""
+                                )
+                                editingNotes = false
+                            }
+                        }
+                        .fontWeight(.semibold)
+                    }
+                } else {
+                    HStack {
+                        Text(day.notes?.isEmpty == false ? day.notes! : "No notes — tap to add")
+                            .foregroundStyle(day.notes?.isEmpty == false ? .primary : .secondary)
+                            .italic(day.notes?.isEmpty != false)
+                            .font(.subheadline)
+                        Spacer()
+                        Button {
+                            editingNotes = true
+                            notesText = day.notes ?? ""
+                        } label: {
+                            Image(systemName: "pencil")
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
                 }
             }
         }

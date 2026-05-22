@@ -22,7 +22,7 @@
 		4BED8439C68597ED905E5518 /* HaleNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AA1D7CF6070F458F822E505 /* HaleNotification.swift */; };
 		4F3EE32CA697D673557F7F60 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D322D12691A62F28635D061 /* LoginView.swift */; };
 		5153DFD64BF9325FEFC74E64 /* LetterEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EE48589C34175A306051197 /* LetterEditorSheet.swift */; };
-		5153DFD64BF9325FEFC74E65 /* ArchiveHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EE48589C34175A306051198 /* ArchiveHubView.swift */; };
+		518E40F650756756CBB7DDE6 /* MaintenanceScheduleManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E947BD3D8138984D1A9AA070 /* MaintenanceScheduleManagerView.swift */; };
 		574B0D1BD4CBC4B98428F106 /* LocalAuthentication.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C309AC162DA76ACDF7A95C8 /* LocalAuthentication.framework */; };
 		5855076BEE4FCBA24B0E1E16 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC6F675794F03BA9FEA90968 /* AccountView.swift */; };
 		5CCB5B17B30F93AED9AA0484 /* QRBatchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 977944FB66BE48718D1183B2 /* QRBatchSheet.swift */; };
@@ -31,6 +31,7 @@
 		63543260E7AFF283D98B27F7 /* QRCodeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D90AD79C3F6F7C3CC8B97F8 /* QRCodeDetailView.swift */; };
 		6B9745F7E8ADD1F8F0B67D7E /* CreateToteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57F526FD0101A9167FD1673 /* CreateToteSheet.swift */; };
 		6BA53ED787AD869D98668CFF /* FinanceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1AD9D996E827387C9F71922 /* FinanceViewModel.swift */; };
+		6EF3632628FD2B8521F92BE6 /* ArchiveHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46245FF3D4EDB0C2E41CE2D8 /* ArchiveHubView.swift */; };
 		70570EDAB2447292C0FE276F /* RecipesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24B721CFDEC7BEE72927514 /* RecipesViewModel.swift */; };
 		7632ECDEF899542D9D899CCC /* ToteDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45ACFCECF85237B26C0F6F99 /* ToteDetailView.swift */; };
 		781EE9C9FD1BF73B1123495B /* ShoppingListDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4007424790D9C4CD3E4E10 /* ShoppingListDetailView.swift */; };
@@ -64,6 +65,7 @@
 		D5D1582EF5D926ED63EC7881 /* LoanCalculatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB8B4D5F0F791D89EC2FB3A0 /* LoanCalculatorView.swift */; };
 		DE32D7A36A038D9603EA2763 /* CookModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D91DAB9A1CAE1BD99CF0623 /* CookModeView.swift */; };
 		DF6FD95B813D135A81B599C7 /* ResourceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1199889C552A49F7DD3EDC /* ResourceDetailView.swift */; };
+		E4CD84CEC9797524233AD907 /* BibleProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815C624F55265C97B1C42422 /* BibleProgressView.swift */; };
 		E5F537F0BD6951338006BB07 /* Resource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B687332A40D9FD2B517A53 /* Resource.swift */; };
 		E939161D079481F668443B56 /* ReadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 040BCD9171AD5B0D521CFD48 /* ReadingView.swift */; };
 		EEAB2FADBDA87D90CA2F7687 /* CompoundInterestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 264657A8853B85BCCFCEA2EA /* CompoundInterestView.swift */; };
@@ -85,7 +87,6 @@
 		1979192C8C8DBC508631A28E /* ReadingDayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingDayDetailView.swift; sourceTree = "<group>"; };
 		1DA68F684F0A477BD7D1FEB9 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		1EE48589C34175A306051197 /* LetterEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LetterEditorSheet.swift; sourceTree = "<group>"; };
-		1EE48589C34175A306051198 /* ArchiveHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveHubView.swift; sourceTree = "<group>"; };
 		1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesListView.swift; sourceTree = "<group>"; };
 		1FCDF504AF0FF0F7B2F22CC9 /* RecipeEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeEditView.swift; sourceTree = "<group>"; };
 		264657A8853B85BCCFCEA2EA /* CompoundInterestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompoundInterestView.swift; sourceTree = "<group>"; };
@@ -96,6 +97,7 @@
 		38E93521147DA51107C96ABA /* RecipesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipesListView.swift; sourceTree = "<group>"; };
 		43CB5F5CE1DA94DB05CEFAB1 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		45ACFCECF85237B26C0F6F99 /* ToteDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToteDetailView.swift; sourceTree = "<group>"; };
+		46245FF3D4EDB0C2E41CE2D8 /* ArchiveHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveHubView.swift; sourceTree = "<group>"; };
 		4A4007424790D9C4CD3E4E10 /* ShoppingListDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListDetailView.swift; sourceTree = "<group>"; };
 		4C6603A1B4CEB94E3C970DF7 /* QRCodeCreateSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeCreateSheet.swift; sourceTree = "<group>"; };
 		4D91DAB9A1CAE1BD99CF0623 /* CookModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookModeView.swift; sourceTree = "<group>"; };
@@ -110,6 +112,7 @@
 		78FB1010716375E4D43CFAC4 /* NotificationsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsViewModel.swift; sourceTree = "<group>"; };
 		7B850A78801A49015E962D7B /* ResourceEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceEditorSheet.swift; sourceTree = "<group>"; };
 		7D90AD79C3F6F7C3CC8B97F8 /* QRCodeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeDetailView.swift; sourceTree = "<group>"; };
+		815C624F55265C97B1C42422 /* BibleProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleProgressView.swift; sourceTree = "<group>"; };
 		82E07456A55F649FBB9C8448 /* ShoppingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingViewModel.swift; sourceTree = "<group>"; };
 		875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesViewModel.swift; sourceTree = "<group>"; };
 		8B6C595536292C2EDCFD5728 /* QRCodesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodesView.swift; sourceTree = "<group>"; };
@@ -130,10 +133,11 @@
 		C8846379DD0DC0029F8B00B6 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		D24B721CFDEC7BEE72927514 /* RecipesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipesViewModel.swift; sourceTree = "<group>"; };
 		D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutingsAnalyticsView.swift; sourceTree = "<group>"; };
-		D77C2BBF0F9F154CA449BA91 /* HaleHubIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HaleHubIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D77C2BBF0F9F154CA449BA91 /* HaleHubIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HaleHubIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E1AD9D996E827387C9F71922 /* FinanceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceViewModel.swift; sourceTree = "<group>"; };
 		E2E42C92988E41BEC50BEFC7 /* AddToteItemSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToteItemSheet.swift; sourceTree = "<group>"; };
 		E3A0DF54CE532F5E9E5E92AE /* VehicleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleDetailView.swift; sourceTree = "<group>"; };
+		E947BD3D8138984D1A9AA070 /* MaintenanceScheduleManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaintenanceScheduleManagerView.swift; sourceTree = "<group>"; };
 		EB8B4D5F0F791D89EC2FB3A0 /* LoanCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanCalculatorView.swift; sourceTree = "<group>"; };
 		EBF25113EBEDA00D06F38AC3 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		EC6F675794F03BA9FEA90968 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
@@ -167,9 +171,9 @@
 		165EF7B69BBF93EFF7F484CE /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				46245FF3D4EDB0C2E41CE2D8 /* ArchiveHubView.swift */,
 				BAAD29803F12391B72A484FC /* LetterDetailView.swift */,
 				1EE48589C34175A306051197 /* LetterEditorSheet.swift */,
-				1EE48589C34175A306051198 /* ArchiveHubView.swift */,
 				9A1199889C552A49F7DD3EDC /* ResourceDetailView.swift */,
 				7B850A78801A49015E962D7B /* ResourceEditorSheet.swift */,
 				0C93425E6A35DBEE8FE9ACBA /* ResourcesHubView.swift */,
@@ -222,6 +226,7 @@
 			children = (
 				026B9CBC27B5BDAB71949F45 /* LogEventSheet.swift */,
 				9CD4130D14F56C5404DD4F9D /* MaintenanceHistoryView.swift */,
+				E947BD3D8138984D1A9AA070 /* MaintenanceScheduleManagerView.swift */,
 				D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */,
 				2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */,
 				5659E674164A8619F674A025 /* TrashView.swift */,
@@ -396,6 +401,7 @@
 			isa = PBXGroup;
 			children = (
 				56D0F8FA6169AFB6A1408AC1 /* AddReadingEntrySheet.swift */,
+				815C624F55265C97B1C42422 /* BibleProgressView.swift */,
 				F7FA5E2300153CB3E9C7B100 /* ReadingCalendarView.swift */,
 				1979192C8C8DBC508631A28E /* ReadingDayDetailView.swift */,
 				040BCD9171AD5B0D521CFD48 /* ReadingView.swift */,
@@ -433,6 +439,8 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = 3B3D8606F7461AA679980847 /* Build configuration list for PBXProject "HaleHubIOS" */;
 			developmentRegion = en;
@@ -473,7 +481,9 @@
 				5855076BEE4FCBA24B0E1E16 /* AccountView.swift in Sources */,
 				A94D98CBBDCCC001230A0FC1 /* AddReadingEntrySheet.swift in Sources */,
 				309D4E2822316C8A2AA73276 /* AddToteItemSheet.swift in Sources */,
+				6EF3632628FD2B8521F92BE6 /* ArchiveHubView.swift in Sources */,
 				F5311CBEC7A613351D674BAE /* AuthManager.swift in Sources */,
+				E4CD84CEC9797524233AD907 /* BibleProgressView.swift in Sources */,
 				823F50914D9327257F393EA2 /* CacheManager.swift in Sources */,
 				EEAB2FADBDA87D90CA2F7687 /* CompoundInterestView.swift in Sources */,
 				DE32D7A36A038D9603EA2763 /* CookModeView.swift in Sources */,
@@ -486,12 +496,12 @@
 				4BED8439C68597ED905E5518 /* HaleNotification.swift in Sources */,
 				CC498B37E53DB67811F88BAD /* LetterDetailView.swift in Sources */,
 				5153DFD64BF9325FEFC74E64 /* LetterEditorSheet.swift in Sources */,
-				5153DFD64BF9325FEFC74E65 /* ArchiveHubView.swift in Sources */,
 				D5D1582EF5D926ED63EC7881 /* LoanCalculatorView.swift in Sources */,
 				9B9348553D9A7A0E97A6E5C9 /* LogEventSheet.swift in Sources */,
 				4F3EE32CA697D673557F7F60 /* LoginView.swift in Sources */,
 				9C3F6E3B9748C95BBB6AAD63 /* MainTabView.swift in Sources */,
 				8B4AAD519B389AE6E8ABE5BE /* MaintenanceHistoryView.swift in Sources */,
+				518E40F650756756CBB7DDE6 /* MaintenanceScheduleManagerView.swift in Sources */,
 				BCDE5F88E2E4D735D3B5F9FB /* MealPlanView.swift in Sources */,
 				D5605EF868D5C66108CCCA2D /* NetworkMonitor.swift in Sources */,
 				8927B65ACE9F99854E246D0E /* NotificationsView.swift in Sources */,
@@ -571,7 +581,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -600,7 +610,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 473M622LJJ;
 				INFOPLIST_FILE = Sources/HaleHubIOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -647,7 +656,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -683,7 +692,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 473M622LJJ;
 				INFOPLIST_FILE = Sources/HaleHubIOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (

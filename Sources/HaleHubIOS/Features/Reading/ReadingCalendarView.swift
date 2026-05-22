@@ -4,63 +4,58 @@ import SwiftUI
 
 @MainActor
 class ReadingCalendarViewModel: ObservableObject {
-    @Published var response: ChunkedDaysResponse?
+    @Published var monthDays: [ReadingDay] = []
     @Published var isLoading = false
     @Published var error: String?
-    @Published var currentChunk = 0
 
-    let planId: String
-    let currentDayNumber: Int?
+    var year: Int
+    var month: Int
+    let plan: ReadingPlanSummary
 
-    init(planId: String, currentDayNumber: Int?) {
-        self.planId = planId
-        self.currentDayNumber = currentDayNumber
-        // Start on the chunk containing today
-        if let day = currentDayNumber {
-            currentChunk = max(0, (day - 1) / 20)
-        }
+    init(plan: ReadingPlanSummary) {
+        self.plan = plan
+        let now = Calendar.current.dateComponents([.year, .month], from: Date())
+        self.year = now.year ?? Calendar.current.component(.year, from: Date())
+        self.month = now.month ?? Calendar.current.component(.month, from: Date())
     }
 
     func load(token: String) async {
         isLoading = true
         error = nil
         do {
-            let r: ChunkedDaysResponse = try await APIClient.shared.get(
-                "/reading/plans/\(planId)/days/?chunk=\(currentChunk)", token: token
+            let r: MonthDaysResponse = try await APIClient.shared.get(
+                "/reading/plans/\(plan.id)/days/?year=\(year)&month=\(month)",
+                token: token
             )
-            response = r
+            monthDays = r.days
         } catch {
             self.error = error.localizedDescription
         }
         isLoading = false
     }
 
-    func goToPrevChunk(token: String) async {
-        guard currentChunk > 0 else { return }
-        currentChunk -= 1
+    func prevMonth(token: String) async {
+        if month == 1 { year -= 1; month = 12 } else { month -= 1 }
         await load(token: token)
     }
 
-    func goToNextChunk(token: String) async {
-        guard let r = response, currentChunk < r.totalChunks - 1 else { return }
-        currentChunk += 1
+    func nextMonth(token: String) async {
+        if month == 12 { year += 1; month = 1 } else { month += 1 }
         await load(token: token)
     }
 
-    func jumpToTodayChunk(token: String) async {
-        guard let day = currentDayNumber else { return }
-        let todayChunk = max(0, (day - 1) / 20)
-        guard todayChunk != currentChunk else { return }
-        currentChunk = todayChunk
-        await load(token: token)
+    // Map from "YYYY-MM-DD" string to ReadingDay
+    var daysByDate: [String: ReadingDay] {
+        Dictionary(uniqueKeysWithValues: monthDays.map { ($0.date, $0) })
     }
+}
 
-    /// Range label e.g. "Days 1–20 of 365"
-    func chunkRangeLabel(r: ChunkedDaysResponse) -> String {
-        let start = currentChunk * r.daysPerChunk + 1
-        let end = min(start + r.daysPerChunk - 1, r.totalDays)
-        return "Days \(start)–\(end) of \(r.totalDays)"
-    }
+// MARK: - Calendar Cell Model
+
+private enum CalendarCell {
+    case empty
+    case outside(dayOfMonth: Int)
+    case planDay(dayOfMonth: Int, dayNumber: Int, dateStr: String, isCompleted: Bool, isOverdue: Bool, entryCount: Int)
 }
 
 // MARK: - View
@@ -68,73 +63,32 @@ class ReadingCalendarViewModel: ObservableObject {
 struct ReadingCalendarView: View {
     @EnvironmentObject var auth: AuthManager
     let plan: ReadingPlanSummary
+
     @StateObject private var vm: ReadingCalendarViewModel
 
     init(plan: ReadingPlanSummary) {
         self.plan = plan
-        _vm = StateObject(wrappedValue: ReadingCalendarViewModel(
-            planId: plan.id, currentDayNumber: plan.currentDayNumber
-        ))
+        _vm = StateObject(wrappedValue: ReadingCalendarViewModel(plan: plan))
     }
+
+    // Weekday column headers (Sunday-first Gregorian)
+    private let weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
 
     var body: some View {
         Group {
-            if vm.isLoading && vm.response == nil {
+            if vm.isLoading && vm.monthDays.isEmpty {
                 ProgressView("Loading…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let r = vm.response {
-                calendarContent(r)
-            } else if let err = vm.error {
-                Text(err)
-                    .foregroundStyle(.red)
-                    .padding()
+            } else {
+                calendarContent
             }
         }
-        .navigationTitle("All Days")
+        .navigationTitle(monthTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task { await vm.load(token: auth.accessToken ?? "") }
-    }
-
-    // MARK: - Calendar Content
-
-    @ViewBuilder
-    private func calendarContent(_ r: ChunkedDaysResponse) -> some View {
-        VStack(spacing: 0) {
-            // Chunk navigation bar
-            chunkNavBar(r: r)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color(.secondarySystemGroupedBackground))
-
-            Divider()
-
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(r.days, id: \.dayNumber) { day in
-                        NavigationLink(destination:
-                            ReadingDayDetailView(
-                                planId: plan.id,
-                                dayNumber: day.dayNumber,
-                                dateString: day.date
-                            )
-                            .environmentObject(auth)
-                        ) {
-                            CalendarDayRow(
-                                day: day,
-                                isToday: day.dayNumber == plan.currentDayNumber
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        Divider()
-                            .padding(.leading, 72)
-                    }
-                }
-                .padding(.bottom, 20)
-            }
-        }
         .overlay {
-            if vm.isLoading {
+            if vm.isLoading && !vm.monthDays.isEmpty {
                 Color.black.opacity(0.15).ignoresSafeArea()
                 ProgressView()
                     .padding(20)
@@ -143,140 +97,303 @@ struct ReadingCalendarView: View {
         }
     }
 
-    // MARK: - Chunk Nav Bar
+    // MARK: - Month Title
 
-    @ViewBuilder
-    private func chunkNavBar(r: ChunkedDaysResponse) -> some View {
+    private var monthTitle: String {
+        var comps = DateComponents()
+        comps.year = vm.year
+        comps.month = vm.month
+        comps.day = 1
+        guard let date = Calendar.current.date(from: comps) else {
+            return "\(vm.month)/\(vm.year)"
+        }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMMM yyyy"
+        return fmt.string(from: date)
+    }
+
+    // MARK: - Calendar Content
+
+    private var calendarContent: some View {
+        VStack(spacing: 0) {
+            // Navigation bar
+            monthNavBar
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color(.secondarySystemGroupedBackground))
+
+            Divider()
+
+            ScrollView {
+                VStack(spacing: 12) {
+                    // Weekday header row
+                    LazyVGrid(columns: columns, spacing: 4) {
+                        ForEach(weekdayLabels, id: \.self) { label in
+                            Text(label)
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 4)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+
+                    // Calendar grid
+                    LazyVGrid(columns: columns, spacing: 6) {
+                        ForEach(Array(buildCalendarCells().enumerated()), id: \.offset) { _, cell in
+                            cellView(for: cell)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 20)
+                }
+            }
+        }
+    }
+
+    // MARK: - Month Nav Bar
+
+    private var monthNavBar: some View {
         HStack(spacing: 12) {
             Button {
-                Task { await vm.goToPrevChunk(token: auth.accessToken ?? "") }
+                Task { await vm.prevMonth(token: auth.accessToken ?? "") }
             } label: {
                 Label("Prev", systemImage: "chevron.left")
                     .labelStyle(.iconOnly)
                     .frame(width: 36, height: 36)
             }
             .buttonStyle(.bordered)
-            .disabled(vm.currentChunk == 0)
+            .disabled(isPrevDisabled)
 
             Spacer()
 
-            VStack(spacing: 2) {
-                Text(vm.chunkRangeLabel(r: r))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .monospacedDigit()
-
-                if let _ = plan.currentDayNumber {
-                    Button("Today") {
-                        Task { await vm.jumpToTodayChunk(token: auth.accessToken ?? "") }
-                    }
-                    .font(.caption)
-                    .foregroundStyle(Color.accentColor)
-                    .buttonStyle(.plain)
-                }
-            }
+            Text(monthTitle)
+                .font(.subheadline)
+                .fontWeight(.semibold)
 
             Spacer()
 
             Button {
-                Task { await vm.goToNextChunk(token: auth.accessToken ?? "") }
+                Task { await vm.nextMonth(token: auth.accessToken ?? "") }
             } label: {
                 Label("Next", systemImage: "chevron.right")
                     .labelStyle(.iconOnly)
                     .frame(width: 36, height: 36)
             }
             .buttonStyle(.bordered)
-            .disabled(vm.currentChunk >= r.totalChunks - 1)
+            .disabled(isNextDisabled)
         }
+    }
+
+    // Disable prev if we're at or before the plan's start month
+    private var isPrevDisabled: Bool {
+        guard let start = planDate(from: plan.startDate) else { return false }
+        let startComps = Calendar.current.dateComponents([.year, .month], from: start)
+        if vm.year < (startComps.year ?? 0) { return true }
+        if vm.year == (startComps.year ?? 0) && vm.month <= (startComps.month ?? 1) { return true }
+        return false
+    }
+
+    // Disable next if we're more than 2 years ahead of today
+    private var isNextDisabled: Bool {
+        let now = Calendar.current.dateComponents([.year, .month], from: Date())
+        let maxYear = (now.year ?? vm.year) + 2
+        return vm.year >= maxYear
+    }
+
+    // MARK: - Cell View
+
+    @ViewBuilder
+    private func cellView(for cell: CalendarCell) -> some View {
+        switch cell {
+        case .empty:
+            Color.clear
+                .frame(height: 52)
+
+        case .outside(let dayOfMonth):
+            VStack(spacing: 2) {
+                Text("\(dayOfMonth)")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color(.systemGray3))
+                Spacer(minLength: 0)
+            }
+            .frame(height: 52)
+
+        case .planDay(let dayOfMonth, let dayNumber, let dateStr, let isCompleted, let isOverdue, let entryCount):
+            let isToday = dateStr == todayString
+            NavigationLink(destination:
+                ReadingDayDetailView(
+                    planId: plan.id,
+                    dayNumber: dayNumber,
+                    dateString: dateStr
+                )
+                .environmentObject(auth)
+            ) {
+                PlanDayCell(
+                    dayOfMonth: dayOfMonth,
+                    isCompleted: isCompleted,
+                    isOverdue: isOverdue,
+                    isToday: isToday,
+                    entryCount: entryCount
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Grid Builder
+
+    private func buildCalendarCells() -> [CalendarCell] {
+        var cells: [CalendarCell] = []
+        let calendar = Calendar.current
+
+        let planStartDate = planDate(from: plan.startDate)
+        let planEndDate = planDate(from: plan.endDate)
+
+        var comps = DateComponents()
+        comps.year = vm.year
+        comps.month = vm.month
+        comps.day = 1
+        guard let firstDay = calendar.date(from: comps) else { return [] }
+
+        let range = calendar.range(of: .day, in: .month, for: firstDay)!
+        let daysInMonth = range.count
+
+        // Offset: weekday of first day (1=Sun in Gregorian) → 0-based
+        let firstWeekday = calendar.component(.weekday, from: firstDay)
+        let offset = firstWeekday - 1
+
+        // Padding before month starts
+        for _ in 0..<offset { cells.append(.empty) }
+
+        for dayOfMonth in 1...daysInMonth {
+            comps.day = dayOfMonth
+            guard let cellDate = calendar.date(from: comps) else { continue }
+
+            let dateStr = isoString(from: cellDate)
+            let inPlan = planStartDate != nil && planEndDate != nil
+                && cellDate >= planStartDate! && cellDate <= planEndDate!
+
+            if inPlan {
+                let planDay = vm.daysByDate[dateStr]
+                let dayNum = planDayNumber(for: cellDate, startDate: planStartDate!)
+                let isPast = cellDate < noonToday
+                cells.append(.planDay(
+                    dayOfMonth: dayOfMonth,
+                    dayNumber: dayNum,
+                    dateStr: dateStr,
+                    isCompleted: planDay?.isCompleted ?? false,
+                    isOverdue: !(planDay?.isCompleted ?? false) && isPast,
+                    entryCount: planDay?.entries.count ?? 0
+                ))
+            } else {
+                cells.append(.outside(dayOfMonth: dayOfMonth))
+            }
+        }
+
+        // Pad end to complete last row
+        while cells.count % 7 != 0 { cells.append(.empty) }
+        return cells
+    }
+
+    // MARK: - Helpers
+
+    private var todayString: String { isoString(from: Date()) }
+
+    private var noonToday: Date {
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: Date())
+        return cal.date(byAdding: .hour, value: 12, to: start) ?? Date()
+    }
+
+    private func planDate(from str: String) -> Date? {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.date(from: str)
+    }
+
+    private func isoString(from date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: date)
+    }
+
+    private func planDayNumber(for date: Date, startDate: Date) -> Int {
+        let days = Calendar.current.dateComponents([.day], from: startDate, to: date).day ?? 0
+        return days + 1
     }
 }
 
-// MARK: - Calendar Day Row
+// MARK: - Plan Day Cell
 
-private struct CalendarDayRow: View {
-    let day: ReadingDay
+private struct PlanDayCell: View {
+    let dayOfMonth: Int
+    let isCompleted: Bool
+    let isOverdue: Bool
     let isToday: Bool
+    let entryCount: Int
 
     private var circleColor: Color {
-        if day.isCompleted { return .green }
+        if isCompleted { return .green }
+        if isToday { return .blue }
+        return .clear
+    }
+
+    private var borderColor: Color {
+        if isCompleted { return .clear }
         if isToday { return .blue }
         if isOverdue { return .orange }
-        return Color(.systemGray5)
+        return Color(.systemGray4)
     }
 
-    private var isOverdue: Bool {
-        guard !day.isCompleted, !isToday else { return false }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let date = formatter.date(from: day.date) else { return false }
-        return date < Calendar.current.startOfDay(for: Date())
+    private var borderWidth: CGFloat {
+        isOverdue ? 2 : 1
     }
 
-    private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let date = formatter.date(from: day.date) else { return day.date }
-        formatter.dateFormat = "EEE, MMM d"
-        return formatter.string(from: date)
-    }
-
-    private var firstReference: String? {
-        day.entries.first?.reference
+    private var textColor: Color {
+        if isCompleted { return .white }
+        if isToday { return .white }
+        if isOverdue { return .orange }
+        return .primary
     }
 
     var body: some View {
-        HStack(spacing: 14) {
-            // Day number circle
+        VStack(spacing: 3) {
             ZStack {
                 Circle()
                     .fill(circleColor)
-                    .frame(width: 44, height: 44)
+                    .overlay(
+                        Circle().strokeBorder(borderColor, lineWidth: borderWidth)
+                    )
+                    .frame(width: 34, height: 34)
 
-                if day.isCompleted {
+                if isCompleted {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white)
                 } else {
-                    Text("\(day.dayNumber)")
+                    Text("\(dayOfMonth)")
                         .font(.system(size: 13, weight: isToday ? .bold : .regular))
-                        .foregroundStyle(isToday ? .white : (isOverdue ? .white : .secondary))
+                        .foregroundStyle(textColor)
                 }
             }
-
-            // Date + reference
-            VStack(alignment: .leading, spacing: 3) {
-                Text(formattedDate)
-                    .font(.subheadline)
-                    .fontWeight(isToday ? .semibold : .regular)
-                    .foregroundStyle(.primary)
-
-                if let ref = firstReference {
-                    Text(ref)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-
-            Spacer()
 
             // Entry count badge
-            if !day.entries.isEmpty {
-                Text("\(day.entries.count) reading\(day.entries.count == 1 ? "" : "s")")
-                    .font(.caption2)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(Color.accentColor.opacity(0.12))
-                    .foregroundStyle(Color.accentColor)
-                    .clipShape(Capsule())
+            if entryCount > 0 {
+                Text("\(entryCount)")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(isCompleted ? .green : Color.accentColor)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(
+                        Capsule().fill(isCompleted ? Color.green.opacity(0.12) : Color.accentColor.opacity(0.12))
+                    )
+            } else {
+                Color.clear.frame(height: 14)
             }
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .contentShape(Rectangle())
+        .frame(height: 52)
     }
 }

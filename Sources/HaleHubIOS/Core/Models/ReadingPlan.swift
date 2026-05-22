@@ -92,3 +92,24 @@ struct AddReadingEntryRequest: Encodable, Sendable {
     let verseEnd: Int
     let notes: String
 }
+
+struct MonthDaysResponse: Codable, Sendable {
+    let year: Int
+    let month: Int
+    let days: [ReadingDay]
+}
+
+struct UpdateDayNotesRequest: Encodable, Sendable {
+    let notes: String
+}
+
+struct BibleBookProgress: Codable, Sendable {
+    let bookId: Int
+    let bookName: String
+    let abbreviation: String
+    let testament: String   // "OT" or "NT"
+    let totalChapters: Int
+    let chaptersRead: Int
+    let isStarted: Bool
+    let isComplete: Bool
+}
