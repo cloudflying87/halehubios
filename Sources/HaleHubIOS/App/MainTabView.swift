@@ -101,21 +101,68 @@ struct ImportedRecipePlaceholder: View {
     let recipeId: String
     @State private var recipe: Recipe?
     @State private var isLoading = true
+    @State private var errorMessage: String?
 
     var body: some View {
         Group {
             if isLoading {
-                ProgressView("Loading recipe…")
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.3)
+                    Text("Loading imported recipe…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let r = recipe {
                 RecipeDetailView(recipe: r)
             } else {
-                ContentUnavailableView("Recipe not found", systemImage: "fork.knife.circle")
+                VStack(spacing: 20) {
+                    Image(systemName: "fork.knife.circle")
+                        .font(.system(size: 52))
+                        .foregroundStyle(.secondary)
+                    VStack(spacing: 8) {
+                        Text("Recipe Not Found")
+                            .font(.title3.bold())
+                        if let msg = errorMessage {
+                            Text(msg)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        } else {
+                            Text("The recipe could not be loaded. It may still be processing — try again in a moment.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+                    Button("Try Again") {
+                        Task { await load() }
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding(32)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .task {
-            guard let token = auth.accessToken else { isLoading = false; return }
-            recipe = try? await APIClient.shared.get("/recipes/\(recipeId)/", token: token)
+        .navigationTitle("Imported Recipe")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await load() }
+    }
+
+    private func load() async {
+        isLoading = true
+        errorMessage = nil
+        guard let token = auth.accessToken else {
+            errorMessage = "Not signed in — please open HaleHub and sign in, then try the shortcut again."
             isLoading = false
+            return
         }
+        do {
+            recipe = try await APIClient.shared.get("/recipes/\(recipeId)/", token: token)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
     }
 }
