@@ -24,6 +24,7 @@ struct ToteDetail: Identifiable, Codable, Sendable {
     let locationNotes: String
     let itemCount: Int
     let dateSorted: String?
+    let dateMoved: String?
     let qrCodeIdentifier: String?
     let notes: String
     let photo1Url: String?
