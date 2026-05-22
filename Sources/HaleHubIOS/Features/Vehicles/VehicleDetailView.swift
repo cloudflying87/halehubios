@@ -125,18 +125,38 @@ struct VehicleDetailView: View {
                         .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
                     }
 
-                    // Maintenance schedule (hidden for guest vehicles)
+                    // Maintenance schedule links (hidden for guest vehicles)
                     if vehicle.status != "guest" {
-                        let okSchedules = schedules.filter { !$0.isDue }
-                        if !okSchedules.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Maintenance Schedule")
-                                    .font(.headline)
-                                ForEach(okSchedules) { s in
-                                    MaintenanceRow(schedule: s)
+                        VStack(spacing: 8) {
+                            NavigationLink(destination: MaintenanceScheduleManagerView(vehicle: vehicle).environmentObject(auth)) {
+                                HStack {
+                                    Label("Maintenance Schedule", systemImage: "wrench.and.screwdriver")
+                                        .font(.headline)
+                                    Spacer()
+                                    Text("\(schedules.count)")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
                                 }
                             }
+                            .buttonStyle(.plain)
+
+                            NavigationLink(destination: MaintenanceHistoryView(vehicle: vehicle).environmentObject(auth)) {
+                                HStack {
+                                    Label("Service History", systemImage: "clock.arrow.circlepath")
+                                        .font(.headline)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                            .buttonStyle(.plain)
                         }
+                        .padding(14)
+                        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
                     }
 
                     Divider()

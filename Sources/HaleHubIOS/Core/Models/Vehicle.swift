@@ -92,6 +92,19 @@ struct MaintenanceSchedule: Identifiable, Codable, Hashable, Sendable {
     let snoozedUntil: Date?
 }
 
+struct MaintenanceScheduleCreateRequest: Encodable, Sendable {
+    let categoryId: Int
+    let intervalMiles: Int?
+    let intervalHours: Int?
+    let intervalDays: Int?
+}
+
+struct MaintenanceScheduleUpdateRequest: Encodable, Sendable {
+    let intervalMiles: Int?
+    let intervalHours: Int?
+    let intervalDays: Int?
+}
+
 struct MaintenanceItemRecord: Identifiable, Codable, Hashable, Sendable {
     let id: Int
     let categoryName: String?
