@@ -71,9 +71,26 @@ struct BibleBook: Identifiable, Codable, Sendable, Hashable {
     let name: String
     let abbreviation: String
     let testament: String  // "OT" or "NT"
+    let totalChapters: Int
+    let chapters: [BibleChapterData]
+
+    // custom decode so old API responses (without chapters) still work
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        abbreviation = try c.decode(String.self, forKey: .abbreviation)
+        testament = try c.decode(String.self, forKey: .testament)
+        totalChapters = (try? c.decode(Int.self, forKey: .totalChapters)) ?? 0
+        chapters = (try? c.decode([BibleChapterData].self, forKey: .chapters)) ?? []
+    }
 
     static func == (lhs: BibleBook, rhs: BibleBook) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
+
+    func totalVerses(forChapter ch: Int) -> Int {
+        chapters.first(where: { $0.chapterNumber == ch })?.totalVerses ?? 0
+    }
 }
 
 struct ChunkedDaysResponse: Codable, Sendable {
@@ -112,4 +129,39 @@ struct BibleBookProgress: Codable, Sendable {
     let chaptersRead: Int
     let isStarted: Bool
     let isComplete: Bool
+}
+
+struct BibleChapterData: Codable, Sendable {
+    let chapterNumber: Int
+    let totalVerses: Int
+}
+
+struct BulkAddRequest: Encodable, Sendable {
+    let references: String
+}
+
+struct BulkEntryError: Codable, Sendable {
+    let input: String
+    let error: String
+}
+
+struct BulkAddResponse: Codable, Sendable {
+    let saved: [ReadingEntry]
+    let savedCount: Int
+    let errors: [BulkEntryError]
+    let errorCount: Int
+}
+
+struct BulkPreviewItem: Codable, Sendable {
+    let input: String
+    let reference: String
+    let valid: Bool
+}
+
+struct BulkPreviewResponse: Codable, Sendable {
+    let dryRun: Bool
+    let validCount: Int
+    let errorCount: Int
+    let valid: [BulkPreviewItem]
+    let errors: [BulkEntryError]
 }

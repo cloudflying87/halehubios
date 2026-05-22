@@ -168,8 +168,8 @@ struct ReadingDayDetailView: View {
                 isPresented: $showAddEntry,
                 planId: planId,
                 dayNumber: dayNumber
-            ) { entry in
-                vm.entryAdded(entry)
+            ) { entries in
+                entries.forEach { vm.entryAdded($0) }
             }
             .environmentObject(auth)
         }
