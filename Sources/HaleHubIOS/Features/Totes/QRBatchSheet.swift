@@ -27,6 +27,7 @@ struct QRBatchSheet: View {
     @State private var isGenerating = false
     @State private var error: String?
     @State private var showShareSheet = false
+    @State private var sharePDF: Data?
 
     private let countOptions = [4, 8, 12, 24, 48]
     private let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
@@ -48,12 +49,20 @@ struct QRBatchSheet: View {
                 }
                 if !items.isEmpty {
                     ToolbarItem(placement: .primaryAction) {
-                        Button("Share All") { showShareSheet = true }
+                        HStack {
+                            Button("Print") { printQRCodes() }
+                            Button("Share PDF") {
+                                sharePDF = makePDF()
+                                showShareSheet = true
+                            }
+                        }
                     }
                 }
             }
             .sheet(isPresented: $showShareSheet) {
-                ActivityViewController(items: items.compactMap { $0.uiImage })
+                if let pdf = sharePDF {
+                    ActivityViewController(items: [pdf])
+                }
             }
         }
     }
@@ -144,6 +153,69 @@ struct QRBatchSheet: View {
             self.error = error.localizedDescription
         }
         isGenerating = false
+    }
+
+    // MARK: - Print / PDF
+
+    private func printQRCodes() {
+        let pdf = makePDF()
+        let printController = UIPrintInteractionController.shared
+        let printInfo = UIPrintInfo(dictionary: nil)
+        printInfo.jobName = "HaleHub QR Codes"
+        printInfo.outputType = .grayscale
+        printController.printInfo = printInfo
+        printController.printingItem = pdf
+        printController.present(animated: true)
+    }
+
+    /// Renders all QR codes into a US-Letter PDF, 4 per row.
+    private func makePDF() -> Data {
+        let pageW: CGFloat = 612   // 8.5 in @ 72 dpi
+        let pageH: CGFloat = 792   // 11 in @ 72 dpi
+        let margin: CGFloat = 36
+        let cols = 4
+        let colGap: CGFloat = 12
+        let rowGap: CGFloat = 14
+        let labelH: CGFloat = 14
+
+        let usableW = pageW - 2 * margin
+        let cellW = (usableW - CGFloat(cols - 1) * colGap) / CGFloat(cols)
+        let rowH = cellW + labelH + rowGap
+        let rowsPerPage = Int((pageH - 2 * margin) / rowH)
+
+        let labelAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.monospacedSystemFont(ofSize: 8, weight: .regular),
+            .foregroundColor: UIColor.darkGray
+        ]
+
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: pageW, height: pageH))
+        return renderer.pdfData { ctx in
+            var idx = 0
+            while idx < items.count {
+                ctx.beginPage()
+                for row in 0..<rowsPerPage {
+                    for col in 0..<cols {
+                        guard idx < items.count else { break }
+                        let item = items[idx]; idx += 1
+                        let x = margin + CGFloat(col) * (cellW + colGap)
+                        let y = margin + CGFloat(row) * rowH
+                        if let img = item.uiImage {
+                            img.draw(in: CGRect(x: x, y: y, width: cellW, height: cellW))
+                        }
+                        let labelRect = CGRect(x: x, y: y + cellW + 2, width: cellW, height: labelH)
+                        let label = NSString(string: item.qrCodeIdentifier)
+                        let labelSize = label.size(withAttributes: labelAttrs)
+                        let centeredRect = CGRect(
+                            x: x + (cellW - labelSize.width) / 2,
+                            y: labelRect.minY,
+                            width: labelSize.width,
+                            height: labelH
+                        )
+                        label.draw(in: centeredRect, withAttributes: labelAttrs)
+                    }
+                }
+            }
+        }
     }
 }
 
