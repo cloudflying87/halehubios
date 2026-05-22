@@ -74,7 +74,7 @@ class ToteDetailViewModel: ObservableObject {
     }
 
     func uploadPhoto(toteId: String, slot: Int, image: UIImage, token: String) async {
-        let normalized = image.normalizedOrientation()
+        let normalized = image.normalizedOrientation().resizedForUpload(maxDimension: 1200)
         guard let jpeg = normalized.jpegData(compressionQuality: 0.85) else { return }
         isUploadingPhoto = true
         defer { isUploadingPhoto = false }
@@ -532,7 +532,7 @@ private extension ToteDetail {
     }
 }
 
-// MARK: - UIImage orientation normalization
+// MARK: - UIImage upload helpers
 
 private extension UIImage {
     /// Re-draws the image so its pixel data matches its display orientation,
@@ -541,6 +541,20 @@ private extension UIImage {
         guard imageOrientation != .up else { return self }
         UIGraphicsBeginImageContextWithOptions(size, false, scale)
         draw(in: CGRect(origin: .zero, size: size))
+        let result = UIGraphicsGetImageFromCurrentImageContext() ?? self
+        UIGraphicsEndImageContext()
+        return result
+    }
+
+    /// Scales down to maxDimension on the longest side. Uses scale=1 so the
+    /// output pixel count matches the target size (not retina-doubled).
+    func resizedForUpload(maxDimension: CGFloat) -> UIImage {
+        let longest = max(size.width, size.height)
+        guard longest > maxDimension else { return self }
+        let scale = maxDimension / longest
+        let newSize = CGSize(width: (size.width * scale).rounded(), height: (size.height * scale).rounded())
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        draw(in: CGRect(origin: .zero, size: newSize))
         let result = UIGraphicsGetImageFromCurrentImageContext() ?? self
         UIGraphicsEndImageContext()
         return result
