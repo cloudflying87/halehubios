@@ -79,10 +79,11 @@ struct HaleUser: Codable, Sendable {
     let role: String
     let canViewFinances: Bool
     let canViewPaychecks: Bool
+    let totesOnly: Bool
 
     enum CodingKeys: String, CodingKey {
         case id, email, firstName, lastName, displayName, role
-        case canViewFinances, canViewPaychecks
+        case canViewFinances, canViewPaychecks, totesOnly
     }
 
     init(from decoder: Decoder) throws {
@@ -95,6 +96,7 @@ struct HaleUser: Codable, Sendable {
         role = try c.decode(String.self, forKey: .role)
         canViewFinances = (try? c.decode(Bool.self, forKey: .canViewFinances)) ?? false
         canViewPaychecks = (try? c.decode(Bool.self, forKey: .canViewPaychecks)) ?? false
+        totesOnly = (try? c.decode(Bool.self, forKey: .totesOnly)) ?? false
     }
 }
 

@@ -13,43 +13,50 @@ struct MainTabView: View {
     @State private var showImportReview = false
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        if auth.currentUser?.totesOnly == true {
+            // Totes-only users: single tab, no distractions
             NavigationStack {
-                VehiclesListView()
+                TotesListView()
             }
-            .tabItem { Label("Vehicles", systemImage: "car.fill") }
-            .tag(0)
-
-            NavigationStack {
-                MealsHubView()
-                    .navigationDestination(isPresented: $navigateToImported) {
-                        if let id = importedRecipeId {
-                            ImportedRecipePlaceholder(recipeId: id)
-                                .environmentObject(auth)
-                        }
-                    }
-            }
-            .tabItem { Label("Meals", systemImage: "fork.knife") }
-            .tag(1)
-
-            NavigationStack {
-                ShoppingListsView()
-            }
-            .tabItem { Label("Shopping", systemImage: "cart.fill") }
-            .tag(2)
-
-            if auth.currentUser?.canViewFinances == true {
+        } else {
+            TabView(selection: $selectedTab) {
                 NavigationStack {
-                    FinanceView()
+                    VehiclesListView()
                 }
-                .tabItem { Label("Finance", systemImage: "chart.line.uptrend.xyaxis") }
-                .tag(4)
-            }
+                .tabItem { Label("Vehicles", systemImage: "car.fill") }
+                .tag(0)
 
-            AccountView(notifVM: notifVM)
-                .tabItem { Label("More", systemImage: "ellipsis.circle.fill") }
-                .badge(notifVM.unreadCount > 0 ? notifVM.unreadCount : 0)
-                .tag(3)
+                NavigationStack {
+                    MealsHubView()
+                        .navigationDestination(isPresented: $navigateToImported) {
+                            if let id = importedRecipeId {
+                                ImportedRecipePlaceholder(recipeId: id)
+                                    .environmentObject(auth)
+                            }
+                        }
+                }
+                .tabItem { Label("Meals", systemImage: "fork.knife") }
+                .tag(1)
+
+                NavigationStack {
+                    ShoppingListsView()
+                }
+                .tabItem { Label("Shopping", systemImage: "cart.fill") }
+                .tag(2)
+
+                if auth.currentUser?.canViewFinances == true {
+                    NavigationStack {
+                        FinanceView()
+                    }
+                    .tabItem { Label("Finance", systemImage: "chart.line.uptrend.xyaxis") }
+                    .tag(4)
+                }
+
+                AccountView(notifVM: notifVM)
+                    .tabItem { Label("More", systemImage: "ellipsis.circle.fill") }
+                    .badge(notifVM.unreadCount > 0 ? notifVM.unreadCount : 0)
+                    .tag(3)
+            }
         }
         .task {
             await notifVM.fetchUnreadCount(token: auth.accessToken ?? "")
