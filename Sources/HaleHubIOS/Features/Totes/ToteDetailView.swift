@@ -42,6 +42,7 @@ class ToteDetailViewModel: ObservableObject {
                     locationNotes: detail.locationNotes,
                     itemCount: detail.itemCount - 1,
                     dateSorted: detail.dateSorted,
+                    dateMoved: detail.dateMoved,
                     qrCodeIdentifier: detail.qrCodeIdentifier,
                     notes: detail.notes,
                     photo1Url: detail.photo1Url,
@@ -63,6 +64,7 @@ class ToteDetailViewModel: ObservableObject {
             locationNotes: updated.locationNotes,
             itemCount: detail.itemCount,
             dateSorted: detail.dateSorted,
+            dateMoved: detail.dateMoved,
             qrCodeIdentifier: detail.qrCodeIdentifier,
             notes: updated.notes,
             photo1Url: detail.photo1Url,
@@ -72,7 +74,8 @@ class ToteDetailViewModel: ObservableObject {
     }
 
     func uploadPhoto(toteId: String, slot: Int, image: UIImage, token: String) async {
-        guard let jpeg = image.jpegData(compressionQuality: 0.85) else { return }
+        let normalized = image.normalizedOrientation()
+        guard let jpeg = normalized.jpegData(compressionQuality: 0.85) else { return }
         isUploadingPhoto = true
         defer { isUploadingPhoto = false }
 
@@ -91,6 +94,7 @@ class ToteDetailViewModel: ObservableObject {
                 locationNotes: detail.locationNotes,
                 itemCount: detail.itemCount,
                 dateSorted: detail.dateSorted,
+                dateMoved: detail.dateMoved,
                 qrCodeIdentifier: detail.qrCodeIdentifier,
                 notes: detail.notes,
                 photo1Url: slot == 1 ? url : detail.photo1Url,
@@ -193,6 +197,7 @@ struct ToteDetailView: View {
                         locationNotes: detail.locationNotes,
                         itemCount: detail.itemCount + 1,
                         dateSorted: detail.dateSorted,
+                        dateMoved: detail.dateMoved,
                         qrCodeIdentifier: detail.qrCodeIdentifier,
                         notes: detail.notes,
                         photo1Url: detail.photo1Url,
@@ -274,6 +279,15 @@ struct ToteDetailView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                }
+            }
+
+            // Notes
+            if !detail.notes.isEmpty {
+                Section("Notes") {
+                    Text(detail.notes)
+                        .font(.body)
+                        .foregroundStyle(.primary)
                 }
             }
 
@@ -517,3 +531,19 @@ private extension ToteDetail {
         }
     }
 }
+
+// MARK: - UIImage orientation normalization
+
+private extension UIImage {
+    /// Re-draws the image so its pixel data matches its display orientation,
+    /// stripping the EXIF rotation flag. Fixes portrait photos uploaded from the camera.
+    func normalizedOrientation() -> UIImage {
+        guard imageOrientation != .up else { return self }
+        UIGraphicsBeginImageContextWithOptions(size, false, scale)
+        draw(in: CGRect(origin: .zero, size: size))
+        let result = UIGraphicsGetImageFromCurrentImageContext() ?? self
+        UIGraphicsEndImageContext()
+        return result
+    }
+}
+
