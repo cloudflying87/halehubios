@@ -106,6 +106,7 @@ class ReadingViewModel: ObservableObject {
 struct ReadingView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm = ReadingViewModel()
+    @State private var showAddEntry = false
 
     var body: some View {
         NavigationStack {
@@ -116,6 +117,30 @@ struct ReadingView: View {
             }
             .navigationTitle("Reading Plan")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                if let detail = vm.primaryPlanDetail {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            showAddEntry = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showAddEntry) {
+                if let detail = vm.primaryPlanDetail,
+                   let dayNum = detail.currentDayNumber {
+                    AddReadingEntrySheet(
+                        isPresented: $showAddEntry,
+                        planId: detail.id,
+                        dayNumber: dayNum
+                    ) { entries in
+                        Task { await vm.load(token: auth.accessToken ?? "") }
+                    }
+                    .environmentObject(auth)
+                }
+            }
             .task { await vm.load(token: auth.accessToken ?? "") }
             .refreshable { await vm.load(token: auth.accessToken ?? "") }
         }
