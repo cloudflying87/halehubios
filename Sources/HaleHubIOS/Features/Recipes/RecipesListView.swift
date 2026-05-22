@@ -99,7 +99,7 @@ struct RecipesListView: View {
     }
 }
 
-// MARK: - Import Recipe Sheet (URL + Paste Text)
+// MARK: - Import Recipe Sheet (URL + Paste Text → Review)
 
 struct ImportRecipeFromURLSheet: View {
     @EnvironmentObject var auth: AuthManager
@@ -112,10 +112,12 @@ struct ImportRecipeFromURLSheet: View {
     @State private var mode: ImportMode = .url
     @State private var urlText = ""
     @State private var pastedText = ""
-    @State private var isImporting = false
+    @State private var isParsing = false
     @State private var errorMessage: String?
+    @State private var parsedData: ParsedRecipeData?
+    @State private var showReview = false
 
-    private var canImport: Bool {
+    private var canContinue: Bool {
         switch mode {
         case .url:  return !urlText.trimmingCharacters(in: .whitespaces).isEmpty
         case .text: return !pastedText.trimmingCharacters(in: .whitespaces).isEmpty
@@ -125,7 +127,6 @@ struct ImportRecipeFromURLSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                // Mode picker
                 Section {
                     Picker("Mode", selection: $mode) {
                         ForEach(ImportMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -156,15 +157,15 @@ struct ImportRecipeFromURLSheet: View {
                     } header: {
                         Text("Recipe Text")
                     } footer: {
-                        Text("Paste the recipe — including title, ingredients, and instructions. The more detail you include, the better the import.")
+                        Text("Paste the recipe — including title, ingredients, and instructions.")
                     }
                 }
 
-                if isImporting {
+                if isParsing {
                     Section {
                         HStack(spacing: 12) {
                             ProgressView()
-                            Text("Importing recipe…").foregroundStyle(.secondary)
+                            Text("Parsing recipe…").foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -179,42 +180,206 @@ struct ImportRecipeFromURLSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.disabled(isImporting)
+                    Button("Cancel") { dismiss() }.disabled(isParsing)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Import") {
-                        Task { await performImport() }
+                    Button("Continue") {
+                        Task { await parse() }
                     }
-                    .disabled(!canImport || isImporting)
+                    .disabled(!canContinue || isParsing)
+                }
+            }
+            .navigationDestination(isPresented: $showReview) {
+                if let data = parsedData {
+                    RecipeImportReviewView(vm: vm, parsed: data) { recipe in
+                        dismiss()
+                        onSuccess(recipe)
+                    }
+                    .environmentObject(auth)
                 }
             }
         }
     }
 
-    private func performImport() async {
+    private func parse() async {
         guard let token = auth.accessToken else { return }
-        isImporting = true
+        isParsing = true
         errorMessage = nil
         do {
-            let recipe: Recipe
             switch mode {
             case .url:
-                recipe = try await vm.importRecipe(
-                    url: urlText.trimmingCharacters(in: .whitespaces),
-                    token: token
+                parsedData = try await vm.parseRecipeFromURL(
+                    url: urlText.trimmingCharacters(in: .whitespaces), token: token
                 )
             case .text:
-                recipe = try await vm.importRecipeFromText(
-                    pastedText.trimmingCharacters(in: .whitespaces),
-                    token: token
+                parsedData = try await vm.parseRecipeFromText(
+                    pastedText.trimmingCharacters(in: .whitespaces), token: token
                 )
             }
-            dismiss()
-            onSuccess(recipe)
+            showReview = true
         } catch {
             errorMessage = error.localizedDescription
         }
-        isImporting = false
+        isParsing = false
+    }
+}
+
+// MARK: - Recipe Import Review
+
+struct RecipeImportReviewView: View {
+    @EnvironmentObject var auth: AuthManager
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var vm: RecipesViewModel
+    let onSuccess: (Recipe) -> Void
+
+    @State private var parsed: ParsedRecipeData
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    init(vm: RecipesViewModel, parsed: ParsedRecipeData, onSuccess: @escaping (Recipe) -> Void) {
+        self.vm = vm
+        self._parsed = State(initialValue: parsed)
+        self.onSuccess = onSuccess
+    }
+
+    var body: some View {
+        Form {
+            if let warning = parsed.parseWarning {
+                Section {
+                    Label(warning, systemImage: "exclamationmark.triangle")
+                        .font(.callout)
+                        .foregroundStyle(.orange)
+                }
+            }
+
+            // Image preview
+            if !parsed.imageUrl.isEmpty, let url = URL(string: parsed.imageUrl) {
+                Section {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let img): img.resizable().scaledToFill()
+                        default: Color(.systemGray5)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 180)
+                    .clipped()
+                    .listRowInsets(.init())
+                }
+            }
+
+            Section("Title") {
+                TextField("Recipe title", text: $parsed.title)
+            }
+
+            Section("Times & Servings") {
+                HStack {
+                    Text("Prep")
+                    Spacer()
+                    OptionalIntField("min", value: $parsed.prepTime)
+                }
+                HStack {
+                    Text("Cook")
+                    Spacer()
+                    OptionalIntField("min", value: $parsed.cookTime)
+                }
+                HStack {
+                    Text("Total")
+                    Spacer()
+                    OptionalIntField("min", value: $parsed.totalTime)
+                }
+                HStack {
+                    Text("Servings")
+                    Spacer()
+                    OptionalIntField("servings", value: $parsed.servings)
+                }
+            }
+
+            if !parsed.ingredients.isEmpty {
+                Section("Ingredients (\(parsed.ingredients.count))") {
+                    ForEach(parsed.ingredients, id: \.self) { ing in
+                        Text(ing).font(.callout)
+                    }
+                }
+            }
+
+            if !parsed.instructions.isEmpty {
+                Section("Instructions (\(parsed.instructions.count) steps)") {
+                    ForEach(Array(parsed.instructions.enumerated()), id: \.offset) { idx, step in
+                        HStack(alignment: .top, spacing: 10) {
+                            Text("\(idx + 1).")
+                                .font(.callout.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                                .frame(minWidth: 20, alignment: .trailing)
+                            Text(step).font(.callout)
+                        }
+                    }
+                }
+            }
+
+            if !parsed.sourceUrl.isEmpty {
+                Section("Source") {
+                    Text(parsed.sourceName.isEmpty ? parsed.sourceUrl : parsed.sourceName)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let error = errorMessage {
+                Section {
+                    Text(error).foregroundStyle(.red).font(.callout)
+                }
+            }
+        }
+        .navigationTitle("Review Recipe")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(isSaving)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                if isSaving {
+                    ProgressView()
+                } else {
+                    Button("Save") {
+                        Task { await save() }
+                    }
+                    .disabled(parsed.title.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        guard let token = auth.accessToken else { return }
+        isSaving = true
+        errorMessage = nil
+        do {
+            let recipe = try await vm.confirmImport(parsed, token: token)
+            onSuccess(recipe)
+        } catch {
+            errorMessage = error.localizedDescription
+            isSaving = false
+        }
+    }
+}
+
+// Small helper for optional Int text fields
+private struct OptionalIntField: View {
+    let placeholder: String
+    @Binding var value: Int?
+
+    init(_ placeholder: String, value: Binding<Int?>) {
+        self.placeholder = placeholder
+        self._value = value
+    }
+
+    var body: some View {
+        TextField(placeholder, text: Binding(
+            get: { value.map { String($0) } ?? "" },
+            set: { value = Int($0) }
+        ))
+        .keyboardType(.numberPad)
+        .multilineTextAlignment(.trailing)
+        .frame(width: 80)
     }
 }
 

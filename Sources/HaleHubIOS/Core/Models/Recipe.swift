@@ -154,3 +154,35 @@ struct PaginatedResponse<T: Decodable & Sendable>: Decodable, Sendable {
     let previous: String?
     let results: [T]
 }
+
+// MARK: - Recipe Import (parse → review → confirm)
+
+struct ParsedRecipeData: Codable, Sendable {
+    let importId: String
+    var title: String
+    var description: String
+    var prepTime: Int?
+    var cookTime: Int?
+    var totalTime: Int?
+    var servings: Int?
+    var ingredients: [String]
+    var instructions: [String]
+    let imageUrl: String
+    let sourceUrl: String
+    let sourceName: String
+    let parseWarning: String?
+}
+
+struct RecipeImportConfirmRequest: Encodable, Sendable {
+    let title: String
+    let description: String
+    let prepTime: Int?
+    let cookTime: Int?
+    let totalTime: Int?
+    let servings: Int?
+    let ingredients: [String]
+    let instructions: [String]
+    let imageUrl: String
+    let sourceUrl: String
+    let sourceName: String
+}

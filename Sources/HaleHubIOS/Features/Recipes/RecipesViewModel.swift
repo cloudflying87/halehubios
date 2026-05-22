@@ -184,7 +184,45 @@ class RecipesViewModel: ObservableObject {
         return updated
     }
 
-    // MARK: - Recipe Import from URL
+    // MARK: - Recipe Import (parse → review → confirm)
+
+    func parseRecipeFromURL(url: String, token: String) async throws -> ParsedRecipeData {
+        struct ParseRequest: Encodable, Sendable { let sourceUrl: String }
+        return try await APIClient.shared.post(
+            "/recipes/import/parse/", body: ParseRequest(sourceUrl: url), token: token
+        )
+    }
+
+    func parseRecipeFromText(_ text: String, token: String) async throws -> ParsedRecipeData {
+        struct ParseRequest: Encodable, Sendable { let recipeJson: String }
+        return try await APIClient.shared.post(
+            "/recipes/import/parse/", body: ParseRequest(recipeJson: text), token: token
+        )
+    }
+
+    func confirmImport(_ data: ParsedRecipeData, token: String) async throws -> Recipe {
+        let body = RecipeImportConfirmRequest(
+            title: data.title,
+            description: data.description,
+            prepTime: data.prepTime,
+            cookTime: data.cookTime,
+            totalTime: data.totalTime,
+            servings: data.servings,
+            ingredients: data.ingredients,
+            instructions: data.instructions,
+            imageUrl: data.imageUrl,
+            sourceUrl: data.sourceUrl,
+            sourceName: data.sourceName
+        )
+        let recipe: Recipe = try await APIClient.shared.post(
+            "/recipes/import/confirm/", body: body, token: token
+        )
+        recipes.insert(recipe, at: 0)
+        await CacheManager.shared.save(recipes, key: recipeCacheKey)
+        return recipe
+    }
+
+    // MARK: - Recipe Import from URL (legacy — saves immediately, kept for compatibility)
 
     func importRecipe(url: String, token: String) async throws -> Recipe {
         struct ImportRequest: Encodable, Sendable { let url: String }
