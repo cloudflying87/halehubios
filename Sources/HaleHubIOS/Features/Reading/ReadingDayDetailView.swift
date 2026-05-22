@@ -133,15 +133,19 @@ struct ReadingDayDetailView: View {
 
     var body: some View {
         Group {
-            if vm.isLoading && vm.day == nil {
+            if vm.isLoading {
                 ProgressView("Loading…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let day = vm.day {
                 dayContent(day)
-            } else if let err = vm.error {
+            } else {
+                // Error or empty — always show something visible
                 VStack(spacing: 16) {
-                    Text(err)
-                        .foregroundStyle(.red)
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.orange)
+                    Text(vm.error ?? "Could not load this day.")
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                     Button("Retry") {
                         Task { await vm.load(token: auth.accessToken ?? "") }
@@ -179,11 +183,12 @@ struct ReadingDayDetailView: View {
             if !editingNotes { notesText = newValue ?? "" }
         }
         .alert("Error", isPresented: .init(
-            get: { vm.error != nil && vm.day != nil },
+            get: { vm.error != nil && vm.day != nil },  // only for non-fatal errors when day is loaded
             set: { if !$0 { vm.error = nil } }
         )) {
             Button("OK") { vm.error = nil }
         } message: { Text(vm.error ?? "") }
+
     }
 
     // MARK: - Day Content

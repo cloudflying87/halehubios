@@ -22,6 +22,8 @@ class ToteDetailViewModel: ObservableObject {
             let (detail, cats) = try await (detailFetch, categoriesFetch)
             toteDetail = detail
             categories = cats
+        } catch is CancellationError {
+            // SwiftUI cancelled the task (e.g. view disappeared) — keep existing data, no error
         } catch {
             self.error = error.localizedDescription
         }

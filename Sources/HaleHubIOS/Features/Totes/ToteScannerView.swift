@@ -113,10 +113,6 @@ struct ToteScannerSheet: View {
             if response.bound, let tote = response.asTote() {
                 dismiss()
                 onToteFound(tote)
-            } else if response.claimedByOtherUser == true {
-                errorMessage = "This QR code is already in use on another account."
-                try? await Task.sleep(for: .seconds(3))
-                isScanning = true
             } else {
                 // Unbound — offer to create a new tote with this identifier
                 unboundIdentifier = response.qrCodeIdentifier ?? identifier

@@ -14,6 +14,8 @@ class TotesViewModel: ObservableObject {
         do {
             let fetched: [Tote] = try await APIClient.shared.get("/totes/", token: token)
             totes = fetched
+        } catch is CancellationError {
+            // SwiftUI cancelled the task (e.g. view disappeared) — keep existing data, no error
         } catch {
             self.error = error.localizedDescription
         }
