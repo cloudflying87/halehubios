@@ -133,7 +133,17 @@ struct RecipeDetailView: View {
                                     }
                                 }
                             }
-                            if let source = displayed.importedFrom {
+                            if let urlString = displayed.sourceUrl,
+                               !urlString.isEmpty,
+                               let url = URL(string: urlString) {
+                                Link(destination: url) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "link").foregroundStyle(Color.accentColor)
+                                        Text(displayed.sourceName?.isEmpty == false ? displayed.sourceName! : "View Original Recipe")
+                                            .foregroundStyle(Color.accentColor)
+                                    }
+                                }
+                            } else if let source = displayed.importedFrom {
                                 HStack {
                                     Image(systemName: "square.and.arrow.down").foregroundStyle(.secondary)
                                     Text("Imported from \(source)")
