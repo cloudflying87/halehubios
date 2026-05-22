@@ -196,8 +196,7 @@ struct RecipeEditView: View {
                 // MARK: Instructions
                 Section("Instructions") {
                     TextEditor(text: $instructionsText)
-                        .frame(minHeight: 140)
-                        .lineLimit(6...20)
+                        .frame(minHeight: 400)
                 }
 
                 // MARK: Error
