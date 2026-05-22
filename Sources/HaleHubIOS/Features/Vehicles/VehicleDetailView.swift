@@ -1248,6 +1248,8 @@ struct MaintenanceActionSheet: View {
     let onRefresh: () -> Void
 
     @State private var showLogSheet = false
+    @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
     @State private var errorMessage: String?
 
     var body: some View {
@@ -1313,6 +1315,15 @@ struct MaintenanceActionSheet: View {
                     }
                 }
 
+                Section {
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        Label("Remove from Schedule", systemImage: "trash")
+                    }
+                    .disabled(isDeleting)
+                }
+
                 if let err = errorMessage {
                     Section {
                         Label(err, systemImage: "exclamationmark.circle.fill").foregroundStyle(.red)
@@ -1325,6 +1336,18 @@ struct MaintenanceActionSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
                 }
+            }
+            .confirmationDialog(
+                "Remove \(schedule.categoryName ?? "this item") from the maintenance schedule?",
+                isPresented: $showDeleteConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Remove", role: .destructive) {
+                    Task { await deleteSchedule() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This cannot be undone.")
             }
         }
         .sheet(isPresented: $showLogSheet) {
@@ -1349,6 +1372,22 @@ struct MaintenanceActionSheet: View {
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func deleteSchedule() async {
+        guard let token = auth.accessToken else { return }
+        isDeleting = true
+        errorMessage = nil
+        do {
+            try await APIClient.shared.delete(
+                "/vehicles/maintenance/\(schedule.id)/", token: token
+            )
+            onRefresh()
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+            isDeleting = false
         }
     }
 }
