@@ -107,6 +107,7 @@ struct ReadingView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm = ReadingViewModel()
     @State private var showAddEntry = false
+    @State private var showCreatePlan = false
 
     var body: some View {
         NavigationStack {
@@ -118,13 +119,22 @@ struct ReadingView: View {
             .navigationTitle("Reading Plan")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                if let detail = vm.primaryPlanDetail {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            showAddEntry = true
-                        } label: {
-                            Image(systemName: "plus")
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        if vm.primaryPlanDetail?.currentDayNumber != nil {
+                            Button {
+                                showAddEntry = true
+                            } label: {
+                                Label("Add Today's Reading", systemImage: "plus.circle")
+                            }
                         }
+                        Button {
+                            showCreatePlan = true
+                        } label: {
+                            Label("New Plan", systemImage: "doc.badge.plus")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                     }
                 }
             }
@@ -135,11 +145,17 @@ struct ReadingView: View {
                         isPresented: $showAddEntry,
                         planId: detail.id,
                         dayNumber: dayNum
-                    ) { entries in
+                    ) { _ in
                         Task { await vm.load(token: auth.accessToken ?? "") }
                     }
                     .environmentObject(auth)
                 }
+            }
+            .sheet(isPresented: $showCreatePlan) {
+                CreateReadingPlanSheet(isPresented: $showCreatePlan) { _ in
+                    Task { await vm.load(token: auth.accessToken ?? "") }
+                }
+                .environmentObject(auth)
             }
             .task { await vm.load(token: auth.accessToken ?? "") }
             .refreshable { await vm.load(token: auth.accessToken ?? "") }
@@ -256,11 +272,19 @@ struct ReadingView: View {
                 Text("No Reading Plan Yet")
                     .font(.title3)
                     .fontWeight(.semibold)
-                Text("Visit the HaleHub web app to create a reading plan, then come back here to track your progress.")
+                Text("Create a plan to start tracking your daily Bible reading.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
+            Button {
+                showCreatePlan = true
+            } label: {
+                Label("Create Reading Plan", systemImage: "doc.badge.plus")
+                    .frame(maxWidth: 260)
+                    .padding(.vertical, 12)
+            }
+            .buttonStyle(.borderedProminent)
         }
         .frame(maxWidth: .infinity, minHeight: 260)
         .padding(.horizontal, 24)

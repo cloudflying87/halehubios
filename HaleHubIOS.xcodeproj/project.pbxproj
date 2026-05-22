@@ -33,6 +33,7 @@
 		6BA53ED787AD869D98668CFF /* FinanceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1AD9D996E827387C9F71922 /* FinanceViewModel.swift */; };
 		6EF3632628FD2B8521F92BE6 /* ArchiveHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46245FF3D4EDB0C2E41CE2D8 /* ArchiveHubView.swift */; };
 		70570EDAB2447292C0FE276F /* RecipesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24B721CFDEC7BEE72927514 /* RecipesViewModel.swift */; };
+		73E45A55E51229F7FB3D456A /* CreateReadingPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42AC9FAC6CDD925AA7D1F237 /* CreateReadingPlanSheet.swift */; };
 		7632ECDEF899542D9D899CCC /* ToteDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45ACFCECF85237B26C0F6F99 /* ToteDetailView.swift */; };
 		781EE9C9FD1BF73B1123495B /* ShoppingListDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4007424790D9C4CD3E4E10 /* ShoppingListDetailView.swift */; };
 		823F50914D9327257F393EA2 /* CacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BF696F77373A167292BC317 /* CacheManager.swift */; };
@@ -95,6 +96,7 @@
 		2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartsLookupView.swift; sourceTree = "<group>"; };
 		37E0D226A300933A7846E042 /* EditToteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditToteSheet.swift; sourceTree = "<group>"; };
 		38E93521147DA51107C96ABA /* RecipesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipesListView.swift; sourceTree = "<group>"; };
+		42AC9FAC6CDD925AA7D1F237 /* CreateReadingPlanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateReadingPlanSheet.swift; sourceTree = "<group>"; };
 		43CB5F5CE1DA94DB05CEFAB1 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		45ACFCECF85237B26C0F6F99 /* ToteDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToteDetailView.swift; sourceTree = "<group>"; };
 		46245FF3D4EDB0C2E41CE2D8 /* ArchiveHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveHubView.swift; sourceTree = "<group>"; };
@@ -402,6 +404,7 @@
 			children = (
 				56D0F8FA6169AFB6A1408AC1 /* AddReadingEntrySheet.swift */,
 				815C624F55265C97B1C42422 /* BibleProgressView.swift */,
+				42AC9FAC6CDD925AA7D1F237 /* CreateReadingPlanSheet.swift */,
 				F7FA5E2300153CB3E9C7B100 /* ReadingCalendarView.swift */,
 				1979192C8C8DBC508631A28E /* ReadingDayDetailView.swift */,
 				040BCD9171AD5B0D521CFD48 /* ReadingView.swift */,
@@ -487,6 +490,7 @@
 				823F50914D9327257F393EA2 /* CacheManager.swift in Sources */,
 				EEAB2FADBDA87D90CA2F7687 /* CompoundInterestView.swift in Sources */,
 				DE32D7A36A038D9603EA2763 /* CookModeView.swift in Sources */,
+				73E45A55E51229F7FB3D456A /* CreateReadingPlanSheet.swift in Sources */,
 				6B9745F7E8ADD1F8F0B67D7E /* CreateToteSheet.swift in Sources */,
 				4024F5BF62140807257E8FCA /* EditToteSheet.swift in Sources */,
 				8B6ED2837A457F2220C99BE7 /* Finance.swift in Sources */,
@@ -581,7 +585,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 21;
+				CURRENT_PROJECT_VERSION = 22;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -656,7 +660,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 21;
+				CURRENT_PROJECT_VERSION = 22;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;

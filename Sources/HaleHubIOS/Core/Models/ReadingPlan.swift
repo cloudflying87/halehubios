@@ -152,6 +152,14 @@ struct BulkAddResponse: Codable, Sendable {
     let errorCount: Int
 }
 
+struct CreatePlanRequest: Encodable, Sendable {
+    let name: String
+    let startDate: String    // "YYYY-MM-DD"
+    let totalDays: Int
+    let description: String
+    let isPrimary: Bool
+}
+
 struct BulkPreviewItem: Codable, Sendable {
     let input: String
     let reference: String
