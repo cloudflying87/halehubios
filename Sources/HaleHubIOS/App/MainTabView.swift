@@ -13,6 +13,7 @@ struct MainTabView: View {
     @State private var showImportReview = false
 
     var body: some View {
+        Group {
         if auth.currentUser?.totesOnly == true {
             // Totes-only users: single tab, no distractions
             NavigationStack {
@@ -58,6 +59,7 @@ struct MainTabView: View {
                     .tag(3)
             }
         }
+        }  // Group
         .task {
             await notifVM.fetchUnreadCount(token: auth.accessToken ?? "")
         }
