@@ -9,8 +9,12 @@ struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var importedRecipeId: String? = nil
     @State private var navigateToImported = false
-    @State private var importDraftId: String? = nil
-    @State private var showImportReview = false
+    /// Non-nil → the shortcut-deep-link review sheet is presented.
+    /// We use a wrapped Identifiable so SwiftUI's `.sheet(item:)` can drive
+    /// presentation — the older isPresented + optional id pattern raced and
+    /// occasionally rendered a blank sheet because the body evaluated before
+    /// the id propagated.
+    @State private var importDraftRoute: ImportDraftRoute? = nil
 
     /// Tabs the user is allowed to see, derived from the permissions
     /// returned by /api/auth/me/. Vehicles is currently family-wide on the
@@ -57,15 +61,13 @@ struct MainTabView: View {
         .onOpenURL { url in
             handleURL(url)
         }
-        .sheet(isPresented: $showImportReview) {
-            if let id = importDraftId {
-                RecipeImportDraftSheet(importId: id) { recipe in
-                    showImportReview = false
-                    importedRecipeId = recipe.id.uuidString
-                    navigateToImported = true
-                }
-                .environmentObject(auth)
+        .sheet(item: $importDraftRoute) { route in
+            RecipeImportDraftSheet(importId: route.id) { recipe in
+                importDraftRoute = nil
+                importedRecipeId = recipe.id.uuidString
+                navigateToImported = true
             }
+            .environmentObject(auth)
         }
     }
 
@@ -109,8 +111,9 @@ struct MainTabView: View {
             if let idx = tabIndex(for: .meals) { selectedTab = idx }
             let parts = url.pathComponents.dropFirst()
             if parts.first == "review", let id = parts.dropFirst().first, !id.isEmpty {
-                importDraftId = id
-                showImportReview = true
+                // `.sheet(item:)` presents only when the optional becomes non-nil,
+                // so wrapping ensures the importId is present at body-eval time.
+                importDraftRoute = ImportDraftRoute(id: id)
             } else if let id = parts.first, !id.isEmpty {
                 importedRecipeId = id
                 navigateToImported = true
@@ -123,6 +126,16 @@ struct MainTabView: View {
             break
         }
     }
+}
+
+// MARK: - Shortcut review route
+
+/// Wraps the import id so it can drive `.sheet(item:)` — the wrapped
+/// optional becomes the single source of truth for both "is sheet up?"
+/// and "which import?", which avoids the blank-sheet race we hit when
+/// these were two separate `@State` properties.
+private struct ImportDraftRoute: Identifiable, Hashable {
+    let id: String
 }
 
 // MARK: - Tab spec
