@@ -8,22 +8,11 @@ struct CreateToteSheet: View {
     var onCancel: (() -> Void)?     // nil when presented as a regular sheet (dismiss handles it)
 
     @State private var name = ""
-    @State private var location = "other"
+    @State private var selectedLocationId: String? = nil
     @State private var locationNotes = ""
     @State private var notes = ""
     @State private var isSaving = false
     @State private var error: String?
-
-    private let locations: [(slug: String, label: String)] = [
-        ("basement", "Basement"),
-        ("attic", "Attic"),
-        ("garage", "Garage"),
-        ("storage_unit", "Storage Unit"),
-        ("bedroom_closet", "Bedroom Closet"),
-        ("guest_room", "Guest Room"),
-        ("shed", "Shed"),
-        ("other", "Other"),
-    ]
 
     var body: some View {
         NavigationStack {
@@ -55,11 +44,7 @@ struct CreateToteSheet: View {
                 }
 
                 Section("Location") {
-                    Picker("Location", selection: $location) {
-                        ForEach(locations, id: \.slug) { loc in
-                            Text(loc.label).tag(loc.slug)
-                        }
-                    }
+                    LocationPickerView(selectionId: $selectedLocationId)
                     TextField("Details (e.g. Top shelf, Left corner)", text: $locationNotes)
                 }
 
@@ -107,8 +92,8 @@ struct CreateToteSheet: View {
         let trimmedQR = qrIdentifier?.trimmingCharacters(in: .whitespaces)
         let body = CreateToteRequest(
             name: name.trimmingCharacters(in: .whitespaces),
-            locationObjId: nil,   // TODO: switch to picker driven by GET /api/totes/locations/
-            location: location,   // legacy slug fallback for now
+            locationObjId: selectedLocationId,
+            location: nil,         // FK is the source of truth now; backend back-fills the slug
             locationNotes: locationNotes.trimmingCharacters(in: .whitespaces),
             notes: notes.trimmingCharacters(in: .whitespaces),
             qrCodeIdentifier: (trimmedQR?.isEmpty == false) ? trimmedQR : nil
