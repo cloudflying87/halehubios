@@ -107,7 +107,8 @@ struct CreateToteSheet: View {
         let trimmedQR = qrIdentifier?.trimmingCharacters(in: .whitespaces)
         let body = CreateToteRequest(
             name: name.trimmingCharacters(in: .whitespaces),
-            location: location,
+            locationObjId: nil,   // TODO: switch to picker driven by GET /api/totes/locations/
+            location: location,   // legacy slug fallback for now
             locationNotes: locationNotes.trimmingCharacters(in: .whitespaces),
             notes: notes.trimmingCharacters(in: .whitespaces),
             qrCodeIdentifier: (trimmedQR?.isEmpty == false) ? trimmedQR : nil

@@ -70,6 +70,16 @@ class AuthManager: ObservableObject {
     }
 }
 
+/// Per-app access pair returned in HaleUser.apps.
+/// Backend rule: owners always get true/true; everyone else needs the
+/// per-app can_view_/can_edit_ flag explicitly granted.
+struct AppAccess: Codable, Sendable, Hashable {
+    let view: Bool
+    let edit: Bool
+
+    static let none = AppAccess(view: false, edit: false)
+}
+
 struct HaleUser: Codable, Sendable {
     let id: Int
     let email: String
@@ -77,12 +87,61 @@ struct HaleUser: Codable, Sendable {
     let lastName: String
     let displayName: String
     let role: String
+
+    let isOwner: Bool
+    let isAdult: Bool
+
+    // Raw flags — still here for code that reads a specific field.
+    // Prefer `can(_:edit:)` for new code, which consults the `apps` map.
     let canViewFinances: Bool
     let canViewPaychecks: Bool
+    let canEditVehicles: Bool
+    let canViewVacations: Bool
+    let canViewMusic: Bool
+    let canEditMusic: Bool
+    let canViewFlights: Bool
+    let canEditFlights: Bool
+    let canViewRecipes: Bool
+    let canEditRecipes: Bool
+    let canViewLists: Bool
+    let canViewTotes: Bool
+    let canViewReading: Bool
+    let canViewLetters: Bool
+    let canEditLetters: Bool
+    let canViewWebsites: Bool
+    let canEditWebsites: Bool
+    let canViewQr: Bool
+    let canViewCalculators: Bool
+    let totesOnly: Bool
 
+    /// Per-app {view, edit} map keyed by app key (recipes, totes, finance, …).
+    /// This is the canonical source for "should iOS show tab X?" — prefer
+    /// `user.can("recipes")` over poking at the raw flag fields.
+    let apps: [String: AppAccess]
+
+    /// Convenience accessor for `apps`. Returns false for unknown keys.
+    func can(_ appKey: String, edit: Bool = false) -> Bool {
+        guard let access = apps[appKey] else { return false }
+        return edit ? access.edit : access.view
+    }
+
+    // Custom decoder so missing/older flag fields don't break login. Newly-
+    // added fields default to false (sensible since the positive-list model
+    // means "no info → no access" is the safe assumption).
     enum CodingKeys: String, CodingKey {
         case id, email, firstName, lastName, displayName, role
+        case isOwner, isAdult
         case canViewFinances, canViewPaychecks
+        case canEditVehicles, canViewVacations
+        case canViewMusic, canEditMusic
+        case canViewFlights, canEditFlights
+        case canViewRecipes, canEditRecipes
+        case canViewLists, canViewTotes, canViewReading
+        case canViewLetters, canEditLetters
+        case canViewWebsites, canEditWebsites
+        case canViewQr, canViewCalculators
+        case totesOnly
+        case apps
     }
 
     init(from decoder: Decoder) throws {
@@ -93,8 +152,35 @@ struct HaleUser: Codable, Sendable {
         lastName = try c.decode(String.self, forKey: .lastName)
         displayName = try c.decode(String.self, forKey: .displayName)
         role = try c.decode(String.self, forKey: .role)
-        canViewFinances = (try? c.decode(Bool.self, forKey: .canViewFinances)) ?? false
-        canViewPaychecks = (try? c.decode(Bool.self, forKey: .canViewPaychecks)) ?? false
+        isOwner = (try? c.decode(Bool.self, forKey: .isOwner)) ?? (role == "owner")
+        isAdult = (try? c.decode(Bool.self, forKey: .isAdult)) ?? (role == "owner" || role == "adult")
+
+        func flag(_ key: CodingKeys, default value: Bool = false) -> Bool {
+            (try? c.decode(Bool.self, forKey: key)) ?? value
+        }
+
+        canViewFinances    = flag(.canViewFinances)
+        canViewPaychecks   = flag(.canViewPaychecks)
+        canEditVehicles    = flag(.canEditVehicles)
+        canViewVacations   = flag(.canViewVacations)
+        canViewMusic       = flag(.canViewMusic)
+        canEditMusic       = flag(.canEditMusic)
+        canViewFlights     = flag(.canViewFlights)
+        canEditFlights     = flag(.canEditFlights)
+        canViewRecipes     = flag(.canViewRecipes, default: true)
+        canEditRecipes     = flag(.canEditRecipes, default: true)
+        canViewLists       = flag(.canViewLists,   default: true)
+        canViewTotes       = flag(.canViewTotes,   default: true)
+        canViewReading     = flag(.canViewReading, default: true)
+        canViewLetters     = flag(.canViewLetters, default: true)
+        canEditLetters     = flag(.canEditLetters)
+        canViewWebsites    = flag(.canViewWebsites)
+        canEditWebsites    = flag(.canEditWebsites)
+        canViewQr          = flag(.canViewQr)
+        canViewCalculators = flag(.canViewCalculators, default: true)
+        totesOnly          = flag(.totesOnly)
+
+        apps = (try? c.decode([String: AppAccess].self, forKey: .apps)) ?? [:]
     }
 }
 

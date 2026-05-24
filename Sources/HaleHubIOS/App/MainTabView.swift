@@ -12,46 +12,46 @@ struct MainTabView: View {
     @State private var importDraftId: String? = nil
     @State private var showImportReview = false
 
+    /// Tabs the user is allowed to see, derived from the permissions
+    /// returned by /api/auth/me/. Vehicles is currently family-wide on the
+    /// backend (`can_access_app('vehicles')` returns True for any role) so
+    /// we keep it visible to everyone too — owners can change that by
+    /// flipping a flag later. Account/More is always shown.
+    private var allowedTabs: [TabSpec] {
+        let user = auth.currentUser
+        var tabs: [TabSpec] = []
+        // Vehicles
+        if user?.can("vehicles") ?? true {
+            tabs.append(.vehicles)
+        }
+        // Meals / Recipes
+        if user?.can("recipes") ?? false {
+            tabs.append(.meals)
+        }
+        // Shopping (lists)
+        if user?.can("lists") ?? false {
+            tabs.append(.shopping)
+        }
+        // Finance
+        if user?.can("finance") ?? false {
+            tabs.append(.finance)
+        }
+        // Account / More is always present
+        tabs.append(.account)
+        return tabs
+    }
+
     var body: some View {
         TabView(selection: $selectedTab) {
-            NavigationStack {
-                VehiclesListView()
+            ForEach(Array(allowedTabs.enumerated()), id: \.element) { index, tab in
+                tabView(for: tab)
+                    .tabItem { Label(tab.title, systemImage: tab.icon) }
+                    .tag(index)
+                    .modifier(MoreBadgeModifier(tab: tab, count: notifVM.unreadCount))
             }
-            .tabItem { Label("Vehicles", systemImage: "car.fill") }
-            .tag(0)
-
-            NavigationStack {
-                MealsHubView()
-                    .navigationDestination(isPresented: $navigateToImported) {
-                        if let id = importedRecipeId {
-                            ImportedRecipePlaceholder(recipeId: id)
-                                .environmentObject(auth)
-                        }
-                    }
-            }
-            .tabItem { Label("Meals", systemImage: "fork.knife") }
-            .tag(1)
-
-            NavigationStack {
-                ShoppingListsView()
-            }
-            .tabItem { Label("Shopping", systemImage: "cart.fill") }
-            .tag(2)
-
-            if auth.currentUser?.canViewFinances == true {
-                NavigationStack {
-                    FinanceView()
-                }
-                .tabItem { Label("Finance", systemImage: "chart.line.uptrend.xyaxis") }
-                .tag(4)
-            }
-
-            AccountView(notifVM: notifVM)
-                .tabItem { Label("More", systemImage: "ellipsis.circle.fill") }
-                .badge(notifVM.unreadCount > 0 ? notifVM.unreadCount : 0)
-                .tag(3)
         }
         .task {
+            await auth.fetchCurrentUser()    // refresh permissions on every cold-launch
             await notifVM.fetchUnreadCount(token: auth.accessToken ?? "")
         }
         .onOpenURL { url in
@@ -69,6 +69,36 @@ struct MainTabView: View {
         }
     }
 
+    @ViewBuilder
+    private func tabView(for tab: TabSpec) -> some View {
+        switch tab {
+        case .vehicles:
+            NavigationStack { VehiclesListView() }
+        case .meals:
+            NavigationStack {
+                MealsHubView()
+                    .navigationDestination(isPresented: $navigateToImported) {
+                        if let id = importedRecipeId {
+                            ImportedRecipePlaceholder(recipeId: id)
+                                .environmentObject(auth)
+                        }
+                    }
+            }
+        case .shopping:
+            NavigationStack { ShoppingListsView() }
+        case .finance:
+            NavigationStack { FinanceView() }
+        case .account:
+            AccountView(notifVM: notifVM)
+        }
+    }
+
+    /// Find the tab index for a deep-link target, returning nil when the
+    /// user doesn't have access (so we don't try to select an invisible tab).
+    private func tabIndex(for tab: TabSpec) -> Int? {
+        allowedTabs.firstIndex(of: tab)
+    }
+
     private func handleURL(_ url: URL) {
         // halehub://recipes               — open Meals tab
         // halehub://recipes/<uuid>        — open Meals tab, navigate to recipe
@@ -76,7 +106,7 @@ struct MainTabView: View {
         guard url.scheme == "halehub" else { return }
         switch url.host {
         case "recipes":
-            selectedTab = 1
+            if let idx = tabIndex(for: .meals) { selectedTab = idx }
             let parts = url.pathComponents.dropFirst()
             if parts.first == "review", let id = parts.dropFirst().first, !id.isEmpty {
                 importDraftId = id
@@ -86,11 +116,53 @@ struct MainTabView: View {
                 navigateToImported = true
             }
         case "vehicles":
-            selectedTab = 0
+            if let idx = tabIndex(for: .vehicles) { selectedTab = idx }
         case "shopping":
-            selectedTab = 2
+            if let idx = tabIndex(for: .shopping) { selectedTab = idx }
         default:
             break
+        }
+    }
+}
+
+// MARK: - Tab spec
+
+/// Identifies a top-level tab. Used to derive the visible tab set from the
+/// user's permissions while keeping deep links robust to tab reorderings.
+enum TabSpec: Hashable {
+    case vehicles, meals, shopping, finance, account
+
+    var title: String {
+        switch self {
+        case .vehicles: return "Vehicles"
+        case .meals:    return "Meals"
+        case .shopping: return "Shopping"
+        case .finance:  return "Finance"
+        case .account:  return "More"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .vehicles: return "car.fill"
+        case .meals:    return "fork.knife"
+        case .shopping: return "cart.fill"
+        case .finance:  return "chart.line.uptrend.xyaxis"
+        case .account:  return "ellipsis.circle.fill"
+        }
+    }
+}
+
+/// Only the More/account tab carries the notification badge.
+private struct MoreBadgeModifier: ViewModifier {
+    let tab: TabSpec
+    let count: Int
+
+    func body(content: Content) -> some View {
+        if tab == .account {
+            content.badge(count > 0 ? count : 0)
+        } else {
+            content
         }
     }
 }

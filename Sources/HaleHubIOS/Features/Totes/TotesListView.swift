@@ -122,8 +122,11 @@ struct TotesListView: View {
                                     }
                                 }
                             } header: {
+                                // Prefer the FK display name (e.g. user-added "Garage shelf B")
+                                // and fall back to the legacy slug label for older totes.
                                 Label(
-                                    Tote.locationLabel(for: group.location),
+                                    group.totes.first?.displayLocation
+                                        ?? Tote.locationLabel(for: group.location),
                                     systemImage: group.totes.first?.locationIcon ?? "shippingbox"
                                 )
                                 .font(.subheadline.weight(.semibold))
