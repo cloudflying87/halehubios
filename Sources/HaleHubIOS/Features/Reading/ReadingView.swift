@@ -552,8 +552,12 @@ struct RecentDaysStrip: View {
                 HStack(spacing: 8) {
                     ForEach(days, id: \.dayNumber) { day in
                         NavigationLink {
-                            ReadingDayDetailView(planId: planId, dayNumber: day.dayNumber)
-                                .environmentObject(auth)
+                            ReadingDayDetailView(
+                                planId: planId,
+                                dayNumber: day.dayNumber,
+                                dateString: day.date
+                            )
+                            .environmentObject(auth)
                         } label: {
                             DayCircle(day: day, isToday: day.dayNumber == currentDayNumber)
                         }

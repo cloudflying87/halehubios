@@ -68,6 +68,31 @@ class ReadingDayDetailViewModel: ObservableObject {
         }
     }
 
+    /// Moves a single entry to a different day in the same plan.
+    /// On success the entry disappears from this view (it now belongs to
+    /// the target day). Errors surface via `vm.error`.
+    func moveEntry(entryId: String, toDayNumber: Int, token: String) async {
+        guard toDayNumber != dayNumber else { return }
+        do {
+            let req = MoveReadingEntryRequest(dayNumber: toDayNumber)
+            let _: ReadingEntry = try await APIClient.shared.post(
+                "/reading/entries/\(entryId)/move/",
+                body: req, token: token
+            )
+            if let d = day {
+                day = ReadingDay(
+                    dayNumber: d.dayNumber,
+                    date: d.date,
+                    isCompleted: d.isCompleted,
+                    entries: d.entries.filter { $0.id != entryId },
+                    notes: d.notes
+                )
+            }
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
     func entryAdded(_ entry: ReadingEntry) {
         if let d = day {
             day = ReadingDay(
@@ -114,6 +139,7 @@ struct ReadingDayDetailView: View {
     @State private var showAddEntry = false
     @State private var editingNotes = false
     @State private var notesText = ""
+    @State private var movingEntry: ReadingEntry?     // non-nil → move sheet visible
 
     init(planId: String, dayNumber: Int, dateString: String) {
         self.planId = planId
@@ -176,6 +202,20 @@ struct ReadingDayDetailView: View {
                 entries.forEach { vm.entryAdded($0) }
             }
             .environmentObject(auth)
+        }
+        .sheet(item: $movingEntry) { entry in
+            MoveReadingEntrySheet(
+                entry: entry,
+                currentDayNumber: dayNumber
+            ) { targetDay in
+                Task {
+                    await vm.moveEntry(
+                        entryId: entry.id,
+                        toDayNumber: targetDay,
+                        token: auth.accessToken ?? ""
+                    )
+                }
+            }
         }
         .task { await vm.load(token: auth.accessToken ?? "") }
         .onAppear { notesText = vm.day?.notes ?? "" }
@@ -255,6 +295,12 @@ struct ReadingDayDetailView: View {
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
+                                Button {
+                                    movingEntry = entry
+                                } label: {
+                                    Label("Move…", systemImage: "arrow.right.arrow.left")
+                                }
+                                .tint(.blue)
                             }
                     }
                 }
@@ -336,5 +382,87 @@ private struct DayEntryRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Move Reading Entry Sheet
+
+/// Sheet that lets the user move a single reading entry to a different day
+/// of the same plan. Day-number validation lives on the backend — bad
+/// values surface via the parent's `vm.error` alert after the sheet closes.
+struct MoveReadingEntrySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let entry: ReadingEntry
+    let currentDayNumber: Int
+    var onMove: (Int) -> Void
+
+    @State private var targetDayString: String = ""
+
+    private var parsedTargetDay: Int? {
+        let trimmed = targetDayString.trimmingCharacters(in: .whitespaces)
+        guard let n = Int(trimmed), n > 0 else { return nil }
+        return n
+    }
+
+    private var canMove: Bool {
+        guard let target = parsedTargetDay else { return false }
+        return target != currentDayNumber
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "book")
+                            .foregroundStyle(Color.accentColor)
+                            .frame(width: 20)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(entry.reference)
+                                .font(.body.weight(.medium))
+                            Text("Currently on day \(currentDayNumber)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Moving")
+                }
+
+                Section {
+                    HStack {
+                        Text("Day number")
+                        Spacer()
+                        TextField("e.g. 145", text: $targetDayString)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100)
+                    }
+                } header: {
+                    Text("Move to")
+                } footer: {
+                    Text("Enter the day number you want to move this reading to. If the target day doesn't have an entry yet it will be created automatically.")
+                        .font(.caption)
+                }
+            }
+            .navigationTitle("Move Reading")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Move") {
+                        if let target = parsedTargetDay {
+                            onMove(target)
+                            dismiss()
+                        }
+                    }
+                    .disabled(!canMove)
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
