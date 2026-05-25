@@ -8,25 +8,24 @@ struct EditToteSheet: View {
     var onSaved: (Tote) -> Void
 
     @State private var name: String
-    @State private var location: String
+    @State private var selectedLocationId: String?
     @State private var locationNotes: String
     @State private var notes: String
     @State private var isSaving = false
     @State private var error: String?
 
-    private let locations: [(String, String)] = [
-        ("basement", "Basement"), ("attic", "Attic"), ("garage", "Garage"),
-        ("storage_unit", "Storage Unit"), ("bedroom_closet", "Bedroom Closet"),
-        ("guest_room", "Guest Room"), ("shed", "Shed"), ("other", "Other"),
-    ]
+    /// Used to preselect the picker on first load when the tote was created
+    /// before the FK migration (i.e. only `location` slug is set, no FK).
+    private let legacySlug: String
 
     init(tote: ToteDetail, onSaved: @escaping (Tote) -> Void) {
         self.tote = tote
         self.onSaved = onSaved
         _name = State(initialValue: tote.name)
-        _location = State(initialValue: tote.location)
+        _selectedLocationId = State(initialValue: tote.locationObjId)
         _locationNotes = State(initialValue: tote.locationNotes)
         _notes = State(initialValue: tote.notes)
+        legacySlug = tote.location
     }
 
     var body: some View {
@@ -37,9 +36,7 @@ struct EditToteSheet: View {
                         .autocorrectionDisabled()
                 }
                 Section("Location") {
-                    Picker("Location", selection: $location) {
-                        ForEach(locations, id: \.0) { Text($0.1).tag($0.0) }
-                    }
+                    LocationPickerView(selectionId: $selectedLocationId, legacySlug: legacySlug)
                     TextField("Details (e.g. Top shelf)", text: $locationNotes)
                 }
                 Section("Notes (optional)") {
@@ -76,7 +73,8 @@ struct EditToteSheet: View {
         error = nil
         let body = EditToteRequest(
             name: name.trimmingCharacters(in: .whitespaces),
-            location: location,
+            locationObjId: selectedLocationId,
+            location: nil,         // FK is the source of truth; backend keeps the legacy slug in sync
             locationNotes: locationNotes.trimmingCharacters(in: .whitespaces),
             notes: notes.trimmingCharacters(in: .whitespaces)
         )

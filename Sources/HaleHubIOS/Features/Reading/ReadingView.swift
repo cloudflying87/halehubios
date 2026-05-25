@@ -196,7 +196,11 @@ struct ReadingView: View {
 
                 // Section 3: Recent Days Strip
                 if let detail = vm.primaryPlanDetail, !detail.recentDays.isEmpty {
-                    RecentDaysStrip(days: detail.recentDays, currentDayNumber: detail.currentDayNumber)
+                    RecentDaysStrip(
+                        planId: detail.id,
+                        days: detail.recentDays,
+                        currentDayNumber: detail.currentDayNumber
+                    )
                 }
 
                 // Section 3b: View All Days button + Bible Progress
@@ -532,8 +536,11 @@ struct StatChip: View {
 // MARK: - Recent Days Strip
 
 struct RecentDaysStrip: View {
+    let planId: String
     let days: [ReadingDaySummary]
     let currentDayNumber: Int?
+
+    @EnvironmentObject var auth: AuthManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -544,7 +551,17 @@ struct RecentDaysStrip: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(days, id: \.dayNumber) { day in
-                        DayCircle(day: day, isToday: day.dayNumber == currentDayNumber)
+                        NavigationLink {
+                            ReadingDayDetailView(
+                                planId: planId,
+                                dayNumber: day.dayNumber,
+                                dateString: day.date
+                            )
+                            .environmentObject(auth)
+                        } label: {
+                            DayCircle(day: day, isToday: day.dayNumber == currentDayNumber)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 16)

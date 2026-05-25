@@ -303,7 +303,9 @@ struct AddReadingEntrySheet: View {
             Section {
                 ForEach(preview.valid, id: \.input) { item in
                     HStack(spacing: 10) {
-                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                        // Open circle, NOT a checkmark — this is just validation,
+                        // nothing has been added yet. Tap Add below to commit.
+                        Image(systemName: "circle.dashed").foregroundStyle(.blue)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(item.reference).font(.subheadline).fontWeight(.medium)
                             if item.input != item.reference {
@@ -324,13 +326,17 @@ struct AddReadingEntrySheet: View {
                 }
             } header: {
                 HStack {
-                    Text("Preview")
+                    Text("Will be added")
                     Spacer()
-                    if preview.validCount > 0 {
-                        Text("\(preview.validCount) valid · \(preview.errorCount) error\(preview.errorCount == 1 ? "" : "s")")
+                    if preview.validCount > 0 || preview.errorCount > 0 {
+                        Text("\(preview.validCount) ready · \(preview.errorCount) error\(preview.errorCount == 1 ? "" : "s")")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
+            } footer: {
+                Text("Nothing is saved until you tap **Add** above.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
 
@@ -400,12 +406,19 @@ struct AddReadingEntrySheet: View {
         do {
             let result = try await vm.addBulk(planId: planId, dayNum: dayNumber,
                                               references: text, token: auth.accessToken ?? "")
-            bulkResult = result
+            // Always close the sheet on a successful round-trip — staying open
+            // after saving is confusing. The parent gets the saved entries
+            // (and, via SwiftUI rerender, will reflect them immediately).
+            // If the parent wants to surface "N saved, M failed" toasts it
+            // can read result; we keep this sheet simple.
             if result.savedCount > 0 {
                 onAdded(result.saved)
-                if result.errorCount == 0 { isPresented = false }
-                // If there were errors, stay open so user can see what failed
+                isPresented = false
+                return
             }
+            // Nothing saved at all — keep the sheet open and show what failed
+            // so the user can fix the input and try again.
+            bulkResult = result
         } catch {
             bulkError = error.localizedDescription
         }

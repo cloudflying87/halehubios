@@ -11,7 +11,10 @@ struct ShoppingListsView: View {
         Group {
             if vm.isLoading && vm.lists.isEmpty {
                 ProgressView("Loading lists…").frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let error = vm.error {
+            } else if vm.lists.isEmpty, let error = vm.error {
+                // Only show the full-screen error when there are NO lists to display.
+                // Errors from individual actions (delete/create) surface as an alert
+                // below so they don't mask the working list view.
                 ContentUnavailableView(
                     "Couldn't Load Lists",
                     systemImage: "exclamationmark.triangle",
@@ -43,6 +46,20 @@ struct ShoppingListsView: View {
                     .refreshable { await vm.load(token: auth.accessToken ?? "", isConnected: network.isConnected) }
                 }
             }
+        }
+        // Action errors (delete/create) when lists are loaded — present as an
+        // alert instead of hijacking the screen.
+        .alert(
+            "Couldn't complete that action",
+            isPresented: Binding(
+                get: { vm.error != nil && !vm.lists.isEmpty },
+                set: { if !$0 { vm.error = nil } }
+            ),
+            presenting: vm.error
+        ) { _ in
+            Button("OK") { vm.error = nil }
+        } message: { msg in
+            Text(msg)
         }
         .navigationTitle("Shopping")
         .toolbar {

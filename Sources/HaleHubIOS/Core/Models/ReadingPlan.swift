@@ -120,6 +120,11 @@ struct UpdateDayNotesRequest: Encodable, Sendable {
     let notes: String
 }
 
+/// POST /api/reading/entries/<id>/move/ body.
+struct MoveReadingEntryRequest: Encodable, Sendable {
+    let dayNumber: Int
+}
+
 struct BibleBookProgress: Codable, Sendable {
     let bookId: Int
     let bookName: String
