@@ -61,6 +61,11 @@ struct AddReadingEntrySheet: View {
     let planId: String
     let dayNumber: Int
     var onAdded: ([ReadingEntry]) -> Void
+    /// Optional bulk-result callback — fires after a bulk save with the full
+    /// response so the parent can surface "N saved, M had errors" via an
+    /// alert/toast. Always called from the bulk path, regardless of whether
+    /// anything saved. Single-entry adds don't trigger this.
+    var onBulkResult: ((BulkAddResponse) -> Void)? = nil
 
     @StateObject private var vm = AddReadingEntryViewModel()
     @State private var mode: EntryMode = .single
@@ -406,20 +411,16 @@ struct AddReadingEntrySheet: View {
         do {
             let result = try await vm.addBulk(planId: planId, dayNum: dayNumber,
                                               references: text, token: auth.accessToken ?? "")
-            // Always close the sheet on a successful round-trip — staying open
-            // after saving is confusing. The parent gets the saved entries
-            // (and, via SwiftUI rerender, will reflect them immediately).
-            // If the parent wants to surface "N saved, M failed" toasts it
-            // can read result; we keep this sheet simple.
-            if result.savedCount > 0 {
-                onAdded(result.saved)
-                isPresented = false
-                return
-            }
-            // Nothing saved at all — keep the sheet open and show what failed
-            // so the user can fix the input and try again.
-            bulkResult = result
+            // Always dismiss on a server response. Errors get surfaced via the
+            // parent's alert (onBulkResult callback) rather than locking the
+            // user in this sheet — much friendlier when they pasted a plan
+            // that included section headers or had one bad line.
+            if result.savedCount > 0 { onAdded(result.saved) }
+            onBulkResult?(result)
+            isPresented = false
         } catch {
+            // Network / 5xx errors keep the sheet open so the user can retry
+            // without losing what they typed.
             bulkError = error.localizedDescription
         }
         isBulkSaving = false

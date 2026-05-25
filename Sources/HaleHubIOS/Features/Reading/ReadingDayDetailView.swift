@@ -140,6 +140,8 @@ struct ReadingDayDetailView: View {
     @State private var editingNotes = false
     @State private var notesText = ""
     @State private var movingEntry: ReadingEntry?     // non-nil → move sheet visible
+    /// Non-nil → alert with the "N saved, M had errors" summary after a bulk add.
+    @State private var bulkResultSummary: BulkAddSummary?
 
     init(planId: String, dayNumber: Int, dateString: String) {
         self.planId = planId
@@ -197,11 +199,31 @@ struct ReadingDayDetailView: View {
             AddReadingEntrySheet(
                 isPresented: $showAddEntry,
                 planId: planId,
-                dayNumber: dayNumber
-            ) { entries in
-                entries.forEach { vm.entryAdded($0) }
-            }
+                dayNumber: dayNumber,
+                onAdded: { entries in entries.forEach { vm.entryAdded($0) } },
+                onBulkResult: { result in
+                    // Only surface an alert when there's something worth saying.
+                    if result.errorCount > 0 || result.savedCount > 1 {
+                        bulkResultSummary = BulkAddSummary(
+                            saved: result.savedCount,
+                            errors: result.errors,
+                        )
+                    }
+                }
+            )
             .environmentObject(auth)
+        }
+        .alert(
+            bulkResultSummary?.title ?? "",
+            isPresented: Binding(
+                get: { bulkResultSummary != nil },
+                set: { if !$0 { bulkResultSummary = nil } }
+            ),
+            presenting: bulkResultSummary,
+        ) { _ in
+            Button("OK") { bulkResultSummary = nil }
+        } message: { summary in
+            Text(summary.detail)
         }
         .sheet(item: $movingEntry) { entry in
             MoveReadingEntrySheet(
@@ -464,5 +486,36 @@ struct MoveReadingEntrySheet: View {
             }
         }
         .presentationDetents([.medium])
+    }
+}
+
+// MARK: - Bulk add result summary
+
+/// Lightweight container for the post-bulk-add alert message. Built from a
+/// BulkAddResponse so we don't keep the full response around — just what
+/// the alert needs.
+private struct BulkAddSummary {
+    let saved: Int
+    let errors: [BulkEntryError]
+
+    var title: String {
+        if errors.isEmpty {
+            return saved == 1 ? "1 reading added" : "\(saved) readings added"
+        }
+        if saved == 0 {
+            return "Nothing added"
+        }
+        return "\(saved) added, \(errors.count) skipped"
+    }
+
+    var detail: String {
+        if errors.isEmpty { return "" }
+        // Cap at the first few so the alert stays compact.
+        let preview = errors.prefix(4).map { "• \($0.input.isEmpty ? "(empty)" : $0.input): \($0.error)" }
+        var msg = preview.joined(separator: "\n")
+        if errors.count > 4 {
+            msg += "\n+ \(errors.count - 4) more"
+        }
+        return msg
     }
 }
