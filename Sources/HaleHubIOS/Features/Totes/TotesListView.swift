@@ -82,11 +82,18 @@ struct TotesListView: View {
                     .buttonStyle(.borderedProminent)
                 }
             } else if vm.totes.isEmpty {
-                ContentUnavailableView(
-                    "No Totes",
-                    systemImage: "shippingbox",
-                    description: Text("Add storage totes on the website.")
-                )
+                ContentUnavailableView {
+                    Label("No Totes", systemImage: "shippingbox")
+                } description: {
+                    Text("Tap the + button in the top right to add your first tote.")
+                } actions: {
+                    Button {
+                        showCreate = true
+                    } label: {
+                        Label("New Tote", systemImage: "shippingbox.badge.plus")
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
             } else {
                 VStack(spacing: 0) {
                     // Location filter chips
@@ -161,6 +168,14 @@ struct TotesListView: View {
                     }
                     Button("Print Blank QR Codes", systemImage: "printer") {
                         showQRBatch = true
+                    }
+                    Divider()
+                    // Escape hatch for users (e.g. totes-only) who might not
+                    // have access to the More/Account tab. Always reachable.
+                    Button(role: .destructive) {
+                        auth.logout()
+                    } label: {
+                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 } label: {
                     Image(systemName: "plus")
