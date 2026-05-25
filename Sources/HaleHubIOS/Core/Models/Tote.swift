@@ -198,7 +198,7 @@ struct AddToteItemRequest: Encodable, Sendable {
 
 // MARK: - Request body for POST /api/totes/locations/ + categories/ + item-types/
 
-struct CreateLocationRequest: Encodable, Sendable {
+struct CreateToteLocationRequest: Encodable, Sendable {
     let name: String
     let order: Int?
 }

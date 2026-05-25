@@ -39,11 +39,15 @@ class ToteDetailViewModel: ObservableObject {
                     id: detail.id,
                     name: detail.name,
                     location: detail.location,
+                    locationObjId: detail.locationObjId,
+                    locationName: detail.locationName,
                     locationNotes: detail.locationNotes,
                     itemCount: detail.itemCount - 1,
                     dateSorted: detail.dateSorted,
+                    dateMoved: detail.dateMoved,
                     qrCodeIdentifier: detail.qrCodeIdentifier,
                     notes: detail.notes,
+                    isArchived: detail.isArchived,
                     photo1Url: detail.photo1Url,
                     photo2Url: detail.photo2Url,
                     items: detail.items.filter { $0.id != itemId }
@@ -148,16 +152,7 @@ struct ToteDetailView: View {
             } else if let detail = vm.toteDetail {
                 toteContent(detail: detail)
             } else {
-                ContentUnavailableView {
-                    Label("Couldn't Load Tote", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(vm.error ?? "Tap Retry to load this tote.")
-                } actions: {
-                    Button("Retry") {
-                        Task { await vm.load(id: toteId, token: auth.accessToken ?? "") }
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
+                loadFailedView
             }
         }
         .navigationTitle(toteName)
@@ -188,28 +183,7 @@ struct ToteDetailView: View {
             }
         }
         .sheet(isPresented: $showAddItem) {
-            AddToteItemSheet(
-                isPresented: $showAddItem,
-                toteId: toteId,
-                categories: vm.categories
-            ) { newItem in
-                if let detail = vm.toteDetail {
-                    vm.toteDetail = ToteDetail(
-                        id: detail.id,
-                        name: detail.name,
-                        location: detail.location,
-                        locationNotes: detail.locationNotes,
-                        itemCount: detail.itemCount + 1,
-                        dateSorted: detail.dateSorted,
-                        qrCodeIdentifier: detail.qrCodeIdentifier,
-                        notes: detail.notes,
-                        photo1Url: detail.photo1Url,
-                        photo2Url: detail.photo2Url,
-                        items: detail.items + [newItem]
-                    )
-                }
-            }
-            .environmentObject(auth)
+            addItemSheet
         }
         .confirmationDialog("Add Photo", isPresented: $showPhotoActionSheet, titleVisibility: .visible) {
             Button("Take Photo") {
@@ -258,6 +232,48 @@ struct ToteDetailView: View {
             ExpandedPhotoView(urlString: photo.url) {
                 expandedPhoto = nil
             }
+        }
+    }
+
+    @ViewBuilder
+    private var addItemSheet: some View {
+        AddToteItemSheet(
+            isPresented: $showAddItem,
+            toteId: toteId,
+            categories: vm.categories
+        ) { newItem in
+            guard let detail = vm.toteDetail else { return }
+            vm.toteDetail = ToteDetail(
+                id: detail.id, name: detail.name,
+                location: detail.location,
+                locationObjId: detail.locationObjId,
+                locationName: detail.locationName,
+                locationNotes: detail.locationNotes,
+                itemCount: detail.itemCount + 1,
+                dateSorted: detail.dateSorted,
+                dateMoved: detail.dateMoved,
+                qrCodeIdentifier: detail.qrCodeIdentifier,
+                notes: detail.notes,
+                isArchived: detail.isArchived,
+                photo1Url: detail.photo1Url,
+                photo2Url: detail.photo2Url,
+                items: detail.items + [newItem]
+            )
+        }
+        .environmentObject(auth)
+    }
+
+    @ViewBuilder
+    private var loadFailedView: some View {
+        ContentUnavailableView {
+            Label("Couldn't Load Tote", systemImage: "exclamationmark.triangle")
+        } description: {
+            Text(vm.error ?? "Tap Retry to load this tote.")
+        } actions: {
+            Button("Retry") {
+                Task { await vm.load(id: toteId, token: auth.accessToken ?? "") }
+            }
+            .buttonStyle(.borderedProminent)
         }
     }
 
