@@ -74,9 +74,6 @@ struct AccountView: View {
                     NavigationLink(destination: ReadingView()) {
                         CalculatorRow(icon: "📖", title: "Reading Plan", subtitle: "Daily Bible reading progress")
                     }
-                    NavigationLink(destination: TotesListView()) {
-                        CalculatorRow(icon: "📦", title: "Totes", subtitle: "Track storage bins & contents")
-                    }
                     NavigationLink(destination: QRCodesView()) {
                         CalculatorRow(icon: "📷", title: "QR Codes", subtitle: "Generate & manage QR codes")
                     }
