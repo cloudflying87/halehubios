@@ -69,29 +69,42 @@ struct AccountView: View {
                     }
                 }
 
-                // Features
-                Section {
-                    NavigationLink(destination: ReadingView()) {
-                        CalculatorRow(icon: "📖", title: "Reading Plan", subtitle: "Daily Bible reading progress")
-                    }
-                    NavigationLink(destination: QRCodesView()) {
-                        CalculatorRow(icon: "📷", title: "QR Codes", subtitle: "Generate & manage QR codes")
-                    }
-                    NavigationLink(destination: ResourcesHubView()) {
-                        CalculatorRow(icon: "📄", title: "Resources & Letters", subtitle: "Family guides and letters")
+                // Features — each row only appears when the user has the matching permission
+                let user = auth.currentUser
+                if user?.can("reading") ?? false ||
+                   user?.can("qr")      ?? false ||
+                   user?.can("letters") ?? false {
+                    Section {
+                        if user?.can("reading") ?? false {
+                            NavigationLink(destination: ReadingView()) {
+                                CalculatorRow(icon: "📖", title: "Reading Plan", subtitle: "Daily Bible reading progress")
+                            }
+                        }
+                        if user?.can("qr") ?? false {
+                            NavigationLink(destination: QRCodesView()) {
+                                CalculatorRow(icon: "📷", title: "QR Codes", subtitle: "Generate & manage QR codes")
+                            }
+                        }
+                        if user?.can("letters") ?? false {
+                            NavigationLink(destination: ResourcesHubView()) {
+                                CalculatorRow(icon: "📄", title: "Resources & Letters", subtitle: "Family guides and letters")
+                            }
+                        }
                     }
                 }
 
                 // Calculators
-                Section("Calculators") {
-                    NavigationLink(destination: LoanCalculatorView()) {
-                        CalculatorRow(icon: "💰", title: "Loan Calculator", subtitle: "Monthly payments & total interest")
-                    }
-                    NavigationLink(destination: CompoundInterestView()) {
-                        CalculatorRow(icon: "📈", title: "Compound Interest", subtitle: "Investment growth over time")
-                    }
-                    NavigationLink(destination: TimeCalculatorView()) {
-                        CalculatorRow(icon: "🕐", title: "Time Calculator", subtitle: "Add, subtract & convert times")
+                if user?.can("calculators") ?? false {
+                    Section("Calculators") {
+                        NavigationLink(destination: LoanCalculatorView()) {
+                            CalculatorRow(icon: "💰", title: "Loan Calculator", subtitle: "Monthly payments & total interest")
+                        }
+                        NavigationLink(destination: CompoundInterestView()) {
+                            CalculatorRow(icon: "📈", title: "Compound Interest", subtitle: "Investment growth over time")
+                        }
+                        NavigationLink(destination: TimeCalculatorView()) {
+                            CalculatorRow(icon: "🕐", title: "Time Calculator", subtitle: "Add, subtract & convert times")
+                        }
                     }
                 }
 
