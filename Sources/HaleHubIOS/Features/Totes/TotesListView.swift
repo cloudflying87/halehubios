@@ -34,33 +34,40 @@ struct TotesListView: View {
     @State private var showCreate = false
     @State private var showQRBatch = false
 
-    // Ordered location slugs that have at least one tote.
-    private var presentLocations: [String] {
-        let slugs = totes(for: "all").map(\.location)
-        // Preserve stable order: deduplicate while keeping first-seen order.
+    /// The canonical location key for a tote — prefer the FK id, fall back to legacy slug.
+    private func locationKey(for tote: Tote) -> String {
+        tote.locationObjId ?? tote.location
+    }
+
+    /// Human-readable label for a location key.
+    private func locationLabel(for key: String, totes: [Tote]) -> String {
+        totes.first(where: { locationKey(for: $0) == key })?.displayLocation
+            ?? Tote.locationLabel(for: key)
+    }
+
+    /// Ordered location keys (FK id or legacy slug) that have at least one tote.
+    private var presentLocationKeys: [String] {
         var seen = Set<String>()
-        return slugs.filter { seen.insert($0).inserted }
+        return vm.totes.compactMap { tote -> String? in
+            let key = locationKey(for: tote)
+            return seen.insert(key).inserted ? key : nil
+        }
     }
 
-    /// Totes visible under the current location filter.
-    private func totes(for location: String) -> [Tote] {
-        location == "all" ? vm.totes : vm.totes.filter { $0.location == location }
-    }
-
-    /// Totes for the currently selected filter, grouped by location slug → [Tote].
-    private var groupedTotes: [(location: String, totes: [Tote])] {
+    /// Totes for the currently selected filter, grouped by location key.
+    private var groupedTotes: [(key: String, totes: [Tote])] {
         if searchLocation == "all" {
-            // Group by every location that appears.
             var groups: [(String, [Tote])] = []
             var seen = Set<String>()
             for tote in vm.totes {
-                if seen.insert(tote.location).inserted {
-                    groups.append((tote.location, vm.totes.filter { $0.location == tote.location }))
+                let key = locationKey(for: tote)
+                if seen.insert(key).inserted {
+                    groups.append((key, vm.totes.filter { locationKey(for: $0) == key }))
                 }
             }
             return groups
         } else {
-            let filtered = vm.totes.filter { $0.location == searchLocation }
+            let filtered = vm.totes.filter { locationKey(for: $0) == searchLocation }
             return filtered.isEmpty ? [] : [(searchLocation, filtered)]
         }
     }
@@ -97,7 +104,7 @@ struct TotesListView: View {
             } else {
                 VStack(spacing: 0) {
                     // Location filter chips
-                    if presentLocations.count > 1 {
+                    if presentLocationKeys.count > 1 {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 LocationFilterChip(
@@ -105,11 +112,11 @@ struct TotesListView: View {
                                     isSelected: searchLocation == "all"
                                 ) { searchLocation = "all" }
 
-                                ForEach(presentLocations, id: \.self) { slug in
+                                ForEach(presentLocationKeys, id: \.self) { key in
                                     LocationFilterChip(
-                                        label: Tote.locationLabel(for: slug),
-                                        isSelected: searchLocation == slug
-                                    ) { searchLocation = slug }
+                                        label: locationLabel(for: key, totes: vm.totes),
+                                        isSelected: searchLocation == key
+                                    ) { searchLocation = key }
                                 }
                             }
                             .padding(.horizontal, 16)
@@ -119,7 +126,7 @@ struct TotesListView: View {
                     }
 
                     List {
-                        ForEach(groupedTotes, id: \.location) { group in
+                        ForEach(groupedTotes, id: \.key) { group in
                             Section {
                                 ForEach(group.totes) { tote in
                                     NavigationLink {
@@ -129,11 +136,8 @@ struct TotesListView: View {
                                     }
                                 }
                             } header: {
-                                // Prefer the FK display name (e.g. user-added "Garage shelf B")
-                                // and fall back to the legacy slug label for older totes.
                                 Label(
-                                    group.totes.first?.displayLocation
-                                        ?? Tote.locationLabel(for: group.location),
+                                    locationLabel(for: group.key, totes: group.totes),
                                     systemImage: group.totes.first?.locationIcon ?? "shippingbox"
                                 )
                                 .font(.subheadline.weight(.semibold))
