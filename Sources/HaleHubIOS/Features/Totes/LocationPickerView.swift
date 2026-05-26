@@ -1,17 +1,11 @@
 import SwiftUI
 
 /// Reusable location picker for tote create/edit forms.
-///
-/// Fetches the family's ToteLocation list from GET /api/totes/locations/
-/// and binds `selectionId` to the chosen location's UUID. If the parent
-/// has a legacy slug from an existing tote (no FK assigned yet), pass it
-/// as `legacySlug` and the picker will preselect the matching ToteLocation
-/// once the list loads.
+/// Fetches ToteLocations from GET /api/totes/locations/ and binds to a UUID.
 struct LocationPickerView: View {
     @EnvironmentObject var auth: AuthManager
 
     @Binding var selectionId: String?
-    var legacySlug: String? = nil
 
     @State private var locations: [ToteLocation] = []
     @State private var isLoading = true
@@ -59,13 +53,7 @@ struct LocationPickerView: View {
             )
             locations = fetched.sorted { ($0.order, $0.name) < ($1.order, $1.name) }
 
-            // If parent gave us a legacy slug (existing tote with no FK yet),
-            // auto-select the matching ToteLocation row so the form looks
-            // pre-populated instead of "— Pick a location —".
-            if selectionId == nil, let slug = legacySlug,
-               let match = locations.first(where: { $0.slug == slug }) {
-                selectionId = match.id
-            }
+
         } catch {
             loadError = error.localizedDescription
         }

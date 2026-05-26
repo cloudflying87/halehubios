@@ -41,8 +41,7 @@ struct TotesListView: View {
 
     /// Human-readable label for a location key.
     private func locationLabel(for key: String, totes: [Tote]) -> String {
-        totes.first(where: { locationKey(for: $0) == key })?.displayLocation
-            ?? Tote.locationLabel(for: key)
+        totes.first(where: { locationKey(for: $0) == key })?.displayLocation ?? key
     }
 
     /// Ordered location keys (FK id or legacy slug) that have at least one tote.
@@ -138,7 +137,7 @@ struct TotesListView: View {
                             } header: {
                                 Label(
                                     locationLabel(for: group.key, totes: group.totes),
-                                    systemImage: group.totes.first?.locationIcon ?? "shippingbox"
+                                    systemImage: "mappin.circle"
                                 )
                                 .font(.subheadline.weight(.semibold))
                                 .textCase(nil)

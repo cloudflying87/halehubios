@@ -14,10 +14,6 @@ struct EditToteSheet: View {
     @State private var isSaving = false
     @State private var error: String?
 
-    /// Used to preselect the picker on first load when the tote was created
-    /// before the FK migration (i.e. only `location` slug is set, no FK).
-    private let legacySlug: String
-
     init(tote: ToteDetail, onSaved: @escaping (Tote) -> Void) {
         self.tote = tote
         self.onSaved = onSaved
@@ -25,7 +21,6 @@ struct EditToteSheet: View {
         _selectedLocationId = State(initialValue: tote.locationObjId)
         _locationNotes = State(initialValue: tote.locationNotes)
         _notes = State(initialValue: tote.notes)
-        legacySlug = tote.location
     }
 
     var body: some View {
@@ -36,7 +31,7 @@ struct EditToteSheet: View {
                         .autocorrectionDisabled()
                 }
                 Section("Location") {
-                    LocationPickerView(selectionId: $selectedLocationId, legacySlug: legacySlug)
+                    LocationPickerView(selectionId: $selectedLocationId)
                     TextField("Details (e.g. Top shelf)", text: $locationNotes)
                 }
                 Section("Notes (optional)") {

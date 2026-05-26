@@ -38,7 +38,6 @@ class ToteDetailViewModel: ObservableObject {
                 toteDetail = ToteDetail(
                     id: detail.id,
                     name: detail.name,
-                    location: detail.location,
                     locationObjId: detail.locationObjId,
                     locationName: detail.locationName,
                     locationNotes: detail.locationNotes,
@@ -63,7 +62,6 @@ class ToteDetailViewModel: ObservableObject {
         toteDetail = ToteDetail(
             id: detail.id,
             name: updated.name,
-            location: updated.location,
             locationObjId: updated.locationObjId,
             locationName: updated.locationName,
             locationNotes: updated.locationNotes,
@@ -96,7 +94,6 @@ class ToteDetailViewModel: ObservableObject {
             toteDetail = ToteDetail(
                 id: detail.id,
                 name: detail.name,
-                location: detail.location,
                 locationObjId: detail.locationObjId,
                 locationName: detail.locationName,
                 locationNotes: detail.locationNotes,
@@ -246,7 +243,6 @@ struct ToteDetailView: View {
             guard let detail = vm.toteDetail else { return }
             vm.toteDetail = ToteDetail(
                 id: detail.id, name: detail.name,
-                location: detail.location,
                 locationObjId: detail.locationObjId,
                 locationName: detail.locationName,
                 locationNotes: detail.locationNotes,
@@ -284,9 +280,9 @@ struct ToteDetailView: View {
             // Location + QR header
             Section {
                 HStack(spacing: 8) {
-                    Image(systemName: detail.locationIcon)
+                    Image(systemName: "mappin.circle")
                         .foregroundStyle(Color.accentColor)
-                    Text(detail.locationLabel)
+                    Text(detail.displayLocation)
                         .font(.subheadline.weight(.medium))
                     if !detail.locationNotes.isEmpty {
                         Text("· \(detail.locationNotes)")
@@ -534,23 +530,6 @@ struct CameraPickerView: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - ToteDetail location helpers (mirror Tote extension)
-
-private extension ToteDetail {
-    var locationLabel: String { Tote.locationLabel(for: location) }
-    var locationIcon: String {
-        switch location {
-        case "basement":        return "stairs"
-        case "attic":           return "house.lodge"
-        case "garage":          return "car.garage.door"
-        case "storage_unit":    return "building.2"
-        case "bedroom_closet":  return "door.sliding.right.hand.closed"
-        case "guest_room":      return "bed.double"
-        case "shed":            return "leaf"
-        default:                return "shippingbox"
-        }
-    }
-}
 
 // MARK: - UIImage upload helpers
 
