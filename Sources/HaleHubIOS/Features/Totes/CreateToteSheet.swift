@@ -93,7 +93,6 @@ struct CreateToteSheet: View {
         let body = CreateToteRequest(
             name: name.trimmingCharacters(in: .whitespaces),
             locationObjId: selectedLocationId,
-            location: nil,         // FK is the source of truth now; backend back-fills the slug
             locationNotes: locationNotes.trimmingCharacters(in: .whitespaces),
             notes: notes.trimmingCharacters(in: .whitespaces),
             qrCodeIdentifier: (trimmedQR?.isEmpty == false) ? trimmedQR : nil

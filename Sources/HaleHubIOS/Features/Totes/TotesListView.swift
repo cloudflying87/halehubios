@@ -36,7 +36,7 @@ struct TotesListView: View {
 
     /// The canonical location key for a tote — prefer the FK id, fall back to legacy slug.
     private func locationKey(for tote: Tote) -> String {
-        tote.locationObjId ?? tote.location
+        tote.locationObjId ?? tote.locationName ?? tote.id
     }
 
     /// Human-readable label for a location key.

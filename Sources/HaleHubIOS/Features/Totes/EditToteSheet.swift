@@ -69,7 +69,6 @@ struct EditToteSheet: View {
         let body = EditToteRequest(
             name: name.trimmingCharacters(in: .whitespaces),
             locationObjId: selectedLocationId,
-            location: nil,         // FK is the source of truth; backend keeps the legacy slug in sync
             locationNotes: locationNotes.trimmingCharacters(in: .whitespaces),
             notes: notes.trimmingCharacters(in: .whitespaces)
         )
