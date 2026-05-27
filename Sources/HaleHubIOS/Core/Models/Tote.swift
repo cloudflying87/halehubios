@@ -187,6 +187,16 @@ struct CreateToteRequest: Encodable, Sendable {
     let qrCodeIdentifier: String?
 }
 
+// MARK: - Request body for POST /api/totes/{id}/associate-qr/
+//
+// Links an already-scanned (but unbound) QR identifier to an existing tote.
+// The backend uppercases the value and rejects (409) a code already claimed
+// by a different tote.
+
+struct AssociateQRRequest: Encodable, Sendable {
+    let qrCodeIdentifier: String
+}
+
 // MARK: - Request body for POST /api/totes/{id}/items/
 
 struct AddToteItemRequest: Encodable, Sendable {
