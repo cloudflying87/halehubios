@@ -162,21 +162,14 @@ struct LinkToteSheet: View {
     var onCancel: () -> Void
 
     @StateObject private var vm = TotesViewModel()
-    @State private var searchText = ""
     @State private var linkingId: String?
     @State private var error: String?
     @State private var showCreate = false
 
-    private var filteredTotes: [Tote] {
-        // Only totes without a QR code — re-linking one that already has a code
-        // is handled from its detail page, not here.
-        let unlinked = vm.totes.filter { ($0.qrCodeIdentifier ?? "").isEmpty }
-        let q = searchText.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return unlinked }
-        return unlinked.filter {
-            $0.name.localizedCaseInsensitiveContains(q)
-                || $0.displayLocation.localizedCaseInsensitiveContains(q)
-        }
+    // Only totes without a QR code — re-linking one that already has a (wrong)
+    // code is handled from its detail page, not here.
+    private var unlinkedTotes: [Tote] {
+        vm.totes.filter { ($0.qrCodeIdentifier ?? "").isEmpty }
     }
 
     var body: some View {
@@ -187,7 +180,7 @@ struct LinkToteSheet: View {
                         Image(systemName: "qrcode")
                             .foregroundStyle(Color.accentColor)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Unlinked QR Code")
+                            Text("New QR Code")
                                 .font(.subheadline.weight(.medium))
                             Text(qrIdentifier)
                                 .font(.caption.monospaced())
@@ -196,50 +189,58 @@ struct LinkToteSheet: View {
                     }
                     .padding(.vertical, 4)
                 } footer: {
-                    Text("This code isn't linked to a tote yet. Pick the tote this label is on, or create a new one.")
+                    Text("This code isn't linked to a tote yet.")
                 }
 
-                Section("Link to an existing tote") {
-                    if vm.isLoading {
-                        HStack { ProgressView(); Text("Loading totes…").foregroundStyle(.secondary) }
-                    } else if filteredTotes.isEmpty {
-                        Text(searchText.isEmpty
-                             ? "No unlinked totes — every tote already has a QR code. Create a new one below."
-                             : "No matching unlinked totes.")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(filteredTotes) { tote in
-                            Button {
-                                Task { await link(tote) }
-                            } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(tote.name).foregroundStyle(.primary)
-                                        Text(tote.displayLocation)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    if linkingId == tote.id {
-                                        ProgressView()
-                                    } else {
-                                        Image(systemName: "link")
-                                            .foregroundStyle(Color.accentColor)
-                                    }
-                                }
-                            }
-                            .disabled(linkingId != nil)
-                        }
-                    }
-                }
-
+                // Primary action — most scanned labels are for new totes.
                 Section {
                     Button {
                         showCreate = true
                     } label: {
-                        Label("Create a new tote instead", systemImage: "plus.circle")
+                        Label("Create a new tote", systemImage: "plus.circle.fill")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .listRowBackground(Color.clear)
                     .disabled(linkingId != nil)
+                }
+
+                // Secondary action — only when a tote lost its code.
+                Section {
+                    DisclosureGroup("This tote already exists — link instead") {
+                        if vm.isLoading {
+                            HStack { ProgressView(); Text("Loading totes…").foregroundStyle(.secondary) }
+                        } else if unlinkedTotes.isEmpty {
+                            Text("No unlinked totes — every tote already has a QR code. To re-link a tote with the wrong code, use the Change button on its detail page.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(unlinkedTotes) { tote in
+                                Button {
+                                    Task { await link(tote) }
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(tote.name).foregroundStyle(.primary)
+                                            Text(tote.displayLocation)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        if linkingId == tote.id {
+                                            ProgressView()
+                                        } else {
+                                            Image(systemName: "link")
+                                                .foregroundStyle(Color.accentColor)
+                                        }
+                                    }
+                                }
+                                .disabled(linkingId != nil)
+                            }
+                        }
+                    }
                 }
 
                 if let error {
@@ -248,8 +249,7 @@ struct LinkToteSheet: View {
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search totes")
-            .navigationTitle("Link QR Code")
+            .navigationTitle("New Tote")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
