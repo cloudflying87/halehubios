@@ -67,7 +67,7 @@ struct ReadingToggleResponse: Codable, Sendable {
 }
 
 struct BibleBook: Identifiable, Codable, Sendable, Hashable {
-    let id: Int
+    let id: String         // UUID — BibleBook uses a UUID primary key
     let name: String
     let abbreviation: String
     let testament: String  // "OT" or "NT"
@@ -77,7 +77,7 @@ struct BibleBook: Identifiable, Codable, Sendable, Hashable {
     // custom decode so old API responses (without chapters) still work
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decode(Int.self, forKey: .id)
+        id = try c.decode(String.self, forKey: .id)
         name = try c.decode(String.self, forKey: .name)
         abbreviation = try c.decode(String.self, forKey: .abbreviation)
         testament = try c.decode(String.self, forKey: .testament)
@@ -102,7 +102,7 @@ struct ChunkedDaysResponse: Codable, Sendable {
 }
 
 struct AddReadingEntryRequest: Encodable, Sendable {
-    let bookId: Int
+    let bookId: String      // UUID of the BibleBook
     let chapterStart: Int
     let verseStart: Int
     let chapterEnd: Int
@@ -126,7 +126,7 @@ struct MoveReadingEntryRequest: Encodable, Sendable {
 }
 
 struct BibleBookProgress: Codable, Sendable {
-    let bookId: Int
+    let bookId: String      // UUID of the BibleBook
     let bookName: String
     let abbreviation: String
     let testament: String   // "OT" or "NT"
