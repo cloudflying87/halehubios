@@ -168,9 +168,12 @@ struct LinkToteSheet: View {
     @State private var showCreate = false
 
     private var filteredTotes: [Tote] {
+        // Only totes without a QR code — re-linking one that already has a code
+        // is handled from its detail page, not here.
+        let unlinked = vm.totes.filter { ($0.qrCodeIdentifier ?? "").isEmpty }
         let q = searchText.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return vm.totes }
-        return vm.totes.filter {
+        guard !q.isEmpty else { return unlinked }
+        return unlinked.filter {
             $0.name.localizedCaseInsensitiveContains(q)
                 || $0.displayLocation.localizedCaseInsensitiveContains(q)
         }
@@ -200,7 +203,10 @@ struct LinkToteSheet: View {
                     if vm.isLoading {
                         HStack { ProgressView(); Text("Loading totes…").foregroundStyle(.secondary) }
                     } else if filteredTotes.isEmpty {
-                        Text("No totes found.").foregroundStyle(.secondary)
+                        Text(searchText.isEmpty
+                             ? "No unlinked totes — every tote already has a QR code. Create a new one below."
+                             : "No matching unlinked totes.")
+                            .foregroundStyle(.secondary)
                     } else {
                         ForEach(filteredTotes) { tote in
                             Button {
@@ -209,14 +215,9 @@ struct LinkToteSheet: View {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(tote.name).foregroundStyle(.primary)
-                                        HStack(spacing: 6) {
-                                            Text(tote.displayLocation)
-                                            if let existing = tote.qrCodeIdentifier, !existing.isEmpty {
-                                                Text("• has \(existing)")
-                                            }
-                                        }
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        Text(tote.displayLocation)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
                                     }
                                     Spacer()
                                     if linkingId == tote.id {
