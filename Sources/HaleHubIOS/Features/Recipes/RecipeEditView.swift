@@ -25,6 +25,7 @@ struct RecipeUpdateRequest: Encodable, Sendable {
     let rating: Int?
     let ingredients: [IngredientUpdateItem]
     let instructions: String?
+    let categoryIds: [String]?      // replaces category assignments; [] clears them
 
     struct IngredientUpdateItem: Encodable, Sendable {
         let rawText: String
@@ -66,6 +67,11 @@ struct RecipeEditView: View {
     // Instructions
     @State private var instructionsText: String
 
+    // Categories
+    @State private var availableCategories: [RecipeCategory] = []
+    @State private var selectedCategoryIds: Set<UUID>
+    @State private var categoriesLoading = false
+
     // State
     @State private var isSaving = false
     @State private var errorMessage: String?
@@ -98,6 +104,8 @@ struct RecipeEditView: View {
 
         // instructions is stored as a single string; display as-is
         _instructionsText = State(initialValue: recipe.instructions ?? "")
+
+        _selectedCategoryIds = State(initialValue: Set((recipe.categories ?? []).map { $0.id }))
     }
 
     var body: some View {
@@ -139,6 +147,40 @@ struct RecipeEditView: View {
 
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(2...6)
+                }
+
+                // MARK: Categories
+                Section {
+                    if availableCategories.isEmpty {
+                        if categoriesLoading {
+                            HStack { ProgressView(); Text("Loading categories…").foregroundStyle(.secondary) }
+                        } else {
+                            Text("No categories available.").foregroundStyle(.secondary)
+                        }
+                    } else {
+                        ForEach(availableCategories) { cat in
+                            Button {
+                                if selectedCategoryIds.contains(cat.id) {
+                                    selectedCategoryIds.remove(cat.id)
+                                } else {
+                                    selectedCategoryIds.insert(cat.id)
+                                }
+                            } label: {
+                                HStack {
+                                    Text(cat.displayName).foregroundStyle(.primary)
+                                    Spacer()
+                                    if selectedCategoryIds.contains(cat.id) {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(Color.accentColor)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Categories")
+                } footer: {
+                    Text("Tap to assign categories. Recipes can be filtered by category on the list.")
                 }
 
                 // MARK: Dietary
@@ -210,6 +252,7 @@ struct RecipeEditView: View {
             }
             .navigationTitle("Edit Recipe")
             .navigationBarTitleDisplayMode(.inline)
+            .task { await loadCategories() }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -225,6 +268,19 @@ struct RecipeEditView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Categories
+
+    private func loadCategories() async {
+        guard availableCategories.isEmpty, let token = auth.accessToken else { return }
+        categoriesLoading = true
+        defer { categoriesLoading = false }
+        do {
+            availableCategories = try await APIClient.shared.get("/recipes/categories/", token: token)
+        } catch {
+            // Non-fatal: leave the section empty if categories can't load.
         }
     }
 
@@ -252,7 +308,8 @@ struct RecipeEditView: View {
             ingredients: editableIngredients
                 .filter { !$0.rawText.trimmingCharacters(in: .whitespaces).isEmpty }
                 .map { RecipeUpdateRequest.IngredientUpdateItem(rawText: $0.rawText) },
-            instructions: instructionsText.isEmpty ? nil : instructionsText
+            instructions: instructionsText.isEmpty ? nil : instructionsText,
+            categoryIds: selectedCategoryIds.map { $0.uuidString.lowercased() }
         )
 
         do {

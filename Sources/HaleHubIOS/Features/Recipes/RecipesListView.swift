@@ -31,7 +31,14 @@ struct RecipesListView: View {
                         }
                     }
                 }
-                .searchable(text: $vm.searchQuery, prompt: "Search recipes…")
+                // Pin the search bar visible so it's easy to find, and rely on the
+                // toolbar refresh button instead of pull-to-refresh (the pull
+                // gesture fought the search bar).
+                .searchable(
+                    text: $vm.searchQuery,
+                    placement: .navigationBarDrawer(displayMode: .always),
+                    prompt: "Search recipes…"
+                )
                 .onChange(of: vm.searchQuery) { _, query in
                     let token = auth.accessToken ?? ""
                     Task {
@@ -39,7 +46,6 @@ struct RecipesListView: View {
                         await vm.search(query: query, token: token)
                     }
                 }
-                .refreshable { await vm.load(token: auth.accessToken ?? "") }
             }
         }
         .navigationTitle("Recipes")
