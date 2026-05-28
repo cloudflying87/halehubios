@@ -1,17 +1,9 @@
 import SwiftUI
 
-// MARK: - Request / Response types
-
-private struct CreateCategoryRequest: Encodable, Sendable {
-    let name: String
-}
+// MARK: - Response types (request types live in Tote.swift)
 
 private struct CreateCategoryResponse: Decodable, Sendable {
     let id: String
-    let name: String
-}
-
-private struct CreateItemTypeRequest: Encodable, Sendable {
     let name: String
 }
 
@@ -242,9 +234,9 @@ struct AddToteItemSheet: View {
         isCreatingCategory = true
         do {
             let response: CreateCategoryResponse = try await APIClient.shared.post(
-                "/totes/categories/", body: CreateCategoryRequest(name: name), token: token
+                "/totes/categories/", body: CreateCategoryRequest(name: name, order: nil), token: token
             )
-            let newCat = ToteCategory(id: response.id, name: response.name, itemTypes: [])
+            let newCat = ToteCategory(id: response.id, name: response.name, order: nil, isActive: nil, itemTypes: [])
             localCategories.append(newCat)
             localCategories.sort { $0.name < $1.name }
             selectedCategory = newCat
@@ -266,14 +258,16 @@ struct AddToteItemSheet: View {
         do {
             let response: CreateItemTypeResponse = try await APIClient.shared.post(
                 "/totes/categories/\(cat.id)/item-types/",
-                body: CreateItemTypeRequest(name: name),
+                body: CreateItemTypeRequest(name: name, order: nil),
                 token: token
             )
-            let newType = ToteItemType(id: response.id, name: response.name)
+            let newType = ToteItemType(id: response.id, name: response.name, order: nil, isActive: nil)
             if let idx = localCategories.firstIndex(where: { $0.id == cat.id }) {
                 let updated = ToteCategory(
                     id: cat.id,
                     name: cat.name,
+                    order: cat.order,
+                    isActive: cat.isActive,
                     itemTypes: (cat.itemTypes + [newType]).sorted { $0.name < $1.name }
                 )
                 localCategories[idx] = updated

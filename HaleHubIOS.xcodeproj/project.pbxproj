@@ -16,6 +16,7 @@
 		309D4E2822316C8A2AA73276 /* AddToteItemSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E42C92988E41BEC50BEFC7 /* AddToteItemSheet.swift */; };
 		3D9A70283B1418D66C2EB770 /* Vehicle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9E73A2B5915D0510398991 /* Vehicle.swift */; };
 		3F50CD98FA91662D30597592 /* TotesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C4CCC6D185F3EE25128D029 /* TotesListView.swift */; };
+		3FA1BC24D56789EF01234567 /* LocationPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CB1BC24D56789EF01234567 /* LocationPickerView.swift */; };
 		4024F5BF62140807257E8FCA /* EditToteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E0D226A300933A7846E042 /* EditToteSheet.swift */; };
 		436A4F3CF403E3EDFC47B773 /* Tote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26CF0181480A7ED66F4D253B /* Tote.swift */; };
 		498E62194638AF42D4D5F4A1 /* HaleHubIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9989920930EEF68FF24A99 /* HaleHubIOSApp.swift */; };
@@ -119,6 +120,7 @@
 		875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesViewModel.swift; sourceTree = "<group>"; };
 		8B6C595536292C2EDCFD5728 /* QRCodesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodesView.swift; sourceTree = "<group>"; };
 		8C4CCC6D185F3EE25128D029 /* TotesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TotesListView.swift; sourceTree = "<group>"; };
+		2CB1BC24D56789EF01234567 /* LocationPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerView.swift; sourceTree = "<group>"; };
 		8F9E73A2B5915D0510398991 /* Vehicle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vehicle.swift; sourceTree = "<group>"; };
 		96E1670807EE686A9B7E7683 /* ShoppingList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingList.swift; sourceTree = "<group>"; };
 		977944FB66BE48718D1183B2 /* QRBatchSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRBatchSheet.swift; sourceTree = "<group>"; };
@@ -215,6 +217,7 @@
 				E2E42C92988E41BEC50BEFC7 /* AddToteItemSheet.swift */,
 				A57F526FD0101A9167FD1673 /* CreateToteSheet.swift */,
 				37E0D226A300933A7846E042 /* EditToteSheet.swift */,
+				2CB1BC24D56789EF01234567 /* LocationPickerView.swift */,
 				977944FB66BE48718D1183B2 /* QRBatchSheet.swift */,
 				45ACFCECF85237B26C0F6F99 /* ToteDetailView.swift */,
 				A12C5A8D410A7C7F5827EFDD /* ToteScannerView.swift */,
@@ -493,6 +496,7 @@
 				73E45A55E51229F7FB3D456A /* CreateReadingPlanSheet.swift in Sources */,
 				6B9745F7E8ADD1F8F0B67D7E /* CreateToteSheet.swift in Sources */,
 				4024F5BF62140807257E8FCA /* EditToteSheet.swift in Sources */,
+				3FA1BC24D56789EF01234567 /* LocationPickerView.swift in Sources */,
 				8B6ED2837A457F2220C99BE7 /* Finance.swift in Sources */,
 				02C04EC24E37CB558298C065 /* FinanceView.swift in Sources */,
 				6BA53ED787AD869D98668CFF /* FinanceViewModel.swift in Sources */,
