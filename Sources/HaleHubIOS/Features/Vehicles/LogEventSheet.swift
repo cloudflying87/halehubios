@@ -368,9 +368,46 @@ struct ServiceItemRow: View {
 // MARK: - Gas Success Card
 
 struct GasSuccessCard: View {
+    @EnvironmentObject var auth: AuthManager
     let event: VehicleEvent
     let vehicle: Vehicle
     let onDone: () -> Void
+
+    // The fill-up immediately before this one, used for the small-print recap.
+    @State private var previousFuelEvent: VehicleEvent?
+
+    private static let dateFmt: DateFormatter = {
+        let f = DateFormatter(); f.dateStyle = .medium; return f
+    }()
+    private static func num(_ d: Double) -> String { String(format: "%g", d) }
+
+    private var odometerText: String? {
+        if vehicle.isBoat {
+            return event.hours.map { "Hours: \(Self.num($0))" }
+        }
+        return event.miles.map { "Odometer: \($0.formatted()) mi" }
+    }
+
+    private var lastFillUpText: String? {
+        guard let prev = previousFuelEvent else { return nil }
+        let reading: String
+        if vehicle.isBoat {
+            reading = prev.hours.map { " at \(Self.num($0)) hr" } ?? ""
+        } else {
+            reading = prev.miles.map { " at \($0.formatted()) mi" } ?? ""
+        }
+        return "Last fill-up: \(Self.dateFmt.string(from: prev.date))\(reading)"
+    }
+
+    private var milesTraveledText: String? {
+        guard let prev = previousFuelEvent else { return nil }
+        if vehicle.isBoat {
+            guard let cur = event.hours, let p = prev.hours, cur - p > 0 else { return nil }
+            return "Hours since last: \(Self.num(cur - p))"
+        }
+        guard let cur = event.miles, let p = prev.miles, cur - p > 0 else { return nil }
+        return "Miles traveled: \((cur - p).formatted()) mi"
+    }
 
     var body: some View {
         VStack(spacing: 24) {
@@ -412,6 +449,20 @@ struct GasSuccessCard: View {
 
             Spacer()
 
+            // Small-print recap of the previous fill-up and distance traveled.
+            if lastFillUpText != nil || odometerText != nil || milesTraveledText != nil {
+                VStack(spacing: 2) {
+                    if let t = lastFillUpText { Text(t) }
+                    if let t = odometerText { Text(t) }
+                    if let t = milesTraveledText { Text(t) }
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+            }
+
             Button(action: onDone) {
                 Text("Got it!")
                     .font(.headline)
@@ -424,6 +475,22 @@ struct GasSuccessCard: View {
         }
         .navigationTitle(vehicle.name)
         .navigationBarTitleDisplayMode(.inline)
+        .task { await loadPreviousFuelEvent() }
+    }
+
+    private func loadPreviousFuelEvent() async {
+        guard let token = auth.accessToken else { return }
+        do {
+            let resp: PaginatedResponse<VehicleEvent> = try await APIClient.shared.get(
+                "/vehicles/\(vehicle.id)/events/?page_size=200", token: token
+            )
+            previousFuelEvent = resp.results
+                .filter { $0.eventType == "gas" && $0.id != event.id }
+                .sorted { $0.date > $1.date }
+                .first
+        } catch {
+            // Non-fatal — just omit the recap lines.
+        }
     }
 }
 

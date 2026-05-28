@@ -12,7 +12,7 @@ struct ToteScannerSheet: View {
     @State private var isLooking = false
     @State private var errorMessage: String?
     @State private var torchOn = false
-    @State private var showCreate = false
+    @State private var showLink = false
     @State private var unboundIdentifier: String?
 
     var body: some View {
@@ -69,24 +69,26 @@ struct ToteScannerSheet: View {
             }
             .toolbarBackground(.clear, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
-            .sheet(isPresented: $showCreate, onDismiss: {
-                // Resume scanning if user cancelled create without saving
+            .sheet(isPresented: $showLink, onDismiss: {
+                // Resume scanning if the user backed out without linking/creating
                 if unboundIdentifier != nil {
                     unboundIdentifier = nil
                     isScanning = true
                 }
             }) {
                 if let identifier = unboundIdentifier {
-                    CreateToteSheet(
+                    LinkToteSheet(
                         qrIdentifier: identifier,
-                        onCreated: { newTote in
-                            showCreate = false
+                        // Both linking an existing tote and creating a new one
+                        // end the same way: close everything and surface the tote.
+                        onResolved: { tote in
+                            showLink = false
                             unboundIdentifier = nil
                             dismiss()
-                            onToteFound(newTote)
+                            onToteFound(tote)
                         },
                         onCancel: {
-                            showCreate = false
+                            showLink = false
                             unboundIdentifier = nil
                             isScanning = true
                         }
@@ -114,9 +116,10 @@ struct ToteScannerSheet: View {
                 dismiss()
                 onToteFound(tote)
             } else {
-                // Unbound — offer to create a new tote with this identifier
+                // Unbound — offer to link this code to an existing tote or
+                // create a new one.
                 unboundIdentifier = response.qrCodeIdentifier ?? identifier
-                showCreate = true
+                showLink = true
             }
         } catch let err as APIError {
             errorMessage = err.errorDescription ?? "Tote not found. Try scanning again."
@@ -144,6 +147,147 @@ struct ToteScannerSheet: View {
             }
         }
         return code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    }
+}
+
+// MARK: - Link / Create Sheet for an unbound QR code
+
+/// Shown when a scanned QR label isn't linked to any tote yet. Lets the user
+/// either link it to an existing tote (the common case when a printed label
+/// lost its association) or create a brand-new tote with the code.
+struct LinkToteSheet: View {
+    @EnvironmentObject var auth: AuthManager
+    let qrIdentifier: String
+    var onResolved: (Tote) -> Void   // linked to existing OR created new
+    var onCancel: () -> Void
+
+    @StateObject private var vm = TotesViewModel()
+    @State private var linkingId: String?
+    @State private var error: String?
+    @State private var showCreate = false
+
+    // Only totes without a QR code — re-linking one that already has a (wrong)
+    // code is handled from its detail page, not here.
+    private var unlinkedTotes: [Tote] {
+        vm.totes.filter { ($0.qrCodeIdentifier ?? "").isEmpty }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    HStack(spacing: 10) {
+                        Image(systemName: "qrcode")
+                            .foregroundStyle(Color.accentColor)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("New QR Code")
+                                .font(.subheadline.weight(.medium))
+                            Text(qrIdentifier)
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } footer: {
+                    Text("This code isn't linked to a tote yet.")
+                }
+
+                // Primary action — most scanned labels are for new totes.
+                Section {
+                    Button {
+                        showCreate = true
+                    } label: {
+                        Label("Create a new tote", systemImage: "plus.circle.fill")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .listRowBackground(Color.clear)
+                    .disabled(linkingId != nil)
+                }
+
+                // Secondary action — only when a tote lost its code.
+                Section {
+                    DisclosureGroup("This tote already exists — link instead") {
+                        if vm.isLoading {
+                            HStack { ProgressView(); Text("Loading totes…").foregroundStyle(.secondary) }
+                        } else if unlinkedTotes.isEmpty {
+                            Text("No unlinked totes — every tote already has a QR code. To re-link a tote with the wrong code, use the Change button on its detail page.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(unlinkedTotes) { tote in
+                                Button {
+                                    Task { await link(tote) }
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(tote.name).foregroundStyle(.primary)
+                                            Text(tote.displayLocation)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        if linkingId == tote.id {
+                                            ProgressView()
+                                        } else {
+                                            Image(systemName: "link")
+                                                .foregroundStyle(Color.accentColor)
+                                        }
+                                    }
+                                }
+                                .disabled(linkingId != nil)
+                            }
+                        }
+                    }
+                }
+
+                if let error {
+                    Section {
+                        Text(error).foregroundStyle(.red).font(.subheadline)
+                    }
+                }
+            }
+            .navigationTitle("New Tote")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onCancel() }
+                        .disabled(linkingId != nil)
+                }
+            }
+            .task {
+                if let token = auth.accessToken { await vm.load(token: token) }
+            }
+            .sheet(isPresented: $showCreate) {
+                CreateToteSheet(
+                    qrIdentifier: qrIdentifier,
+                    onCreated: { newTote in
+                        showCreate = false
+                        onResolved(newTote)
+                    },
+                    onCancel: { showCreate = false }
+                )
+                .environmentObject(auth)
+            }
+        }
+    }
+
+    private func link(_ tote: Tote) async {
+        guard let token = auth.accessToken else { return }
+        linkingId = tote.id
+        error = nil
+        do {
+            let body = AssociateQRRequest(qrCodeIdentifier: qrIdentifier)
+            let updated: Tote = try await APIClient.shared.post(
+                "/totes/\(tote.id)/associate-qr/", body: body, token: token
+            )
+            onResolved(updated)
+        } catch {
+            self.error = error.localizedDescription
+            linkingId = nil
+        }
     }
 }
 
