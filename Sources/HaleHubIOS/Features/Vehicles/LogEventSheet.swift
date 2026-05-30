@@ -85,7 +85,7 @@ struct LogEventSheet: View {
 
                 Section("Details") {
                     TextField(vehicle.isBoat ? "Hours" : "Odometer (miles)", text: $odometer)
-                        .keyboardType(.numberPad)
+                        .keyboardType(vehicle.isBoat ? .decimalPad : .numberPad)
 
                     if eventType == "gas" {
                         TextField("Gallons", text: $gallons)
