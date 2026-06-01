@@ -110,8 +110,9 @@ struct OutingsAnalyticsView: View {
                                 .font(.headline)
                                 .padding(.horizontal, 16)
                             ForEach(data.byVehicle) { item in
+                                let icon = vehicles.first(where: { $0.id == item.vehicleId })?.typeIcon ?? "car.fill"
                                 HStack {
-                                    Label(item.vehicleName, systemImage: "car")
+                                    Label(item.vehicleName, systemImage: icon)
                                         .font(.subheadline)
                                     Spacer()
                                     Text("\(item.count)")
