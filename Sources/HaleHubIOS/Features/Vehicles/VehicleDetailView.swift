@@ -32,7 +32,7 @@ struct VehicleDetailView: View {
     @State private var editingEvent: VehicleEvent? = nil
     @State private var detailEvent: VehicleEvent? = nil
     @State private var selectedSchedule: MaintenanceSchedule? = nil
-    @State private var peekEvent: VehicleEvent? = nil
+    @State private var showOutings = false
     @State private var showTrash = false
     @State private var showPhotoActionSheet = false
     @State private var showCamera = false
@@ -176,12 +176,7 @@ struct VehicleDetailView: View {
                                     .padding(.top, 4)
                                     ForEach(monthEvents) { event in
                                         EventCard(event: event, vehicle: vehicle) {
-                                            // tap → edit
                                             editingEvent = event
-                                        } onLongPress: {
-                                            // long press → peek detail (handled via pressing state below)
-                                        } onPeek: { isPressing in
-                                            peekEvent = isPressing ? event : nil
                                         } onDelete: {
                                             Task { await deleteEvent(event) }
                                         }
@@ -204,6 +199,10 @@ struct VehicleDetailView: View {
             }
             ToolbarItem(placement: .secondaryAction) {
                 Menu {
+                    Button("Outings Summary", systemImage: "map") {
+                        showOutings = true
+                    }
+                    Divider()
                     // Photo
                     Button("Change Photo", systemImage: "camera") {
                         showPhotoActionSheet = true
@@ -293,12 +292,9 @@ struct VehicleDetailView: View {
             }
             .environmentObject(auth)
         }
-        .overlay {
-            if let peek = peekEvent {
-                EventPeekOverlay(event: peek, vehicle: vehicle) {
-                    peekEvent = nil
-                }
-            }
+        .navigationDestination(isPresented: $showOutings) {
+            OutingsAnalyticsView(vehicle: vehicle)
+                .environmentObject(auth)
         }
         .task { await loadData() }
     }
@@ -399,7 +395,7 @@ struct VehicleChartSection: View {
         switch mode {
         case .pricePerGallon:
             let priceEvents = sorted.filter { $0.pricePerGallon != nil }
-            if priceEvents.count >= 2 {
+            if priceEvents.count >= 1 {
                 PriceHistoryChart(events: priceEvents)
             }
 
@@ -407,13 +403,13 @@ struct VehicleChartSection: View {
             let effEvents = vehicle.isBoat
                 ? sorted.filter { $0.gallonsperhour != nil }
                 : sorted.filter { $0.milespergallon != nil }
-            if effEvents.count >= 2 {
+            if effEvents.count >= 1 {
                 EfficiencyChart(events: effEvents, isBoat: vehicle.isBoat)
             }
 
         case .fuelCost:
             let costEvents = sorted.filter { $0.totalCost != nil }
-            if costEvents.count >= 2 {
+            if costEvents.count >= 1 {
                 FuelCostChart(events: costEvents)
             }
         }
@@ -730,8 +726,6 @@ struct EventCard: View {
     let event: VehicleEvent
     let vehicle: Vehicle
     let onTap: () -> Void
-    let onLongPress: () -> Void
-    var onPeek: ((Bool) -> Void)? = nil
     var onDelete: (() -> Void)? = nil
 
     @State private var swipeOffset: CGFloat = 0
@@ -790,13 +784,11 @@ struct EventCard: View {
                 .onTapGesture {
                     if swipeOffset != 0 {
                         withAnimation(.spring(response: 0.25)) { swipeOffset = 0 }
-                    } else {
-                        onTap()
                     }
                 }
-                .onLongPressGesture(minimumDuration: 0.4, pressing: { isPressing in
-                    onPeek?(isPressing)
-                }, perform: { onLongPress() })
+                .onLongPressGesture(minimumDuration: 0.5) {
+                    onTap()
+                }
         }
         .clipped()
     }

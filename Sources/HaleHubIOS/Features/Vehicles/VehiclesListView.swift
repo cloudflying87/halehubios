@@ -84,6 +84,14 @@ struct VehiclesListView: View {
                 }
                 .disabled(vm.isLoading)
             }
+            ToolbarItem(placement: .primaryAction) {
+                NavigationLink {
+                    OutingsAnalyticsView()
+                        .environmentObject(auth)
+                } label: {
+                    Image(systemName: "map")
+                }
+            }
         }
         .task { await vm.load(token: auth.accessToken ?? "") }
         .alert("Error", isPresented: .constant(vm.error != nil)) {
