@@ -197,7 +197,7 @@ struct VehicleDetailView: View {
                     Label("Log Event", systemImage: "plus")
                 }
             }
-            ToolbarItem(placement: .secondaryAction) {
+            ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button("Outings Summary", systemImage: "map") {
                         showOutings = true
@@ -604,10 +604,10 @@ struct StatsRow: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                if let mileage = vehicle.currentMileage {
+                if let mileage = vehicle.currentMileage, !vehicle.isBoat {
                     VehicleStatPill(
-                        label: vehicle.isBoat ? "Hours" : "Mileage",
-                        value: "\(mileage.formatted()) \(vehicle.unitAbbrev)",
+                        label: "Mileage",
+                        value: "\(mileage.formatted()) mi",
                         icon: "gauge.with.dots.needle.67percent"
                     )
                 }
@@ -636,8 +636,8 @@ struct StatsRow: View {
                 if let maint = vehicle.maintenanceCostDouble, maint > 0 {
                     VehicleStatPill(label: "Total Service", value: "$\(Int(maint))", icon: "wrench")
                 }
-                if vehicle.isBoat {
-                    VehicleStatPill(label: "This Month", value: "\(stats.outingsThisMonth)", icon: "map")
+                if stats.outingEventCount > 0 {
+                    VehicleStatPill(label: "Outings", value: "\(stats.outingEventCount)", icon: "map")
                 }
                 VehicleStatPill(label: "Gas Logs", value: "\(stats.gasEventCount)", icon: "fuelpump.fill")
                 VehicleStatPill(label: "Service Logs", value: "\(stats.maintenanceEventCount)", icon: "wrench.fill")
