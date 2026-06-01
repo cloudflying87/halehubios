@@ -10,27 +10,16 @@ struct OutingsAnalyticsView: View {
     @State private var vehicles: [Vehicle] = []
     @State private var selectedVehicleId: Int? = nil
     @State private var selectedYear: Int? = nil
+    @State private var availableYears: [Int] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
 
-    private var availableYears: [Int] {
-        guard let data = analytics else { return [] }
-        let years = Set(data.byMonth.compactMap { Int($0.month.prefix(4)) })
-        return years.sorted(by: >)
-    }
-
-    private var filteredByMonth: [OutingsByMonth] {
-        guard let data = analytics else { return [] }
-        guard let year = selectedYear else { return data.byMonth }
-        return data.byMonth.filter { $0.month.hasPrefix("\(year)") }
-    }
-
     private var totalOutings: Int {
-        filteredByMonth.reduce(0) { $0 + $1.count }
+        analytics?.byMonth.reduce(0) { $0 + $1.count } ?? 0
     }
 
     private var bestMonth: OutingsByMonth? {
-        filteredByMonth.max(by: { $0.count < $1.count })
+        analytics?.byMonth.max(by: { $0.count < $1.count })
     }
 
     var body: some View {
@@ -47,11 +36,11 @@ struct OutingsAnalyticsView: View {
                         }
                         .pickerStyle(.menu)
                         .onChange(of: selectedVehicleId) { _, _ in
-                            Task { await loadAnalytics() }
+                            Task { await loadAnalytics(updateYears: true) }
                         }
                     }
 
-                    if availableYears.count > 1 {
+                    if !availableYears.isEmpty {
                         Picker("Year", selection: $selectedYear) {
                             Text("All Years").tag(nil as Int?)
                             ForEach(availableYears, id: \.self) { year in
@@ -59,6 +48,9 @@ struct OutingsAnalyticsView: View {
                             }
                         }
                         .pickerStyle(.menu)
+                        .onChange(of: selectedYear) { _, _ in
+                            Task { await loadAnalytics(updateYears: false) }
+                        }
                     }
 
                     Spacer()
@@ -75,7 +67,7 @@ struct OutingsAnalyticsView: View {
                         systemImage: "exclamationmark.circle",
                         description: Text(error)
                     )
-                } else if analytics != nil {
+                } else if let data = analytics {
                     // Summary card
                     HStack(spacing: 0) {
                         VStack(spacing: 4) {
@@ -106,73 +98,71 @@ struct OutingsAnalyticsView: View {
                     .padding(.horizontal, 16)
 
                     // Monthly bar chart
-                    if !filteredByMonth.isEmpty {
-                        OutingsByMonthChart(byMonth: filteredByMonth)
+                    if !data.byMonth.isEmpty {
+                        OutingsByMonthChart(byMonth: data.byMonth)
                             .padding(.horizontal, 16)
                     }
 
-                    if let data = analytics {
-                        // By Vehicle breakdown
-                        if !data.byVehicle.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("By Vehicle")
-                                    .font(.headline)
-                                    .padding(.horizontal, 16)
-                                ForEach(data.byVehicle) { item in
-                                    HStack {
-                                        Label(item.vehicleName, systemImage: "car")
-                                            .font(.subheadline)
-                                        Spacer()
-                                        Text("\(item.count)")
-                                            .font(.subheadline.monospacedDigit())
-                                            .foregroundStyle(.secondary)
-                                        Text(item.count == 1 ? "outing" : "outings")
-                                            .font(.caption)
-                                            .foregroundStyle(.tertiary)
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 6)
-                                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
-                                    .padding(.horizontal, 16)
+                    // By Vehicle breakdown
+                    if !data.byVehicle.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("By Vehicle")
+                                .font(.headline)
+                                .padding(.horizontal, 16)
+                            ForEach(data.byVehicle) { item in
+                                HStack {
+                                    Label(item.vehicleName, systemImage: "car")
+                                        .font(.subheadline)
+                                    Spacer()
+                                    Text("\(item.count)")
+                                        .font(.subheadline.monospacedDigit())
+                                        .foregroundStyle(.secondary)
+                                    Text(item.count == 1 ? "outing" : "outings")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
                                 }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 6)
+                                .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
+                                .padding(.horizontal, 16)
                             }
                         }
+                    }
 
-                        // Top Locations
-                        if !data.topLocations.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Top Locations")
-                                    .font(.headline)
-                                    .padding(.horizontal, 16)
-                                ForEach(Array(data.topLocations.enumerated()), id: \.element.id) { index, loc in
-                                    HStack(spacing: 12) {
-                                        Text("#\(index + 1)")
-                                            .font(.caption.monospacedDigit())
-                                            .foregroundStyle(.secondary)
-                                            .frame(width: 28, alignment: .trailing)
-                                        Text(loc.name)
-                                            .font(.subheadline)
-                                        Spacer()
-                                        Text("\(loc.count)")
-                                            .font(.subheadline.monospacedDigit())
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 6)
-                                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
-                                    .padding(.horizontal, 16)
+                    // Top Locations
+                    if !data.topLocations.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Top Locations")
+                                .font(.headline)
+                                .padding(.horizontal, 16)
+                            ForEach(Array(data.topLocations.enumerated()), id: \.element.id) { index, loc in
+                                HStack(spacing: 12) {
+                                    Text("#\(index + 1)")
+                                        .font(.caption.monospacedDigit())
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 28, alignment: .trailing)
+                                    Text(loc.name)
+                                        .font(.subheadline)
+                                    Spacer()
+                                    Text("\(loc.count)")
+                                        .font(.subheadline.monospacedDigit())
+                                        .foregroundStyle(.secondary)
                                 }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 6)
+                                .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
+                                .padding(.horizontal, 16)
                             }
                         }
+                    }
 
-                        if filteredByMonth.isEmpty && data.byVehicle.isEmpty && data.topLocations.isEmpty {
-                            ContentUnavailableView(
-                                "No Outings Data",
-                                systemImage: "map",
-                                description: Text("Log some outings to see analytics here.")
-                            )
-                            .padding(.top, 40)
-                        }
+                    if data.byMonth.isEmpty && data.byVehicle.isEmpty && data.topLocations.isEmpty {
+                        ContentUnavailableView(
+                            "No Outings Data",
+                            systemImage: "map",
+                            description: Text("Log some outings to see analytics here.")
+                        )
+                        .padding(.top, 40)
                     }
                 }
             }
@@ -180,11 +170,11 @@ struct OutingsAnalyticsView: View {
         }
         .navigationTitle("Outings Summary")
         .navigationBarTitleDisplayMode(.inline)
-        .refreshable { await loadAnalytics() }
+        .refreshable { await loadAnalytics(updateYears: selectedYear == nil) }
         .task {
             await loadVehicles()
             if let v = vehicle { selectedVehicleId = v.id }
-            await loadAnalytics()
+            await loadAnalytics(updateYears: true)
         }
     }
 
@@ -195,23 +185,23 @@ struct OutingsAnalyticsView: View {
         }
     }
 
-    private func loadAnalytics() async {
+    private func loadAnalytics(updateYears: Bool) async {
         guard let token = auth.accessToken else { return }
         isLoading = true
         errorMessage = nil
 
-        var path = "/vehicles/outings-analytics/"
-        if let vid = selectedVehicleId {
-            path += "?vehicle_id=\(vid)"
-        }
+        var params: [String] = []
+        if let vid = selectedVehicleId { params.append("vehicle_id=\(vid)") }
+        if let year = selectedYear { params.append("year=\(year)") }
+        let query = params.isEmpty ? "" : "?" + params.joined(separator: "&")
 
         do {
-            let result: OutingsAnalyticsResponse = try await APIClient.shared.get(path, token: token)
+            let result: OutingsAnalyticsResponse = try await APIClient.shared.get(
+                "/vehicles/outings-analytics/\(query)", token: token
+            )
             analytics = result
-            if selectedYear == nil {
-                let currentYear = Calendar.current.component(.year, from: Date())
-                let years = Set(result.byMonth.compactMap { Int($0.month.prefix(4)) }).sorted(by: >)
-                selectedYear = years.contains(currentYear) ? currentYear : years.first
+            if updateYears {
+                availableYears = Array(Set(result.byMonth.compactMap { Int($0.month.prefix(4)) })).sorted(by: >)
             }
         } catch {
             errorMessage = error.localizedDescription

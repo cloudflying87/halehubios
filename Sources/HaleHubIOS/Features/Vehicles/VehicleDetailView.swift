@@ -761,6 +761,19 @@ struct EventCard: View {
 
             // Card content
             cardContent
+                .contextMenu {
+                    Button("Edit", systemImage: "pencil") { onTap() }
+                    if onDelete != nil {
+                        Divider()
+                        Button("Delete", systemImage: "trash", role: .destructive) {
+                            withAnimation(.spring(response: 0.25)) { swipeOffset = 0 }
+                            onDelete?()
+                        }
+                    }
+                } preview: {
+                    cardContent
+                        .frame(minWidth: 280)
+                }
                 .offset(x: swipeOffset)
                 .gesture(
                     DragGesture(minimumDistance: 12, coordinateSpace: .local)
@@ -785,9 +798,6 @@ struct EventCard: View {
                     if swipeOffset != 0 {
                         withAnimation(.spring(response: 0.25)) { swipeOffset = 0 }
                     }
-                }
-                .onLongPressGesture(minimumDuration: 0.5) {
-                    onTap()
                 }
         }
         .clipped()
