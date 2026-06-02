@@ -783,7 +783,7 @@ struct EventCard: View {
                         .padding(4)
                 }
                 .offset(x: swipeOffset)
-                .gesture(
+                .simultaneousGesture(
                     DragGesture(minimumDistance: 12, coordinateSpace: .local)
                         .onChanged { g in
                             // Only respond to mostly-horizontal drags
