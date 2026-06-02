@@ -611,6 +611,13 @@ struct StatsRow: View {
                         icon: "gauge.with.dots.needle.67percent"
                     )
                 }
+                if let hours = vehicle.currentHours, vehicle.isBoat {
+                    VehicleStatPill(
+                        label: "Hours",
+                        value: String(format: "%.1f hrs", hours),
+                        icon: "gauge.with.dots.needle.67percent"
+                    )
+                }
                 if let mpg = stats.avgMPG {
                     VehicleStatPill(label: "Avg MPG", value: String(format: "%.1f", mpg), icon: "fuelpump",
                                    isSelected: selectedChart == .efficiency) {
