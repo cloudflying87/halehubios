@@ -778,8 +778,9 @@ struct EventCard: View {
                         }
                     }
                 } preview: {
-                    cardContent
-                        .frame(minWidth: 280)
+                    expandedCardContent
+                        .frame(minWidth: 300)
+                        .padding(4)
                 }
                 .offset(x: swipeOffset)
                 .gesture(
@@ -862,6 +863,60 @@ struct EventCard: View {
         .padding(10)
         .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
         .contentShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var expandedCardContent: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: event.eventIcon)
+                .font(.subheadline)
+                .foregroundStyle(accentColor)
+                .frame(width: 28, height: 28)
+                .background(accentColor.opacity(0.12), in: Circle())
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(eventTitle).font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Text(event.date, style: .date).font(.caption).foregroundStyle(.secondary)
+                }
+                HStack(spacing: 10) {
+                    if let mpg = event.milespergallon {
+                        Text(String(format: "%.1f MPG", mpg)).font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let gph = event.gallonsperhour {
+                        Text(String(format: "%.2f GPH", gph)).font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let cost = event.totalCost {
+                        Text(String(format: "$%.2f", cost)).font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let miles = event.miles {
+                        Text("\(miles.formatted()) \(vehicle.unitAbbrev)").font(.caption).foregroundStyle(.tertiary)
+                    }
+                }
+                if let items = event.maintenanceItems, !items.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(items) { item in
+                            HStack {
+                                Text(item.categoryName ?? "Service")
+                                if !item.description.isEmpty {
+                                    Text("· \(item.description)").foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if item.cost > 0 {
+                                    Text(String(format: "$%.2f", item.cost))
+                                }
+                            }
+                            .font(.caption)
+                        }
+                    }
+                }
+                if let notes = event.notes, !notes.isEmpty {
+                    Text(notes).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(14)
+        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
     }
 
     var eventTitle: String {
