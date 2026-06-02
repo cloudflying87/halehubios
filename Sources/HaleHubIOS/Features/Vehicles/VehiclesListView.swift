@@ -127,8 +127,12 @@ struct VehicleRow: View {
                 }
 
                 HStack(spacing: 14) {
-                    if let mileage = vehicle.currentMileage {
-                        Label("\(mileage.formatted()) \(vehicle.unitAbbrev)", systemImage: "gauge.with.dots.needle.67percent")
+                    if vehicle.isBoat, let hours = vehicle.currentHours {
+                        Label(String(format: "%.1f hrs", hours), systemImage: "gauge.with.dots.needle.67percent")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    } else if !vehicle.isBoat, let mileage = vehicle.currentMileage {
+                        Label("\(mileage.formatted()) mi", systemImage: "gauge.with.dots.needle.67percent")
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     }
