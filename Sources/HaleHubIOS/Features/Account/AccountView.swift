@@ -93,6 +93,15 @@ struct AccountView: View {
                     }
                 }
 
+                // Babysitters
+                if user?.can("babysitters") ?? false {
+                    Section {
+                        NavigationLink(destination: BabysittersListView()) {
+                            CalculatorRow(icon: "👶", title: "Babysitters", subtitle: "Hours, rates & pay reports")
+                        }
+                    }
+                }
+
                 // Calculators
                 if user?.can("calculators") ?? false {
                     Section("Calculators") {

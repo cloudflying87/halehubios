@@ -16,6 +16,12 @@
 		309D4E2822316C8A2AA73276 /* AddToteItemSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E42C92988E41BEC50BEFC7 /* AddToteItemSheet.swift */; };
 		3D9A70283B1418D66C2EB770 /* Vehicle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9E73A2B5915D0510398991 /* Vehicle.swift */; };
 		3F50CD98FA91662D30597592 /* TotesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C4CCC6D185F3EE25128D029 /* TotesListView.swift */; };
+		BAB500000000000000000002 /* Babysitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB500000000000000000001 /* Babysitter.swift */; };
+		BAB500000000000000000004 /* BabysittersListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB500000000000000000003 /* BabysittersListView.swift */; };
+		BAB500000000000000000006 /* BabysitterDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB500000000000000000005 /* BabysitterDetailView.swift */; };
+		BAB500000000000000000008 /* BabysitterFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB500000000000000000007 /* BabysitterFormSheet.swift */; };
+		BAB50000000000000000000A /* SessionFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB500000000000000000009 /* SessionFormSheet.swift */; };
+		BAB50000000000000000000C /* WeeklyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB50000000000000000000B /* WeeklyReportView.swift */; };
 
 		4024F5BF62140807257E8FCA /* EditToteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E0D226A300933A7846E042 /* EditToteSheet.swift */; };
 		CC1A2B3D4E5F6A7B8C9D0E1F /* LocationPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F6A7B8C9D0E1F /* LocationPickerView.swift */; };
@@ -94,6 +100,12 @@
 		1FCDF504AF0FF0F7B2F22CC9 /* RecipeEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeEditView.swift; sourceTree = "<group>"; };
 		264657A8853B85BCCFCEA2EA /* CompoundInterestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompoundInterestView.swift; sourceTree = "<group>"; };
 		26CF0181480A7ED66F4D253B /* Tote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tote.swift; sourceTree = "<group>"; };
+		BAB500000000000000000001 /* Babysitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Babysitter.swift; sourceTree = "<group>"; };
+		BAB500000000000000000003 /* BabysittersListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BabysittersListView.swift; sourceTree = "<group>"; };
+		BAB500000000000000000005 /* BabysitterDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BabysitterDetailView.swift; sourceTree = "<group>"; };
+		BAB500000000000000000007 /* BabysitterFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BabysitterFormSheet.swift; sourceTree = "<group>"; };
+		BAB500000000000000000009 /* SessionFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionFormSheet.swift; sourceTree = "<group>"; };
+		BAB50000000000000000000B /* WeeklyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportView.swift; sourceTree = "<group>"; };
 		2AA1D7CF6070F458F822E505 /* HaleNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaleNotification.swift; sourceTree = "<group>"; };
 		2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartsLookupView.swift; sourceTree = "<group>"; };
 		37E0D226A300933A7846E042 /* EditToteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditToteSheet.swift; sourceTree = "<group>"; };
@@ -213,6 +225,18 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		BAB50000000000000000000D /* Babysitters */ = {
+			isa = PBXGroup;
+			children = (
+				BAB500000000000000000003 /* BabysittersListView.swift */,
+				BAB500000000000000000005 /* BabysitterDetailView.swift */,
+				BAB500000000000000000007 /* BabysitterFormSheet.swift */,
+				BAB500000000000000000009 /* SessionFormSheet.swift */,
+				BAB50000000000000000000B /* WeeklyReportView.swift */,
+			);
+			path = Babysitters;
+			sourceTree = "<group>";
+		};
 		4A984A79AB78489485356B9C /* Totes */ = {
 			isa = PBXGroup;
 			children = (
@@ -305,6 +329,7 @@
 			children = (
 				A527332F79E146C023F518AE /* Account */,
 				2779E23076A0489295A19FEC /* Auth */,
+				BAB50000000000000000000D /* Babysitters */,
 				930528345EA9D2A1C1D133E1 /* Finance */,
 				D645A6604A6A6419044BE7C6 /* Notifications */,
 				FBB18F775E80E5142A4EA1ED /* QRCodes */,
@@ -339,6 +364,7 @@
 		D4A79967382059C3D2354F07 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				BAB500000000000000000001 /* Babysitter.swift */,
 				6EEFA3D48D7D75683FDAAF83 /* Finance.swift */,
 				2AA1D7CF6070F458F822E505 /* HaleNotification.swift */,
 				4F474D48454B3A561B5D58DA /* QRCode.swift */,
@@ -544,6 +570,12 @@
 				7632ECDEF899542D9D899CCC /* ToteDetailView.swift in Sources */,
 				B14F46530706653C689340C6 /* ToteScannerView.swift in Sources */,
 				3F50CD98FA91662D30597592 /* TotesListView.swift in Sources */,
+				BAB500000000000000000002 /* Babysitter.swift in Sources */,
+				BAB500000000000000000004 /* BabysittersListView.swift in Sources */,
+				BAB500000000000000000006 /* BabysitterDetailView.swift in Sources */,
+				BAB500000000000000000008 /* BabysitterFormSheet.swift in Sources */,
+				BAB50000000000000000000A /* SessionFormSheet.swift in Sources */,
+				BAB50000000000000000000C /* WeeklyReportView.swift in Sources */,
 				0B277FF382202D8663836D1A /* TrashView.swift in Sources */,
 				3D9A70283B1418D66C2EB770 /* Vehicle.swift in Sources */,
 				91A6E494EED5EEBEADD0A03C /* VehicleDetailView.swift in Sources */,
