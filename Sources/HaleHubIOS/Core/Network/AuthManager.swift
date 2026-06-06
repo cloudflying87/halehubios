@@ -113,11 +113,17 @@ struct HaleUser: Codable, Sendable {
     let canViewQr: Bool
     let canViewCalculators: Bool
     let totesOnly: Bool
+    /// Non-nil when this user account is linked to a babysitter record.
+    let babysitterProfileId: String?
 
     /// Per-app {view, edit} map keyed by app key (recipes, totes, finance, …).
     /// This is the canonical source for "should iOS show tab X?" — prefer
     /// `user.can("recipes")` over poking at the raw flag fields.
     let apps: [String: AppAccess]
+
+    var isBabysitterOnly: Bool {
+        babysitterProfileId != nil && !can("babysitters")
+    }
 
     /// Convenience accessor for `apps`. Returns false for unknown keys.
     func can(_ appKey: String, edit: Bool = false) -> Bool {
@@ -140,7 +146,7 @@ struct HaleUser: Codable, Sendable {
         case canViewLetters, canEditLetters
         case canViewWebsites, canEditWebsites
         case canViewQr, canViewCalculators
-        case totesOnly
+        case totesOnly, babysitterProfileId
         case apps
     }
 
@@ -179,6 +185,7 @@ struct HaleUser: Codable, Sendable {
         canViewQr          = flag(.canViewQr)
         canViewCalculators = flag(.canViewCalculators, default: true)
         totesOnly          = flag(.totesOnly)
+        babysitterProfileId = try? c.decode(String.self, forKey: .babysitterProfileId)
 
         apps = (try? c.decode([String: AppAccess].self, forKey: .apps)) ?? [:]
     }

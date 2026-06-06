@@ -9,10 +9,25 @@ struct HaleHubIOSApp: App {
     var body: some Scene {
         WindowGroup {
             if auth.isAuthenticated {
-                MainTabView()
-                    .environmentObject(auth)
-                    .environmentObject(network)
-                    .environmentObject(deepLink)
+                if let user = auth.currentUser {
+                    if user.isBabysitterOnly {
+                        NavigationStack {
+                            BabysitterPortalView()
+                        }
+                        .environmentObject(auth)
+                    } else {
+                        MainTabView()
+                            .environmentObject(auth)
+                            .environmentObject(network)
+                            .environmentObject(deepLink)
+                    }
+                } else {
+                    // currentUser not yet loaded from the server — fetch and wait
+                    ProgressView("Loading…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .environmentObject(auth)
+                        .task { await auth.fetchCurrentUser() }
+                }
             } else {
                 LoginView()
                     .environmentObject(auth)

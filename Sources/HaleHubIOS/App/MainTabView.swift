@@ -27,8 +27,8 @@ struct MainTabView: View {
         var tabs: [TabSpec] = []
         if user?.can("recipes")  ?? false { tabs.append(.meals) }
         if user?.can("lists")    ?? false { tabs.append(.shopping) }
-        if user?.can("totes")    ?? true  { tabs.append(.totes) }
-        if user?.can("vehicles") ?? true  { tabs.append(.vehicles) }
+        if user?.can("totes")    ?? false { tabs.append(.totes) }
+        if user?.can("vehicles") ?? false { tabs.append(.vehicles) }
         // Account/More is always last — holds Finance, QR codes, profile, etc.
         tabs.append(.account)
         return tabs

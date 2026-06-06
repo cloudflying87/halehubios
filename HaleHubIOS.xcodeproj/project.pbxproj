@@ -22,6 +22,7 @@
 		BAB500000000000000000008 /* BabysitterFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB500000000000000000007 /* BabysitterFormSheet.swift */; };
 		BAB50000000000000000000A /* SessionFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB500000000000000000009 /* SessionFormSheet.swift */; };
 		BAB50000000000000000000C /* WeeklyReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB50000000000000000000B /* WeeklyReportView.swift */; };
+		BAB50000000000000000000E /* BabysitterPortalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB50000000000000000000F /* BabysitterPortalView.swift */; };
 
 		4024F5BF62140807257E8FCA /* EditToteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E0D226A300933A7846E042 /* EditToteSheet.swift */; };
 		CC1A2B3D4E5F6A7B8C9D0E1F /* LocationPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F6A7B8C9D0E1F /* LocationPickerView.swift */; };
@@ -106,6 +107,7 @@
 		BAB500000000000000000007 /* BabysitterFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BabysitterFormSheet.swift; sourceTree = "<group>"; };
 		BAB500000000000000000009 /* SessionFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionFormSheet.swift; sourceTree = "<group>"; };
 		BAB50000000000000000000B /* WeeklyReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportView.swift; sourceTree = "<group>"; };
+		BAB50000000000000000000F /* BabysitterPortalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BabysitterPortalView.swift; sourceTree = "<group>"; };
 		2AA1D7CF6070F458F822E505 /* HaleNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaleNotification.swift; sourceTree = "<group>"; };
 		2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartsLookupView.swift; sourceTree = "<group>"; };
 		37E0D226A300933A7846E042 /* EditToteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditToteSheet.swift; sourceTree = "<group>"; };
@@ -233,6 +235,7 @@
 				BAB500000000000000000007 /* BabysitterFormSheet.swift */,
 				BAB500000000000000000009 /* SessionFormSheet.swift */,
 				BAB50000000000000000000B /* WeeklyReportView.swift */,
+				BAB50000000000000000000F /* BabysitterPortalView.swift */,
 			);
 			path = Babysitters;
 			sourceTree = "<group>";
@@ -576,6 +579,7 @@
 				BAB500000000000000000008 /* BabysitterFormSheet.swift in Sources */,
 				BAB50000000000000000000A /* SessionFormSheet.swift in Sources */,
 				BAB50000000000000000000C /* WeeklyReportView.swift in Sources */,
+				BAB50000000000000000000E /* BabysitterPortalView.swift in Sources */,
 				0B277FF382202D8663836D1A /* TrashView.swift in Sources */,
 				3D9A70283B1418D66C2EB770 /* Vehicle.swift in Sources */,
 				91A6E494EED5EEBEADD0A03C /* VehicleDetailView.swift in Sources */,
