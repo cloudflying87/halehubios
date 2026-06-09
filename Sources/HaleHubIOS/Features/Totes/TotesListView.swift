@@ -135,13 +135,20 @@ struct TotesListView: View {
                                     }
                                 }
                             } header: {
-                                Label(
-                                    locationLabel(for: group.key, totes: group.totes),
-                                    systemImage: "mappin.circle"
-                                )
-                                .font(.subheadline.weight(.semibold))
-                                .textCase(nil)
-                                .foregroundStyle(.primary)
+                                HStack {
+                                    Label(
+                                        locationLabel(for: group.key, totes: group.totes),
+                                        systemImage: "mappin.circle"
+                                    )
+                                    .font(.subheadline.weight(.semibold))
+                                    .textCase(nil)
+                                    .foregroundStyle(.primary)
+                                    Spacer()
+                                    Text("\(group.totes.count) tote\(group.totes.count == 1 ? "" : "s")")
+                                        .font(.caption)
+                                        .textCase(nil)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
                     }
