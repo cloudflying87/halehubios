@@ -102,6 +102,20 @@ struct TotesListView: View {
                 }
             } else {
                 VStack(spacing: 0) {
+                    // Grand total across all locations (matches the web's count)
+                    HStack {
+                        Text("\(vm.totes.count) tote\(vm.totes.count == 1 ? "" : "s")")
+                            .font(.subheadline.weight(.semibold))
+                        if presentLocationKeys.count > 1 {
+                            Text("· \(presentLocationKeys.count) locations")
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .font(.subheadline)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+
                     // Location filter chips
                     if presentLocationKeys.count > 1 {
                         ScrollView(.horizontal, showsIndicators: false) {
