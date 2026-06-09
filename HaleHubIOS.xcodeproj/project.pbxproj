@@ -76,6 +76,9 @@
 		DE32D7A36A038D9603EA2763 /* CookModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D91DAB9A1CAE1BD99CF0623 /* CookModeView.swift */; };
 		DF6FD95B813D135A81B599C7 /* ResourceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1199889C552A49F7DD3EDC /* ResourceDetailView.swift */; };
 		E4CD84CEC9797524233AD907 /* BibleProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815C624F55265C97B1C42422 /* BibleProgressView.swift */; };
+		BEEF00000000000000000002 /* BookDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000001 /* BookDetailView.swift */; };
+		BEEF00000000000000000004 /* ChapterDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000003 /* ChapterDetailView.swift */; };
+		BEEF00000000000000000006 /* EditReadingEntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000005 /* EditReadingEntrySheet.swift */; };
 		E5F537F0BD6951338006BB07 /* Resource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B687332A40D9FD2B517A53 /* Resource.swift */; };
 		E939161D079481F668443B56 /* ReadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 040BCD9171AD5B0D521CFD48 /* ReadingView.swift */; };
 		EEAB2FADBDA87D90CA2F7687 /* CompoundInterestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 264657A8853B85BCCFCEA2EA /* CompoundInterestView.swift */; };
@@ -132,6 +135,9 @@
 		7B850A78801A49015E962D7B /* ResourceEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceEditorSheet.swift; sourceTree = "<group>"; };
 		7D90AD79C3F6F7C3CC8B97F8 /* QRCodeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeDetailView.swift; sourceTree = "<group>"; };
 		815C624F55265C97B1C42422 /* BibleProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleProgressView.swift; sourceTree = "<group>"; };
+		BEEF00000000000000000001 /* BookDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDetailView.swift; sourceTree = "<group>"; };
+		BEEF00000000000000000003 /* ChapterDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterDetailView.swift; sourceTree = "<group>"; };
+		BEEF00000000000000000005 /* EditReadingEntrySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditReadingEntrySheet.swift; sourceTree = "<group>"; };
 		82E07456A55F649FBB9C8448 /* ShoppingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingViewModel.swift; sourceTree = "<group>"; };
 		875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesViewModel.swift; sourceTree = "<group>"; };
 		8B6C595536292C2EDCFD5728 /* QRCodesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodesView.swift; sourceTree = "<group>"; };
@@ -438,6 +444,9 @@
 			children = (
 				56D0F8FA6169AFB6A1408AC1 /* AddReadingEntrySheet.swift */,
 				815C624F55265C97B1C42422 /* BibleProgressView.swift */,
+				BEEF00000000000000000001 /* BookDetailView.swift */,
+				BEEF00000000000000000003 /* ChapterDetailView.swift */,
+				BEEF00000000000000000005 /* EditReadingEntrySheet.swift */,
 				42AC9FAC6CDD925AA7D1F237 /* CreateReadingPlanSheet.swift */,
 				F7FA5E2300153CB3E9C7B100 /* ReadingCalendarView.swift */,
 				1979192C8C8DBC508631A28E /* ReadingDayDetailView.swift */,
@@ -519,6 +528,9 @@
 				6EF3632628FD2B8521F92BE6 /* ArchiveHubView.swift in Sources */,
 				F5311CBEC7A613351D674BAE /* AuthManager.swift in Sources */,
 				E4CD84CEC9797524233AD907 /* BibleProgressView.swift in Sources */,
+				BEEF00000000000000000002 /* BookDetailView.swift in Sources */,
+				BEEF00000000000000000004 /* ChapterDetailView.swift in Sources */,
+				BEEF00000000000000000006 /* EditReadingEntrySheet.swift in Sources */,
 				823F50914D9327257F393EA2 /* CacheManager.swift in Sources */,
 				EEAB2FADBDA87D90CA2F7687 /* CompoundInterestView.swift in Sources */,
 				DE32D7A36A038D9603EA2763 /* CookModeView.swift in Sources */,

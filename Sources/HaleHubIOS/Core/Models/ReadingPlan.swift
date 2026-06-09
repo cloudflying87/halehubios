@@ -141,6 +141,38 @@ struct BibleChapterData: Codable, Sendable {
     let totalVerses: Int
 }
 
+// MARK: - Book → chapter → verse drill-down
+// GET /api/reading/plans/<id>/books/<bookId>/
+
+struct BookProgressDetail: Codable, Sendable {
+    let bookId: String
+    let bookName: String
+    let testament: String
+    let totalChapters: Int
+    let chapters: [ChapterProgress]
+}
+
+struct ChapterProgress: Identifiable, Codable, Sendable {
+    let chapterNumber: Int
+    let totalVerses: Int
+    let versesRead: Int
+    let isStarted: Bool
+    let isComplete: Bool
+    let readRanges: [[Int]]   // [[start, end], ...] of verses read
+
+    var id: Int { chapterNumber }
+
+    /// Verse numbers read, expanded from the ranges (chapter is the finest
+    /// tracked granularity; verses are derived from recorded ranges).
+    var readVerses: Set<Int> {
+        var s = Set<Int>()
+        for r in readRanges where r.count == 2 && r[1] >= r[0] {
+            s.formUnion(r[0]...r[1])
+        }
+        return s
+    }
+}
+
 struct BulkAddRequest: Encodable, Sendable {
     let references: String
 }

@@ -82,7 +82,7 @@ struct BibleProgressView: View {
             if !vm.otBooks.isEmpty {
                 Section("Old Testament") {
                     ForEach(vm.otBooks, id: \.bookId) { book in
-                        BookProgressRow(book: book)
+                        bookLink(book)
                     }
                 }
             }
@@ -90,12 +90,21 @@ struct BibleProgressView: View {
             if !vm.ntBooks.isEmpty {
                 Section("New Testament") {
                     ForEach(vm.ntBooks, id: \.bookId) { book in
-                        BookProgressRow(book: book)
+                        bookLink(book)
                     }
                 }
             }
         }
         .listStyle(.insetGrouped)
+    }
+
+    @ViewBuilder
+    private func bookLink(_ book: BibleBookProgress) -> some View {
+        NavigationLink {
+            BookDetailView(planId: planId, bookId: book.bookId, bookName: book.bookName)
+        } label: {
+            BookProgressRow(book: book)
+        }
     }
 
     private func statCell(value: Int, label: String) -> some View {

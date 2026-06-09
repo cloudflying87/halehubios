@@ -105,6 +105,18 @@ class ReadingDayDetailViewModel: ObservableObject {
         }
     }
 
+    func entryUpdated(_ entry: ReadingEntry) {
+        if let d = day {
+            day = ReadingDay(
+                dayNumber: d.dayNumber,
+                date: d.date,
+                isCompleted: d.isCompleted,
+                entries: d.entries.map { $0.id == entry.id ? entry : $0 },
+                notes: d.notes
+            )
+        }
+    }
+
     func updateNotes(notes: String, token: String) async {
         do {
             let req = UpdateDayNotesRequest(notes: notes)
@@ -140,6 +152,7 @@ struct ReadingDayDetailView: View {
     @State private var editingNotes = false
     @State private var notesText = ""
     @State private var movingEntry: ReadingEntry?     // non-nil → move sheet visible
+    @State private var editingEntry: ReadingEntry?    // non-nil → edit sheet visible
     /// Non-nil → alert with the "N saved, M had errors" summary after a bulk add.
     @State private var bulkResultSummary: BulkAddSummary?
 
@@ -239,6 +252,12 @@ struct ReadingDayDetailView: View {
                 }
             }
         }
+        .sheet(item: $editingEntry) { entry in
+            EditReadingEntrySheet(entry: entry) { updated in
+                vm.entryUpdated(updated)
+            }
+            .environmentObject(auth)
+        }
         .task { await vm.load(token: auth.accessToken ?? "") }
         .onAppear { notesText = vm.day?.notes ?? "" }
         .onChange(of: vm.day?.notes) { _, newValue in
@@ -306,6 +325,8 @@ struct ReadingDayDetailView: View {
                 } else {
                     ForEach(day.entries) { entry in
                         DayEntryRow(entry: entry)
+                            .contentShape(Rectangle())
+                            .onTapGesture { editingEntry = entry }
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) {
                                     Task {
@@ -323,6 +344,14 @@ struct ReadingDayDetailView: View {
                                     Label("Move…", systemImage: "arrow.right.arrow.left")
                                 }
                                 .tint(.blue)
+                            }
+                            .swipeActions(edge: .leading) {
+                                Button {
+                                    editingEntry = entry
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.orange)
                             }
                     }
                 }

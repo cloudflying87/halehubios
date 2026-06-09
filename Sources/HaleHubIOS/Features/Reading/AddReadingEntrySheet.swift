@@ -36,6 +36,13 @@ class AddReadingEntryViewModel: ObservableObject {
         )
     }
 
+    func updateSingle(entryId: String, req: AddReadingEntryRequest,
+                      token: String) async throws -> ReadingEntry {
+        return try await APIClient.shared.patch(
+            "/reading/entries/\(entryId)/", body: req, token: token
+        )
+    }
+
     func previewBulk(planId: String, dayNum: Int, references: String,
                      token: String) async throws -> BulkPreviewResponse {
         return try await APIClient.shared.post(
