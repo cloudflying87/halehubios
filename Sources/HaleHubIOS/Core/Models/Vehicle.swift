@@ -78,6 +78,10 @@ struct MaintenanceCategory: Identifiable, Codable, Sendable {
     let vehicleTypes: [String]?
 }
 
+struct CreateMaintenanceCategoryRequest: Encodable, Sendable {
+    let name: String
+}
+
 struct MaintenanceSchedule: Identifiable, Codable, Hashable, Sendable {
     let id: Int
     let categoryId: Int?

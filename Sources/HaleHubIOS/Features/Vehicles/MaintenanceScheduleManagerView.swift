@@ -206,11 +206,19 @@ struct AddEditScheduleSheet: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
 
+    // User-added maintenance options (created from this sheet) appended to the
+    // passed-in list for the picker.
+    @State private var addedCategories: [MaintenanceCategory] = []
+    @State private var showAddCategory = false
+    @State private var newCategoryName = ""
+
+    private var allCategories: [MaintenanceCategory] { categories + addedCategories }
+
     private var isEditing: Bool { schedule != nil }
     private var title: String { isEditing ? "Edit Schedule" : "Add Schedule" }
 
     private var selectedCategory: MaintenanceCategory? {
-        categories.first { $0.id == selectedCategoryId }
+        allCategories.first { $0.id == selectedCategoryId }
     }
 
     var body: some View {
@@ -218,15 +226,21 @@ struct AddEditScheduleSheet: View {
             Form {
                 if !isEditing {
                     Section("Service Type") {
-                        if categories.isEmpty {
+                        if allCategories.isEmpty {
                             Text("Loading categories…").foregroundStyle(.secondary)
                         } else {
                             Picker("Category", selection: $selectedCategoryId) {
                                 Text("Select…").tag(Optional<Int>.none)
-                                ForEach(categories) { cat in
+                                ForEach(allCategories) { cat in
                                     Text(cat.name).tag(Optional(cat.id))
                                 }
                             }
+                        }
+                        Button {
+                            newCategoryName = ""
+                            showAddCategory = true
+                        } label: {
+                            Label("Add a new option…", systemImage: "plus.circle")
                         }
                     }
                 } else {
@@ -290,6 +304,29 @@ struct AddEditScheduleSheet: View {
             }
         }
         .onAppear { prefill() }
+        .alert("New Maintenance Option", isPresented: $showAddCategory) {
+            TextField("e.g. Drive Shaft", text: $newCategoryName)
+            Button("Cancel", role: .cancel) { newCategoryName = "" }
+            Button("Add") { Task { await createCategory() } }
+        } message: {
+            Text("Add a maintenance type you can schedule and log on your vehicles.")
+        }
+    }
+
+    private func createCategory() async {
+        let name = newCategoryName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty, let token = auth.accessToken else { return }
+        do {
+            let created: MaintenanceCategory = try await APIClient.shared.post(
+                "/vehicles/maintenance-categories/",
+                body: CreateMaintenanceCategoryRequest(name: name), token: token
+            )
+            addedCategories.append(created)
+            selectedCategoryId = created.id
+            newCategoryName = ""
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private var canSave: Bool {
