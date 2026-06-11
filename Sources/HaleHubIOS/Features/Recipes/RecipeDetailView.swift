@@ -259,7 +259,7 @@ struct RecipeDetailView: View {
         isDeleting = true
         do {
             try await APIClient.shared.delete("/recipes/\(recipe.id)/", token: token)
-            onDelete?(recipe.id)
+            onDelete?(recipe.id.uuidString)
             dismiss()
         } catch {
             loadError = error.localizedDescription

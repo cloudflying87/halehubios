@@ -117,7 +117,7 @@ struct RecipesListView: View {
             List {
                 ForEach(vm.filtered) { recipe in
                     NavigationLink(destination: RecipeDetailView(recipe: recipe, onDelete: { id in
-                        vm.recipes.removeAll { $0.id == id }
+                        vm.recipes.removeAll { $0.id.uuidString.lowercased() == id.lowercased() }
                     }).environmentObject(auth)) {
                         RecipeRow(recipe: recipe)
                     }

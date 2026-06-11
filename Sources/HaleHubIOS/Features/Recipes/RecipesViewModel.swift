@@ -186,7 +186,7 @@ class RecipesViewModel: ObservableObject {
 
     func deleteRecipe(id: String, token: String) async throws {
         try await APIClient.shared.delete("/recipes/\(id)/", token: token)
-        recipes.removeAll { $0.id == id }
+        recipes.removeAll { $0.id.uuidString.lowercased() == id.lowercased() }
         await CacheManager.shared.save(recipes, key: recipeCacheKey)
     }
 
