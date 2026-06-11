@@ -10,10 +10,14 @@ class BookDetailViewModel: ObservableObject {
         isLoading = true
         error = nil
         do {
-            detail = try await APIClient.shared.get(
+            let result: BookProgressDetail = try await APIClient.shared.get(
                 "/reading/plans/\(planId)/books/\(bookId)/", token: token
             )
+            detail = result
         } catch is CancellationError {
+            // Superseded by a fresh load — leave state so the view shows a
+            // spinner (never blank) and the retriggered task reloads.
+            return
         } catch {
             self.error = error.localizedDescription
         }
@@ -36,15 +40,7 @@ struct BookDetailView: View {
 
     var body: some View {
         Group {
-            if vm.isLoading && vm.detail == nil {
-                ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let msg = vm.error, vm.detail == nil {
-                ContentUnavailableView {
-                    Label("Couldn't Load", systemImage: "exclamationmark.triangle")
-                } description: { Text(msg) } actions: {
-                    Button("Retry") { Task { await load() } }.buttonStyle(.borderedProminent)
-                }
-            } else if let detail = vm.detail {
+            if let detail = vm.detail {
                 List {
                     Section {
                         HStack {
@@ -67,11 +63,20 @@ struct BookDetailView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+            } else if let msg = vm.error {
+                ContentUnavailableView {
+                    Label("Couldn't Load", systemImage: "exclamationmark.triangle")
+                } description: { Text(msg) } actions: {
+                    Button("Retry") { Task { await load() } }.buttonStyle(.borderedProminent)
+                }
+            } else {
+                // Loading or a superseded/cancelled load — never blank.
+                ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .navigationTitle(bookName)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await load() }
+        .task(id: bookId) { await load() }
         .refreshable { await load() }
     }
 

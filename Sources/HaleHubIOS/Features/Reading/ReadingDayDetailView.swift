@@ -10,11 +10,18 @@ class ReadingDayDetailViewModel: ObservableObject {
     @Published var isToggling = false
 
     let planId: String
-    let dayNumber: Int
+    @Published private(set) var dayNumber: Int
 
     init(planId: String, dayNumber: Int) {
         self.planId = planId
         self.dayNumber = dayNumber
+    }
+
+    /// Switch to another day in the same plan and reload it in place.
+    func goToDay(_ newDay: Int, token: String) async {
+        guard newDay >= 1, newDay != dayNumber else { return }
+        dayNumber = newDay
+        await load(token: token)
     }
 
     func load(token: String) async {
@@ -146,6 +153,7 @@ struct ReadingDayDetailView: View {
     let planId: String
     let dayNumber: Int
     let dateString: String   // "YYYY-MM-DD" for display
+    let totalDays: Int?      // upper bound for next-day navigation (nil = unbounded)
 
     @StateObject private var vm: ReadingDayDetailViewModel
     @State private var showAddEntry = false
@@ -156,25 +164,37 @@ struct ReadingDayDetailView: View {
     /// Non-nil → alert with the "N saved, M had errors" summary after a bulk add.
     @State private var bulkResultSummary: BulkAddSummary?
 
-    init(planId: String, dayNumber: Int, dateString: String) {
+    init(planId: String, dayNumber: Int, dateString: String, totalDays: Int? = nil) {
         self.planId = planId
         self.dayNumber = dayNumber
         self.dateString = dateString
+        self.totalDays = totalDays
         _vm = StateObject(wrappedValue: ReadingDayDetailViewModel(planId: planId, dayNumber: dayNumber))
     }
 
     private var formattedDate: String {
+        // Prefer the loaded day's date so it stays correct while paging days.
+        let source = vm.day?.date ?? dateString
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        guard let date = formatter.date(from: source) else { return source }
         formatter.dateStyle = .long
         formatter.timeStyle = .none
         return formatter.string(from: date)
     }
 
+    private var canGoNext: Bool {
+        if let total = totalDays { return vm.dayNumber < total }
+        return true
+    }
+
+    private func goToDay(_ newDay: Int) {
+        Task { await vm.goToDay(newDay, token: auth.accessToken ?? "") }
+    }
+
     var body: some View {
         Group {
-            if vm.isLoading {
+            if vm.isLoading && vm.day == nil {
                 ProgressView("Loading…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let day = vm.day {
@@ -197,7 +217,7 @@ struct ReadingDayDetailView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .navigationTitle("Day \(dayNumber)")
+        .navigationTitle("Day \(vm.dayNumber)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -212,7 +232,7 @@ struct ReadingDayDetailView: View {
             AddReadingEntrySheet(
                 isPresented: $showAddEntry,
                 planId: planId,
-                dayNumber: dayNumber,
+                dayNumber: vm.dayNumber,
                 onAdded: { entries in entries.forEach { vm.entryAdded($0) } },
                 onBulkResult: { result in
                     // Only surface an alert when there's something worth saying.
@@ -241,7 +261,7 @@ struct ReadingDayDetailView: View {
         .sheet(item: $movingEntry) { entry in
             MoveReadingEntrySheet(
                 entry: entry,
-                currentDayNumber: dayNumber
+                currentDayNumber: vm.dayNumber
             ) { targetDay in
                 Task {
                     await vm.moveEntry(
@@ -277,6 +297,29 @@ struct ReadingDayDetailView: View {
     @ViewBuilder
     private func dayContent(_ day: ReadingDay) -> some View {
         List {
+            // Previous / next day navigation
+            Section {
+                HStack {
+                    if vm.dayNumber > 1 {
+                        Button { goToDay(vm.dayNumber - 1) } label: {
+                            Label("Day \(vm.dayNumber - 1)", systemImage: "chevron.left")
+                                .labelStyle(.titleAndIcon)
+                        }
+                    }
+                    Spacer()
+                    if canGoNext {
+                        Button { goToDay(vm.dayNumber + 1) } label: {
+                            HStack(spacing: 4) {
+                                Text("Day \(vm.dayNumber + 1)")
+                                Image(systemName: "chevron.right")
+                            }
+                        }
+                    }
+                }
+                .font(.subheadline.weight(.medium))
+                .buttonStyle(.borderless)
+            }
+
             // Date header
             Section {
                 HStack {

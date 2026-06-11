@@ -227,7 +227,8 @@ struct ReadingCalendarView: View {
                 ReadingDayDetailView(
                     planId: plan.id,
                     dayNumber: dayNumber,
-                    dateString: dateStr
+                    dateString: dateStr,
+                    totalDays: plan.totalDays
                 )
                 .environmentObject(auth)
             ) {
