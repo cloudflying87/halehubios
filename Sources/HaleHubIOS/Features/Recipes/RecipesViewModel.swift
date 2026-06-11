@@ -184,6 +184,22 @@ class RecipesViewModel: ObservableObject {
         return updated
     }
 
+    func deleteRecipe(id: String, token: String) async throws {
+        try await APIClient.shared.delete("/recipes/\(id)/", token: token)
+        recipes.removeAll { $0.id == id }
+        await CacheManager.shared.save(recipes, key: recipeCacheKey)
+    }
+
+    /// Returns existing recipes that match the given title / source URL (empty = no duplicate).
+    func checkDuplicate(title: String, sourceUrl: String, token: String) async -> [RecipeDuplicateMatch] {
+        func enc(_ s: String) -> String {
+            s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? s
+        }
+        let path = "/recipes/check-duplicate/?title=\(enc(title))&source_url=\(enc(sourceUrl))"
+        let resp: DuplicateCheckResponse? = try? await APIClient.shared.get(path, token: token)
+        return resp?.matches ?? []
+    }
+
     // MARK: - Recipe Import (parse → review → confirm)
 
     func parseRecipeFromURL(url: String, token: String) async throws -> ParsedRecipeData {

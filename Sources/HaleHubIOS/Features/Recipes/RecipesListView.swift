@@ -6,46 +6,38 @@ struct RecipesListView: View {
     @State private var showImportURL = false
     @State private var importedRecipe: Recipe?
     @State private var navigateToImported = false
+    @State private var searchTask: Task<Void, Never>?
 
     var body: some View {
-        Group {
-            if vm.isLoading && vm.recipes.isEmpty {
-                ProgressView("Loading recipes…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                VStack(spacing: 0) {
-                    FilterBar(vm: vm)
-                        .padding(.vertical, 8)
-                    Divider()
-                    List {
-                        ForEach(vm.filtered) { recipe in
-                            NavigationLink(destination: RecipeDetailView(recipe: recipe).environmentObject(auth)) {
-                                RecipeRow(recipe: recipe)
-                            }
-                        }
-                    }
-                    .listStyle(.plain)
-                    .navigationDestination(isPresented: $navigateToImported) {
-                        if let imported = importedRecipe {
-                            RecipeDetailView(recipe: imported).environmentObject(auth)
-                        }
-                    }
-                }
-                // Pin the search bar visible so it's easy to find, and rely on the
-                // toolbar refresh button instead of pull-to-refresh (the pull
-                // gesture fought the search bar).
-                .searchable(
-                    text: $vm.searchQuery,
-                    placement: .navigationBarDrawer(displayMode: .always),
-                    prompt: "Search recipes…"
-                )
-                .onChange(of: vm.searchQuery) { _, query in
-                    let token = auth.accessToken ?? ""
-                    Task {
-                        try? await Task.sleep(for: .milliseconds(300))
-                        await vm.search(query: query, token: token)
-                    }
-                }
+        // The search bar lives on this always-present container so it is never
+        // torn down and recreated when loading state changes — that teardown was
+        // what made the field jump and lose focus mid-typing.
+        VStack(spacing: 0) {
+            FilterBar(vm: vm)
+                .padding(.vertical, 8)
+            Divider()
+            recipeContent
+        }
+        .navigationDestination(isPresented: $navigateToImported) {
+            if let imported = importedRecipe {
+                RecipeDetailView(recipe: imported).environmentObject(auth)
+            }
+        }
+        .searchable(
+            text: $vm.searchQuery,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "Search recipes…"
+        )
+        .onChange(of: vm.searchQuery) { _, query in
+            // Results filter instantly client-side (vm.filtered). This debounced
+            // server search just augments for large libraries; cancel the prior
+            // one so a burst of keystrokes fires at most one request.
+            searchTask?.cancel()
+            let token = auth.accessToken ?? ""
+            searchTask = Task {
+                try? await Task.sleep(for: .milliseconds(400))
+                guard !Task.isCancelled else { return }
+                await vm.search(query: query, token: token)
             }
         }
         .navigationTitle("Recipes")
@@ -102,6 +94,37 @@ struct RecipesListView: View {
             .environmentObject(auth)
         }
         .task { await vm.load(token: auth.accessToken ?? "") }
+    }
+
+    @ViewBuilder
+    private var recipeContent: some View {
+        // Only show the full-screen spinner on the initial load (no recipes yet
+        // and not searching) — never while typing a search, so the field stays put.
+        if vm.isLoading && vm.recipes.isEmpty && vm.searchQuery.isEmpty {
+            ProgressView("Loading recipes…")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if vm.filtered.isEmpty {
+            ContentUnavailableView {
+                Label(vm.searchQuery.isEmpty ? "No Recipes" : "No Matches",
+                      systemImage: "magnifyingglass")
+            } description: {
+                Text(vm.searchQuery.isEmpty
+                     ? "Import a recipe to get started."
+                     : "No recipes match \u{201C}\(vm.searchQuery)\u{201D}.")
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            List {
+                ForEach(vm.filtered) { recipe in
+                    NavigationLink(destination: RecipeDetailView(recipe: recipe, onDelete: { id in
+                        vm.recipes.removeAll { $0.id == id }
+                    }).environmentObject(auth)) {
+                        RecipeRow(recipe: recipe)
+                    }
+                }
+            }
+            .listStyle(.plain)
+        }
     }
 }
 
@@ -241,6 +264,7 @@ struct RecipeImportReviewView: View {
     @State private var parsed: ParsedRecipeData
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var duplicates: [RecipeDuplicateMatch] = []
 
     init(vm: RecipesViewModel, parsed: ParsedRecipeData, onSuccess: @escaping (Recipe) -> Void) {
         self.vm = vm
@@ -250,6 +274,19 @@ struct RecipeImportReviewView: View {
 
     var body: some View {
         Form {
+            if !duplicates.isEmpty {
+                Section {
+                    Label("You may already have this recipe", systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(.orange)
+                    ForEach(duplicates) { dup in
+                        Text(dup.title).font(.callout).foregroundStyle(.secondary)
+                    }
+                } footer: {
+                    Text("You can still save it as a separate recipe.")
+                }
+            }
+
             if let warning = parsed.parseWarning {
                 Section {
                     Label(warning, systemImage: "exclamationmark.triangle")
@@ -351,6 +388,12 @@ struct RecipeImportReviewView: View {
                     .disabled(parsed.title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
+        }
+        .task {
+            duplicates = await vm.checkDuplicate(
+                title: parsed.title, sourceUrl: parsed.sourceUrl,
+                token: auth.accessToken ?? ""
+            )
         }
     }
 

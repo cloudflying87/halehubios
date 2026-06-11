@@ -2,7 +2,10 @@ import SwiftUI
 
 struct RecipeDetailView: View {
     @EnvironmentObject var auth: AuthManager
+    @Environment(\.dismiss) private var dismiss
     let recipe: Recipe
+    /// Called with the recipe id after a successful delete (so the list can drop it).
+    var onDelete: ((String) -> Void)? = nil
 
     @State private var fullRecipe: Recipe?
     @State private var loadError: String?
@@ -11,6 +14,8 @@ struct RecipeDetailView: View {
     @State private var showCookMode = false
     @State private var showAddToMealPlan = false
     @State private var showEditRecipe = false
+    @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
 
     var displayed: Recipe { fullRecipe ?? recipe }
 
@@ -177,10 +182,22 @@ struct RecipeDetailView: View {
                     } label: {
                         Label("Edit Recipe", systemImage: "pencil")
                     }
+                    Divider()
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        Label("Delete Recipe", systemImage: "trash")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
             }
+        }
+        .alert("Delete Recipe?", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) { Task { await deleteRecipe() } }
+        } message: {
+            Text("This permanently removes \u{201C}\(displayed.title)\u{201D}.")
         }
         .overlay(alignment: .bottom) {
             if showCookedToast {
@@ -235,6 +252,19 @@ struct RecipeDetailView: View {
             try? await Task.sleep(for: .seconds(2))
             showCookedToast = false
         } catch {}
+    }
+
+    private func deleteRecipe() async {
+        guard let token = auth.accessToken else { return }
+        isDeleting = true
+        do {
+            try await APIClient.shared.delete("/recipes/\(recipe.id)/", token: token)
+            onDelete?(recipe.id)
+            dismiss()
+        } catch {
+            loadError = error.localizedDescription
+        }
+        isDeleting = false
     }
 }
 

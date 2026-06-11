@@ -155,6 +155,17 @@ struct PaginatedResponse<T: Decodable & Sendable>: Decodable, Sendable {
     let results: [T]
 }
 
+struct RecipeDuplicateMatch: Codable, Sendable, Identifiable {
+    let id: String
+    let title: String
+    let sourceUrl: String
+}
+
+struct DuplicateCheckResponse: Codable, Sendable {
+    let exists: Bool
+    let matches: [RecipeDuplicateMatch]
+}
+
 // MARK: - Recipe Import (parse → review → confirm)
 
 struct ParsedRecipeData: Codable, Sendable {
