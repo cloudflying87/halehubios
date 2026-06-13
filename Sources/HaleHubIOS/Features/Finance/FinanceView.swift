@@ -335,10 +335,10 @@ struct FinanceView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            ProgressView(value: loan.progressPct / 100.0)
+            ProgressView(value: max(0, min(1, loan.progressPct / 100.0)))
                 .tint(.blue)
-            if let payoff = loan.payoffDate {
-                Text("Payoff: \(payoff)")
+            if let payoff = loan.payoffDate, !payoff.isEmpty {
+                Text("Payoff: \(formatPayoff(payoff))")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -496,6 +496,17 @@ struct FinanceView: View {
         // API may return 0–100 or 0–1; normalise to 0–1 for percent formatter
         let normalized = value > 1 ? value / 100 : value
         return pctFormatter.string(from: NSNumber(value: normalized)) ?? "\(Int(value * 100))%"
+    }
+
+    /// "2030-06-01" → "Jun 2030"
+    private func formatPayoff(_ ymd: String) -> String {
+        let inF = DateFormatter()
+        inF.locale = Locale(identifier: "en_US_POSIX")
+        inF.dateFormat = "yyyy-MM-dd"
+        guard let d = inF.date(from: ymd) else { return ymd }
+        let out = DateFormatter()
+        out.dateFormat = "MMM yyyy"
+        return out.string(from: d)
     }
 }
 

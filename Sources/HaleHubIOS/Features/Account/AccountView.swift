@@ -71,6 +71,17 @@ struct AccountView: View {
 
                 // Features — each row only appears when the user has the matching permission
                 let user = auth.currentUser
+
+                // Finance — only visible with finance access (backend also 403s
+                // /api/finance/* without it). Behind a biometric lock inside.
+                if user?.can("finance") ?? false {
+                    Section {
+                        NavigationLink(destination: FinanceView()) {
+                            CalculatorRow(icon: "🏦", title: "Finance", subtitle: "Net worth, loans & investments")
+                        }
+                    }
+                }
+
                 if user?.can("reading") ?? false ||
                    user?.can("qr")      ?? false ||
                    user?.can("letters") ?? false {
