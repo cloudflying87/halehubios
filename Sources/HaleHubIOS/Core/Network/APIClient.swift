@@ -104,6 +104,17 @@ actor APIClient {
         return try decode(data)
     }
 
+    // PUT request
+    func put<Body: Encodable & Sendable, Response: Decodable & Sendable>(
+        _ path: String, body: Body, token: String
+    ) async throws -> Response {
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let encoded = try encoder.encode(body)
+        let data = try await request(path: path, method: "PUT", body: encoded, token: token)
+        return try decode(data)
+    }
+
     // DELETE request
     func delete(_ path: String, token: String) async throws {
         _ = try await request(path: path, method: "DELETE", body: nil as Data?, token: token)
@@ -139,6 +150,48 @@ actor APIClient {
             struct Resp: Decodable { let photoUrl: String }
             let parsed = try decoder.decode(Resp.self, from: data)
             return parsed.photoUrl
+        } catch let e as APIError { throw e }
+        catch { throw APIError.networkError(error) }
+    }
+
+    // Paycheck PDF upload — multipart, returns the parsed/created paycheck.
+    // Uses a longer timeout because server-side parsing (AI providers) can be slow.
+    func uploadPaycheck(
+        pdfData: Data, filename: String, employerId: Int?, employerName: String?, token: String
+    ) async throws -> PaycheckUploadResponse {
+        guard let url = URL(string: "\(baseURL)/finance/paychecks/upload/") else { throw APIError.invalidURL }
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 120
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let crlf = "\r\n"
+        var body = Data()
+        func textField(_ name: String, _ value: String) {
+            body.append("--\(boundary)\(crlf)".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"\(name)\"\(crlf)\(crlf)".data(using: .utf8)!)
+            body.append("\(value)\(crlf)".data(using: .utf8)!)
+        }
+        if let employerId { textField("employer_id", "\(employerId)") }
+        if let employerName, !employerName.isEmpty { textField("employer_name", employerName) }
+        body.append("--\(boundary)\(crlf)".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"pdf\"; filename=\"\(filename)\"\(crlf)".data(using: .utf8)!)
+        body.append("Content-Type: application/pdf\(crlf)\(crlf)".data(using: .utf8)!)
+        body.append(pdfData)
+        body.append(crlf.data(using: .utf8)!)
+        body.append("--\(boundary)--\(crlf)".data(using: .utf8)!)
+        req.httpBody = body
+
+        do {
+            let (data, response) = try await session.data(for: req)
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if code == 401 { throw APIError.unauthorized }
+            if code >= 400 {
+                throw APIError.serverError(code, String(data: data, encoding: .utf8) ?? "")
+            }
+            return try decoder.decode(PaycheckUploadResponse.self, from: data)
         } catch let e as APIError { throw e }
         catch { throw APIError.networkError(error) }
     }

@@ -147,6 +147,8 @@ struct FinanceView: View {
                         netWorthCard(s)
                         thisMonthSection(s.currentMonth)
                     }
+                    titheNavCard
+                    budgetNavCard
                     if !vm.loans.isEmpty {
                         loansSection
                     }
@@ -286,14 +288,72 @@ struct FinanceView: View {
         }
     }
 
+    // MARK: - Tithe
+
+    private var titheNavCard: some View {
+        NavigationLink(destination: TitheView()) {
+            HStack(spacing: 12) {
+                Image(systemName: "hands.sparkles.fill")
+                    .font(.title3)
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 36, height: 36)
+                    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Tithe").font(.subheadline).fontWeight(.medium)
+                    Text("Giving vs monthly goal").font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+            }
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Budget (YNAB)
+
+    private var budgetNavCard: some View {
+        NavigationLink(destination: BudgetView()) {
+            HStack(spacing: 12) {
+                Image(systemName: "chart.pie.fill")
+                    .font(.title3)
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 36, height: 36)
+                    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Budget").font(.subheadline).fontWeight(.medium)
+                    Text("YNAB categories & spending").font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+            }
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Loans
 
     private var loansSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Loans")
-                .font(.headline)
+            HStack {
+                Text("Loans")
+                    .font(.headline)
+                Spacer()
+                NavigationLink(destination: FinanceLoansView()) {
+                    Text("Manage")
+                        .font(.subheadline)
+                }
+            }
             ForEach(vm.loans) { loan in
-                loanRow(loan)
+                NavigationLink(destination: LoanDetailView(loanId: loan.id)) {
+                    loanRow(loan)
+                }
+                .buttonStyle(.plain)
             }
             HStack {
                 Text("Total Debt")
@@ -400,31 +460,41 @@ struct FinanceView: View {
 
     private var recentPaychecksSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Recent Paychecks")
-                .font(.headline)
+            HStack {
+                Text("Recent Paychecks")
+                    .font(.headline)
+                Spacer()
+                NavigationLink(destination: PaychecksView()) {
+                    Text("Manage")
+                        .font(.subheadline)
+                }
+            }
             ForEach(vm.paychecks.prefix(5)) { check in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(check.payDate.formatted(date: .abbreviated, time: .omitted))
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        if let employer = check.employerName {
-                            Text(employer)
+                NavigationLink(destination: PaycheckDetailView(paycheckId: check.id)) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(check.payDate.formatted(date: .abbreviated, time: .omitted))
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            if let employer = check.employerName {
+                                Text(employer)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(format(check.grossPay))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Text("Net: \(format(check.netPay))")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(format(check.grossPay))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        Text("Net: \(format(check.netPay))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    .padding(.bottom, 6)
                 }
-                .padding(.bottom, 6)
+                .buttonStyle(.plain)
             }
         }
         .padding(16)

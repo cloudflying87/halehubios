@@ -37,6 +37,112 @@ struct FinanceLoan: Identifiable, Codable, Sendable {
     let progressPct: Double
 }
 
+// MARK: - Loan detail / management
+
+struct LoanDetail: Identifiable, Codable, Sendable {
+    let id: Int
+    let name: String
+    let loanType: String
+    let principalAmount: Double
+    let currentBalance: Double
+    let interestRate: Double
+    let termMonths: Int
+    let monthlyPayment: Double
+    let startDate: String          // "YYYY-MM-DD"
+    let isActive: Bool
+    let isInvestment: Bool
+    let progressPct: Double
+    let payoffDate: String?
+    let totalInterest: Double?
+    let remainingPayments: Int?
+    let payments: [LoanPayment]?
+    let amortization: [AmortizationRow]?
+}
+
+struct AmortizationRow: Identifiable, Codable, Sendable {
+    var id: Int { paymentNumber }
+    let paymentNumber: Int
+    let beginningBalance: Double
+    let monthlyPayment: Double
+    let principalPayment: Double
+    let interestPayment: Double
+    let endingBalance: Double
+}
+
+struct LoanPayment: Identifiable, Codable, Sendable {
+    let id: Int
+    let paymentDate: String        // "YYYY-MM-DD"
+    let amount: Double
+    let principalPortion: Double
+    let interestPortion: Double
+    let extraPayment: Double
+    let paymentMethod: String
+    let notes: String
+}
+
+/// Create/update payload. Nil optionals are omitted by JSONEncoder, so a nil
+/// currentBalance lets the backend default it to the principal amount.
+struct LoanRequest: Codable, Sendable {
+    let name: String
+    let loanType: String
+    let principalAmount: Double
+    let currentBalance: Double?
+    let interestRate: Double
+    let termMonths: Int
+    let monthlyPayment: Double
+    let startDate: String
+    let isActive: Bool
+    let isInvestment: Bool
+}
+
+struct PaymentRequest: Codable, Sendable {
+    let amount: Double
+    let paymentDate: String
+    let paymentMethod: String
+    let notes: String?
+}
+
+/// Response from POST .../payments/ — the new payment plus the updated loan.
+struct PaymentResponse: Codable, Sendable {
+    let payment: LoanPayment
+    let loan: LoanDetail
+}
+
+// MARK: - Tithe
+
+struct TitheSummary: Codable, Sendable {
+    let month: String            // "YYYY-MM"
+    let configured: Bool
+    let percentage: Double
+    let givingCategory: String
+    let gross: Double
+    let target: Double
+    let given: Double
+    let remaining: Double
+    let pctGiven: Double
+    let history: [TitheMonthPoint]
+}
+
+struct TitheMonthPoint: Codable, Sendable, Identifiable {
+    var id: String { month }
+    let month: String
+    let gross: Double
+    let target: Double
+    let given: Double
+    let remaining: Double
+}
+
+struct TitheSettingsData: Codable, Sendable {
+    let percentage: Double
+    let givingCategory: String
+    let availableCategories: [String]
+}
+
+struct TitheSettingsRequest: Codable, Sendable {
+    let percentage: Double
+    let givingCategory: String
+}
+
 struct FinancePaycheck: Identifiable, Codable, Sendable {
     let id: Int
     let payDate: Date
@@ -47,6 +153,49 @@ struct FinancePaycheck: Identifiable, Codable, Sendable {
     let payPeriodEnd: Date?
 }
 
+// MARK: - Paychecks (upload + detail)
+
+struct Employer: Identifiable, Codable, Sendable {
+    let id: Int
+    let name: String
+    let isActive: Bool
+}
+
+struct PaycheckLineItemValue: Codable, Sendable, Identifiable {
+    var id: String { name }
+    let name: String
+    let amount: Double
+    let ytdAmount: Double
+    let itemType: String
+}
+
+struct PaycheckDetail: Identifiable, Codable, Sendable {
+    let id: Int
+    let payDate: String            // "YYYY-MM-DD"
+    let employerId: Int
+    let employerName: String
+    let grossPay: Double
+    let netPay: Double
+    let payPeriodStart: String
+    let payPeriodEnd: String
+    let checkNumber: String
+    let notes: String
+    let pdfUrl: String?
+    let lineItems: [PaycheckLineItemValue]?
+}
+
+struct PaycheckUploadResponse: Codable, Sendable {
+    let paycheck: PaycheckDetail
+    let parsedOk: Bool
+}
+
+struct PaycheckEditRequest: Codable, Sendable {
+    let grossPay: Double
+    let netPay: Double
+    let payDate: String
+    let notes: String
+}
+
 struct BrokerageAccountSummary: Identifiable, Codable, Sendable {
     let id: Int
     let name: String
@@ -54,6 +203,74 @@ struct BrokerageAccountSummary: Identifiable, Codable, Sendable {
     let institution: String?
     let latestBalance: Double?
     let latestImportDate: Date?
+}
+
+// MARK: - YNAB + Budget
+
+struct YNABStatus: Codable, Sendable {
+    let connected: Bool
+    let budgetId: String
+    let budgetName: String
+    let syncEnabled: Bool
+    let lastSyncedAt: String?
+    let lastSyncStatus: String
+    let hasToken: Bool
+}
+
+struct YNABBudgetOption: Identifiable, Codable, Sendable {
+    let id: String
+    let name: String
+}
+
+struct YNABBudgetsResponse: Codable, Sendable {
+    let budgets: [YNABBudgetOption]
+}
+
+struct YNABSettingsRequest: Codable, Sendable {
+    let token: String?
+    let budgetId: String?
+    let budgetName: String?
+    let syncEnabled: Bool?
+}
+
+struct SyncCounts: Codable, Sendable {
+    let created: Int
+    let updated: Int
+}
+
+struct YNABSyncSummary: Codable, Sendable {
+    let months: [String]
+    let budgets: SyncCounts
+    let transactions: SyncCounts
+}
+
+struct BudgetCategoryRow: Codable, Sendable, Identifiable {
+    var id: String { category }
+    let category: String
+    let budgeted: Double
+    let activity: Double
+    let available: Double
+}
+
+struct BudgetGroup: Codable, Sendable, Identifiable {
+    var id: String { group }
+    let group: String
+    let budgeted: Double
+    let activity: Double
+    let available: Double
+    let categories: [BudgetCategoryRow]
+}
+
+struct BudgetTotals: Codable, Sendable {
+    let budgeted: Double
+    let activity: Double
+    let available: Double
+}
+
+struct BudgetMonthData: Codable, Sendable {
+    let month: String
+    let groups: [BudgetGroup]
+    let totals: BudgetTotals
 }
 
 struct MonthlyTrendPoint: Codable, Sendable {
