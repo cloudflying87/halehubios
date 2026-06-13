@@ -238,6 +238,14 @@ final class PayMonthViewModel: ObservableObject {
         } catch { self.error = error.localizedDescription }
     }
 
+    func update(_ trip: PayTrip, hours: Double, type: PayTripType, label: String, token: String) async -> Bool {
+        do {
+            let req = PayTripEditRequest(hours: hours, tripType: type.rawValue, label: label)
+            let _: PayTrip = try await APIClient.shared.patch("/finance/pay/trips/\(trip.id)/", body: req, token: token)
+            return true
+        } catch { self.error = error.localizedDescription; return false }
+    }
+
     func delete(_ trip: PayTrip, token: String) async {
         do { try await APIClient.shared.delete("/finance/pay/trips/\(trip.id)/", token: token) }
         catch { self.error = error.localizedDescription }
@@ -250,6 +258,7 @@ struct PayMonthDetailView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm = PayMonthViewModel()
     @State private var showAdd = false
+    @State private var editingTrip: PayTrip?
 
     private var token: String { auth.accessToken ?? "" }
     private var monthString: String { String(format: "%04d-%02d", year, monthNum) }
@@ -269,7 +278,13 @@ struct PayMonthDetailView: View {
                     Text("No trips yet.").foregroundStyle(.secondary)
                 }
                 ForEach(vm.trips) { trip in
-                    tripRow(trip)
+                    Button { editingTrip = trip } label: { tripRow(trip) }
+                        .buttonStyle(.plain)
+                        .swipeActions {
+                            Button(role: .destructive) {
+                                Task { await vm.delete(trip, token: token); await vm.load(year: year, monthNum: monthNum, token: token) }
+                            } label: { Label("Delete", systemImage: "trash") }
+                        }
                 }
             }
         }
@@ -287,6 +302,13 @@ struct PayMonthDetailView: View {
                 return ok
             }
         }
+        .sheet(item: $editingTrip) { trip in
+            EditTripSheet(trip: trip) { hours, type, label in
+                let ok = await vm.update(trip, hours: hours, type: type, label: label, token: token)
+                if ok { await vm.load(year: year, monthNum: monthNum, token: token) }
+                return ok
+            }
+        }
         .task { await vm.load(year: year, monthNum: monthNum, token: token) }
         .refreshable { await vm.load(year: year, monthNum: monthNum, token: token) }
         .alert("Error", isPresented: .init(get: { vm.error != nil }, set: { if !$0 { vm.error = nil } })) {
@@ -295,33 +317,80 @@ struct PayMonthDetailView: View {
     }
 
     private func tripRow(_ trip: PayTrip) -> some View {
-        HStack {
+        let type = PayTripType(rawValue: trip.tripType) ?? .regular
+        return HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(String(format: "%.2f hrs", trip.hours)).font(.subheadline)
-                    + Text(trip.multiplier != 1 ? "  ×\(String(format: "%.0f", trip.multiplier))" : "")
-                    .font(.caption).foregroundColor(.green)
+                HStack(spacing: 4) {
+                    Text(String(format: "%.2f hrs", trip.hours)).font(.subheadline)
+                    if trip.multiplier != 1 {
+                        Text("×\(String(format: "%.0f", trip.multiplier))").font(.caption).foregroundStyle(.green)
+                    }
+                }
                 if !trip.label.isEmpty {
                     Text(trip.label).font(.caption).foregroundStyle(.secondary)
                 }
             }
             Spacer()
             Text(String(format: "%.2f", trip.creditHours)).font(.caption).foregroundStyle(.secondary)
-            Menu {
-                ForEach(PayTripType.allCases) { t in
-                    Button(t.label) { Task { await vm.setType(trip, t, token: token); await vm.load(year: year, monthNum: monthNum, token: token) } }
-                }
-            } label: {
-                Text((PayTripType(rawValue: trip.tripType) ?? .regular).label)
-                    .font(.caption2)
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background((PayTripType(rawValue: trip.tripType) ?? .regular).color.opacity(0.15))
-                    .clipShape(Capsule())
-            }
+            Text(type.label)
+                .font(.caption2)
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .background(type.color.opacity(0.15))
+                .clipShape(Capsule())
+            Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
         }
-        .swipeActions {
-            Button(role: .destructive) {
-                Task { await vm.delete(trip, token: token); await vm.load(year: year, monthNum: monthNum, token: token) }
-            } label: { Label("Delete", systemImage: "trash") }
+        .contentShape(Rectangle())
+    }
+}
+
+struct EditTripSheet: View {
+    let trip: PayTrip
+    let onSave: (Double, PayTripType, String) async -> Bool
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var hours: Double
+    @State private var type: PayTripType
+    @State private var label: String
+    @State private var saving = false
+
+    init(trip: PayTrip, onSave: @escaping (Double, PayTripType, String) async -> Bool) {
+        self.trip = trip
+        self.onSave = onSave
+        _hours = State(initialValue: trip.hours)
+        _type = State(initialValue: PayTripType(rawValue: trip.tripType) ?? .regular)
+        _label = State(initialValue: trip.label)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Trip") {
+                    HStack {
+                        Text("Hours"); Spacer()
+                        TextField("Hours", value: $hours, format: .number)
+                            .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
+                    }
+                    Picker("Type", selection: $type) {
+                        ForEach(PayTripType.allCases) { Text($0.label).tag($0) }
+                    }
+                    TextField("Label (optional)", text: $label)
+                }
+                if type == .green {
+                    Text("Green slips pay 2× — credited as \(String(format: "%.2f", hours * 2)) hours.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Edit Trip")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        Task { saving = true; let ok = await onSave(hours, type, label); saving = false; if ok { dismiss() } }
+                    }
+                    .disabled(saving || hours <= 0)
+                }
+            }
         }
     }
 }

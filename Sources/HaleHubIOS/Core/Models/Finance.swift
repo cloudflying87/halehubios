@@ -203,6 +203,12 @@ struct PayTripPatch: Codable, Sendable {
     let tripType: String
 }
 
+struct PayTripEditRequest: Codable, Sendable {
+    let hours: Double
+    let tripType: String
+    let label: String
+}
+
 struct PayRate: Codable, Sendable, Identifiable {
     let id: Int
     let effectiveDate: String
