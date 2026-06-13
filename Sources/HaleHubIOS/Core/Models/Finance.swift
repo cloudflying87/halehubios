@@ -153,6 +153,76 @@ struct FinancePaycheck: Identifiable, Codable, Sendable {
     let payPeriodEnd: Date?
 }
 
+// MARK: - Pay Hours (pilot trips + rates)
+
+struct PaySummaryTotals: Codable, Sendable {
+    let creditHours: Double
+    let estimatedPay: Double
+}
+
+struct PayMonthRow: Codable, Sendable, Identifiable {
+    var id: Int { monthNum }
+    let month: String
+    let monthNum: Int
+    let regular: Double
+    let green: Double
+    let sick: Double
+    let `override`: Double
+    let totalCredit: Double
+    let rate: Double?
+    let estimatedPay: Double?
+}
+
+struct PaySummary: Codable, Sendable {
+    let year: Int
+    let months: [PayMonthRow]
+    let totals: PaySummaryTotals
+    let averages: PaySummaryTotals
+}
+
+struct PayTrip: Codable, Sendable, Identifiable {
+    let id: Int
+    let month: String
+    let tripDate: String?
+    let hours: Double
+    let tripType: String
+    let multiplier: Double
+    let creditHours: Double
+    let label: String
+    let source: String
+}
+
+struct PayTripRequest: Codable, Sendable {
+    let month: String
+    let hours: Double
+    let tripType: String
+    let label: String?
+}
+
+struct PayTripPatch: Codable, Sendable {
+    let tripType: String
+}
+
+struct PayRate: Codable, Sendable, Identifiable {
+    let id: Int
+    let effectiveDate: String
+    let hourlyRate: Double
+    let note: String
+}
+
+struct PayRateRequest: Codable, Sendable {
+    let effectiveDate: String
+    let hourlyRate: Double
+    let note: String?
+}
+
+struct PayImportSummary: Codable, Sendable {
+    let monthsImported: Int
+    let tripsCreated: Int
+    let greenSlips: Int
+    let years: [Int]
+}
+
 // MARK: - Paychecks (upload + detail)
 
 struct Employer: Identifiable, Codable, Sendable {

@@ -196,6 +196,41 @@ actor APIClient {
         catch { throw APIError.networkError(error) }
     }
 
+    // Generic multipart single-file upload, decoding a JSON response.
+    func uploadData<Response: Decodable & Sendable>(
+        _ path: String, data: Data, filename: String, fieldName: String,
+        mimeType: String, token: String
+    ) async throws -> Response {
+        guard let url = URL(string: "\(baseURL)\(path)") else { throw APIError.invalidURL }
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 120
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let crlf = "\r\n"
+        var body = Data()
+        body.append("--\(boundary)\(crlf)".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"\(filename)\"\(crlf)".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\(crlf)\(crlf)".data(using: .utf8)!)
+        body.append(data)
+        body.append(crlf.data(using: .utf8)!)
+        body.append("--\(boundary)--\(crlf)".data(using: .utf8)!)
+        req.httpBody = body
+
+        do {
+            let (respData, response) = try await session.data(for: req)
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if code == 401 { throw APIError.unauthorized }
+            if code >= 400 {
+                throw APIError.serverError(code, String(data: respData, encoding: .utf8) ?? "")
+            }
+            return try decoder.decode(Response.self, from: respData)
+        } catch let e as APIError { throw e }
+        catch { throw APIError.networkError(error) }
+    }
+
     // Multipart photo upload — returns the absolute URL of the saved photo
     func uploadPhoto(_ path: String, imageData: Data, slot: Int, token: String) async throws -> String {
         guard let url = URL(string: "\(baseURL)\(path)") else { throw APIError.invalidURL }

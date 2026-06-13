@@ -149,6 +149,7 @@ struct FinanceView: View {
                     }
                     titheNavCard
                     budgetNavCard
+                    payHoursNavCard
                     if !vm.loans.isEmpty {
                         loansSection
                     }
@@ -325,6 +326,30 @@ struct FinanceView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Budget").font(.subheadline).fontWeight(.medium)
                     Text("YNAB categories & spending").font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+            }
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Pay Hours
+
+    private var payHoursNavCard: some View {
+        NavigationLink(destination: PayHoursView()) {
+            HStack(spacing: 12) {
+                Image(systemName: "clock.badge.checkmark.fill")
+                    .font(.title3)
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 36, height: 36)
+                    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Pay Hours").font(.subheadline).fontWeight(.medium)
+                    Text("Trips, green slips & estimated pay").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
