@@ -275,6 +275,22 @@ struct PayMonthDetail: Codable, Sendable {
     let paycheck: PaycheckSplit
 }
 
+struct PayCompareRow: Codable, Sendable, Identifiable {
+    var id: Int { monthNum }
+    let monthNum: Int
+    let month: String
+    let credit: Double
+    let alv: Double?
+    let overUnder: Double?
+    let rate: Double?
+}
+
+struct PayCompareData: Codable, Sendable {
+    let year: Int
+    let klConnected: Bool
+    let months: [PayCompareRow]
+}
+
 // MARK: - Paychecks (upload + detail)
 
 struct Employer: Identifiable, Codable, Sendable {

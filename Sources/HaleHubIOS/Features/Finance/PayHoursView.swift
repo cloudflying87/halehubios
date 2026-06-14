@@ -99,6 +99,9 @@ struct PayHoursView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    NavigationLink(destination: PayCompareView()) {
+                        Label("Compare to ALV", systemImage: "chart.bar.xaxis")
+                    }
                     NavigationLink(destination: PayRatesView()) {
                         Label("Pay Rates", systemImage: "dollarsign.circle")
                     }
@@ -687,5 +690,99 @@ struct KeepLoggingConnectView: View {
         .alert("Done", isPresented: .init(get: { vm.message != nil }, set: { if !$0 { vm.message = nil } })) {
             Button("OK") {}
         } message: { Text(vm.message ?? "") }
+    }
+}
+
+// MARK: - Year comparison (credit vs ALV)
+
+@MainActor
+final class PayCompareViewModel: ObservableObject {
+    @Published var data: PayCompareData?
+    @Published var isLoading = false
+    @Published var error: String?
+    @Published var year: Int
+
+    init() { year = Calendar.current.component(.year, from: Date()) }
+
+    func load(token: String) async {
+        isLoading = true
+        error = nil
+        do {
+            data = try await APIClient.shared.get("/finance/pay/compare/?year=\(year)", token: token)
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    func step(_ delta: Int) { year += delta }
+}
+
+struct PayCompareView: View {
+    @EnvironmentObject var auth: AuthManager
+    @StateObject private var vm = PayCompareViewModel()
+    private var token: String { auth.accessToken ?? "" }
+
+    var body: some View {
+        List {
+            Section {
+                HStack {
+                    Button { vm.step(-1) } label: { Image(systemName: "chevron.left") }
+                    Spacer()
+                    Text(String(vm.year)).font(.headline)
+                    Spacer()
+                    Button { vm.step(1) } label: { Image(systemName: "chevron.right") }
+                }
+            }
+            if vm.isLoading {
+                Section { HStack { Spacer(); ProgressView("Loading ALV…"); Spacer() } }
+            }
+            if let d = vm.data {
+                if !d.klConnected {
+                    Section {
+                        NavigationLink(destination: KeepLoggingConnectView()) {
+                            Label("Connect keep-logging to compare", systemImage: "link")
+                        }
+                    }
+                }
+                Section {
+                    HStack {
+                        Text("Month").frame(width: 84, alignment: .leading)
+                        Spacer()
+                        Text("Credit").frame(width: 64, alignment: .trailing)
+                        Text("ALV").frame(width: 56, alignment: .trailing)
+                        Text("+/−").frame(width: 64, alignment: .trailing)
+                    }
+                    .font(.caption).foregroundStyle(.secondary)
+
+                    ForEach(d.months.filter { $0.credit > 0 || $0.alv != nil }) { row in
+                        HStack {
+                            Text(monthName(row.monthNum)).frame(width: 84, alignment: .leading).font(.subheadline)
+                            Spacer()
+                            Text(String(format: "%.1f", row.credit)).frame(width: 64, alignment: .trailing).font(.subheadline)
+                            Text(row.alv != nil ? String(format: "%.1f", row.alv!) : "—")
+                                .frame(width: 56, alignment: .trailing).font(.subheadline).foregroundStyle(.secondary)
+                            if let ou = row.overUnder {
+                                Text(String(format: "%+.1f", ou))
+                                    .frame(width: 64, alignment: .trailing).font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(ou >= 0 ? .green : .orange)
+                            } else {
+                                Text("—").frame(width: 64, alignment: .trailing).font(.subheadline).foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+                } footer: {
+                    Text("Credit is from your trips (Excel import). ALV is keep-logging's line target — available 2024 on. Positive = over the line.")
+                }
+            }
+        }
+        .navigationTitle("Compare to ALV")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await vm.load(token: token) }
+        .onChange(of: vm.year) { Task { await vm.load(token: token) } }
+        .refreshable { await vm.load(token: token) }
+        .alert("Error", isPresented: .init(get: { vm.error != nil }, set: { if !$0 { vm.error = nil } })) {
+            Button("OK") {}
+        } message: { Text(vm.error ?? "") }
     }
 }
