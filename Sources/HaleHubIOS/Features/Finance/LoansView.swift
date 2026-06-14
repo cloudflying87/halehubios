@@ -62,6 +62,13 @@ enum LoanFormatters {
         f.dateFormat = "yyyy-MM-dd"
         return f.string(from: date)
     }
+
+    static func parseYMD(_ ymd: String) -> Date? {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return f.date(from: ymd)
+    }
 }
 
 // MARK: - View Models

@@ -526,6 +526,14 @@ final class PayRatesViewModel: ObservableObject {
             await load(token: token); return true
         } catch { self.error = error.localizedDescription; return false }
     }
+    func update(_ r: PayRate, effective: String, rate: Double, token: String) async -> Bool {
+        do {
+            // note: "manual" marks it as corrected so it's no longer labeled keep-logging
+            let req = PayRateRequest(effectiveDate: effective, hourlyRate: rate, note: "manual")
+            let _: PayRate = try await APIClient.shared.patch("/finance/pay/rates/\(r.id)/", body: req, token: token)
+            await load(token: token); return true
+        } catch { self.error = error.localizedDescription; return false }
+    }
     func delete(_ r: PayRate, token: String) async {
         do { try await APIClient.shared.delete("/finance/pay/rates/\(r.id)/", token: token); await load(token: token) }
         catch { self.error = error.localizedDescription }
@@ -536,20 +544,25 @@ struct PayRatesView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm = PayRatesViewModel()
     @State private var showAdd = false
+    @State private var editingRate: PayRate?
     private var token: String { auth.accessToken ?? "" }
 
     var body: some View {
         List {
             Section {
-                Text("Each rate stays in effect until a newer one starts. Months use the rate active at the time.")
+                Text("Each rate stays in effect until a newer one starts. Months use the rate active at the time. Tap a rate to edit it.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             ForEach(vm.rates) { r in
-                HStack {
-                    Text(LoanFormatters.fullDate(r.effectiveDate))
-                    Spacer()
-                    Text(LoanFormatters.money(r.hourlyRate) + "/hr").fontWeight(.medium)
+                Button { editingRate = r } label: {
+                    HStack {
+                        Text(LoanFormatters.fullDate(r.effectiveDate))
+                        Spacer()
+                        Text(LoanFormatters.money(r.hourlyRate) + "/hr").fontWeight(.medium)
+                        Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
+                    }
                 }
+                .buttonStyle(.plain)
                 .swipeActions {
                     Button(role: .destructive) { Task { await vm.delete(r, token: token) } } label: { Label("Delete", systemImage: "trash") }
                 }
@@ -561,8 +574,13 @@ struct PayRatesView: View {
             ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "plus") } }
         }
         .sheet(isPresented: $showAdd) {
-            AddRateSheet { eff, rate in
+            RateSheet(title: "Add Rate") { eff, rate in
                 await vm.add(effective: eff, rate: rate, token: token)
+            }
+        }
+        .sheet(item: $editingRate) { r in
+            RateSheet(title: "Edit Rate", initialDate: r.effectiveDate, initialRate: r.hourlyRate) { eff, rate in
+                await vm.update(r, effective: eff, rate: rate, token: token)
             }
         }
         .task { await vm.load(token: token) }
@@ -572,7 +590,10 @@ struct PayRatesView: View {
     }
 }
 
-struct AddRateSheet: View {
+struct RateSheet: View {
+    let title: String
+    var initialDate: String? = nil
+    var initialRate: Double = 0
     let onSave: (String, Double) async -> Bool
     @Environment(\.dismiss) private var dismiss
     @State private var date = Date()
@@ -589,7 +610,7 @@ struct AddRateSheet: View {
                         .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
                 }
             }
-            .navigationTitle("Add Rate")
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -599,6 +620,10 @@ struct AddRateSheet: View {
                     }
                     .disabled(saving || rate <= 0)
                 }
+            }
+            .onAppear {
+                rate = initialRate
+                if let iso = initialDate, let d = LoanFormatters.parseYMD(iso) { date = d }
             }
         }
     }
