@@ -124,6 +124,7 @@ struct LoanDetail: Identifiable, Codable, Sendable {
     let isInvestment: Bool
     let progressPct: Double
     let payoffDate: String?
+    let ynabCategory: String?
     let totalInterest: Double?
     let remainingPayments: Int?
     let payments: [LoanPayment]?
@@ -164,6 +165,7 @@ struct LoanRequest: Codable, Sendable {
     let startDate: String
     let isActive: Bool
     let isInvestment: Bool
+    let ynabCategory: String?
 }
 
 struct PaymentRequest: Codable, Sendable {

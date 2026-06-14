@@ -489,6 +489,7 @@ struct LoanFormSheet: View {
     @State private var monthlyPayment: Double = 0
     @State private var startDate = Date()
     @State private var isInvestment = false
+    @State private var ynabCategory = ""
     @State private var saving = false
 
     private var isValid: Bool {
@@ -528,6 +529,11 @@ struct LoanFormSheet: View {
                     Text("Investment loans are excluded from net-worth liabilities.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+                Section("Auto-record payments") {
+                    TextField("YNAB category (e.g. Mortgage Payment)", text: $ynabCategory)
+                    Text("Transactions in this YNAB category are recorded as payments and lower the balance on each sync.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             .navigationTitle(existing == nil ? "Add Loan" : "Edit Loan")
             .navigationBarTitleDisplayMode(.inline)
@@ -544,7 +550,8 @@ struct LoanFormSheet: View {
                                 interestRate: rate, termMonths: termMonths,
                                 monthlyPayment: monthlyPayment,
                                 startDate: LoanFormatters.ymd(startDate),
-                                isActive: true, isInvestment: isInvestment
+                                isActive: true, isInvestment: isInvestment,
+                                ynabCategory: ynabCategory.trimmingCharacters(in: .whitespaces)
                             )
                             let ok = await onSave(req)
                             saving = false
@@ -578,6 +585,7 @@ struct LoanFormSheet: View {
         termMonths = loan.termMonths
         monthlyPayment = loan.monthlyPayment
         isInvestment = loan.isInvestment
+        ynabCategory = loan.ynabCategory ?? ""
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyy-MM-dd"

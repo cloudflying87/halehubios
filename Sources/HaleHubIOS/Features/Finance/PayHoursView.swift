@@ -355,9 +355,20 @@ struct PayMonthDetailView: View {
     @ViewBuilder private var payAndAlvSection: some View {
         if let d = vm.detail {
             let kl = d.keeplogging
-            Section("Pay & ALV") {
-                if kl.connected {
-                    payRow("Credit (your trips)", String(format: "%.2f hrs", d.halehubCredit))
+            // Rate + estimated pay — always shown when a rate is known.
+            Section("Estimated Pay") {
+                if let rate = d.paycheck.rate {
+                    payRow("Pay rate", LoanFormatters.money(rate) + "/hr")
+                    if let full = d.paycheck.fullPay {
+                        payRow("Estimated pay (month)", LoanFormatters.money(full))
+                    }
+                } else {
+                    Text("Add a pay rate (Pay Hours ⋯ → Pay Rates) or connect keep-logging to estimate pay.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if kl.connected {
+                Section("ALV & Paycheck Split") {
                     if let alv = kl.alv {
                         payRow("ALV (target)", String(format: "%.2f hrs", alv))
                         let diff = d.halehubCredit - alv
@@ -373,22 +384,19 @@ struct PayMonthDetailView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     if let rsv = kl.reserveGuarantee { payRow("Reserve guarantee", String(format: "%.2f hrs", rsv)) }
-                    if let rate = d.paycheck.rate { payRow("Rate", LoanFormatters.money(rate) + "/hr") }
-                    if let full = d.paycheck.fullPay { payRow("Full month pay", LoanFormatters.money(full)) }
                     if let adv = d.paycheck.advance { payRow("Last check (this month)", LoanFormatters.money(adv)) }
                     if let rem = d.paycheck.remainder { payRow("Mid next month", LoanFormatters.money(rem)) }
                     if kl.creditAvailable, let klc = kl.monthlyCredit {
                         payRow("keep-logging credit", String(format: "%.2f hrs", klc))
-                    } else {
-                        Text("keep-logging credit not available yet — using your trip credit.")
-                            .font(.caption).foregroundStyle(.secondary)
                     }
                     if let err = kl.error, !err.isEmpty {
                         Text(err).font(.caption).foregroundStyle(.orange)
                     }
-                } else {
+                }
+            } else {
+                Section {
                     NavigationLink(destination: KeepLoggingConnectView()) {
-                        Label("Connect keep-logging for ALV & paycheck estimate", systemImage: "link")
+                        Label("Connect keep-logging for ALV", systemImage: "link")
                     }
                 }
             }
