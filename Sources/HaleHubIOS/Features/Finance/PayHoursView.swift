@@ -355,7 +355,20 @@ struct PayMonthDetailView: View {
             Section("Pay & ALV") {
                 if kl.connected {
                     payRow("Credit (your trips)", String(format: "%.2f hrs", d.halehubCredit))
-                    if let alv = kl.alv { payRow("ALV (target)", String(format: "%.2f hrs", alv)) }
+                    if let alv = kl.alv {
+                        payRow("ALV (target)", String(format: "%.2f hrs", alv))
+                        let diff = d.halehubCredit - alv
+                        HStack {
+                            Text(diff >= 0 ? "Over the line" : "Under the line").foregroundStyle(.secondary)
+                            Spacer()
+                            Text(String(format: "%+.2f hrs", diff))
+                                .fontWeight(.semibold)
+                                .foregroundStyle(diff >= 0 ? .green : .orange)
+                        }
+                    } else {
+                        Text("No ALV for this month (keep-logging covers 2024 on).")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     if let rsv = kl.reserveGuarantee { payRow("Reserve guarantee", String(format: "%.2f hrs", rsv)) }
                     if let rate = d.paycheck.rate { payRow("Rate", LoanFormatters.money(rate) + "/hr") }
                     if let full = d.paycheck.fullPay { payRow("Full month pay", LoanFormatters.money(full)) }
