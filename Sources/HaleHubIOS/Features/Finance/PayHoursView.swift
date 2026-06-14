@@ -102,6 +102,9 @@ struct PayHoursView: View {
                     NavigationLink(destination: PayRatesView()) {
                         Label("Pay Rates", systemImage: "dollarsign.circle")
                     }
+                    NavigationLink(destination: KeepLoggingConnectView()) {
+                        Label("keep-logging (ALV)", systemImage: "airplane")
+                    }
                     Button { showImporter = true } label: {
                         Label("Import .xlsx", systemImage: "square.and.arrow.down")
                     }
@@ -209,6 +212,7 @@ struct PayHoursView: View {
 @MainActor
 final class PayMonthViewModel: ObservableObject {
     @Published var trips: [PayTrip] = []
+    @Published var detail: PayMonthDetail?
     @Published var isLoading = false
     @Published var error: String?
 
@@ -221,6 +225,8 @@ final class PayMonthViewModel: ObservableObject {
         } catch {
             self.error = error.localizedDescription
         }
+        // Best-effort: keep-logging may be unconfigured/slow; don't block the trip list.
+        detail = try? await APIClient.shared.get("/finance/pay/month-detail/?year=\(year)&month=\(monthNum)", token: token)
         isLoading = false
     }
 
@@ -273,6 +279,7 @@ struct PayMonthDetailView: View {
                     Text(String(format: "%.2f hrs", totalCredit)).fontWeight(.semibold)
                 }
             }
+            payAndAlvSection
             Section("Trips") {
                 if vm.trips.isEmpty {
                     Text("No trips yet.").foregroundStyle(.secondary)
@@ -340,6 +347,44 @@ struct PayMonthDetailView: View {
             Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
         }
         .contentShape(Rectangle())
+    }
+
+    @ViewBuilder private var payAndAlvSection: some View {
+        if let d = vm.detail {
+            let kl = d.keeplogging
+            Section("Pay & ALV") {
+                if kl.connected {
+                    payRow("Credit (your trips)", String(format: "%.2f hrs", d.halehubCredit))
+                    if let alv = kl.alv { payRow("ALV (target)", String(format: "%.2f hrs", alv)) }
+                    if let rsv = kl.reserveGuarantee { payRow("Reserve guarantee", String(format: "%.2f hrs", rsv)) }
+                    if let rate = d.paycheck.rate { payRow("Rate", LoanFormatters.money(rate) + "/hr") }
+                    if let full = d.paycheck.fullPay { payRow("Full month pay", LoanFormatters.money(full)) }
+                    if let adv = d.paycheck.advance { payRow("Last check (this month)", LoanFormatters.money(adv)) }
+                    if let rem = d.paycheck.remainder { payRow("Mid next month", LoanFormatters.money(rem)) }
+                    if kl.creditAvailable, let klc = kl.monthlyCredit {
+                        payRow("keep-logging credit", String(format: "%.2f hrs", klc))
+                    } else {
+                        Text("keep-logging credit not available yet — using your trip credit.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let err = kl.error, !err.isEmpty {
+                        Text(err).font(.caption).foregroundStyle(.orange)
+                    }
+                } else {
+                    NavigationLink(destination: KeepLoggingConnectView()) {
+                        Label("Connect keep-logging for ALV & paycheck estimate", systemImage: "link")
+                    }
+                }
+            }
+        }
+    }
+
+    private func payRow(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label).foregroundStyle(.secondary)
+            Spacer()
+            Text(value).fontWeight(.medium)
+        }
     }
 }
 
@@ -532,5 +577,102 @@ struct AddRateSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - keep-logging connect
+
+@MainActor
+final class KeepLoggingViewModel: ObservableObject {
+    @Published var status: KeepLoggingStatus?
+    @Published var busy = false
+    @Published var error: String?
+    @Published var message: String?
+
+    func load(token: String) async {
+        status = try? await APIClient.shared.get("/finance/keeplogging/settings/", token: token)
+    }
+
+    func connect(username: String, password: String, token: String) async -> Bool {
+        busy = true
+        defer { busy = false }
+        do {
+            let req = KLConnectRequest(username: username, password: password)
+            status = try await APIClient.shared.post("/finance/keeplogging/connect/", body: req, token: token)
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            return false
+        }
+    }
+
+    func disconnect(token: String) async {
+        do {
+            try await APIClient.shared.delete("/finance/keeplogging/settings/", token: token)
+            await load(token: token)
+        } catch { self.error = error.localizedDescription }
+    }
+
+    func syncRate(token: String) async {
+        busy = true
+        defer { busy = false }
+        do {
+            struct Result: Decodable, Sendable { let effectiveDate: String; let hourlyRate: Double }
+            let r: Result = try await APIClient.shared.postEmpty("/finance/keeplogging/sync-rate/", token: token)
+            message = "Pay rate \(LoanFormatters.money(r.hourlyRate))/hr (from \(LoanFormatters.fullDate(r.effectiveDate))) added."
+        } catch { self.error = error.localizedDescription }
+    }
+}
+
+struct KeepLoggingConnectView: View {
+    @EnvironmentObject var auth: AuthManager
+    @StateObject private var vm = KeepLoggingViewModel()
+    @State private var username = ""
+    @State private var password = ""
+
+    private var token: String { auth.accessToken ?? "" }
+
+    var body: some View {
+        Form {
+            if vm.status?.connected == true {
+                Section("Connected") {
+                    HStack { Text("Account"); Spacer(); Text(vm.status?.username ?? "").foregroundStyle(.secondary) }
+                    Button {
+                        Task { await vm.syncRate(token: token) }
+                    } label: { Label("Sync pay rate now", systemImage: "arrow.triangle.2.circlepath") }
+                        .disabled(vm.busy)
+                    Button(role: .destructive) {
+                        Task { await vm.disconnect(token: token) }
+                    } label: { Label("Disconnect", systemImage: "xmark.circle") }
+                }
+            } else {
+                Section("Connect keep-logging") {
+                    TextField("keeplogging.com username", text: $username)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    SecureField("Password", text: $password)
+                    Button("Connect") {
+                        Task {
+                            if await vm.connect(username: username, password: password, token: token) {
+                                password = ""
+                            }
+                        }
+                    }
+                    .disabled(username.isEmpty || password.isEmpty || vm.busy)
+                }
+                Section {
+                    Text("Your keeplogging.com login is exchanged for a token once and stored encrypted — your password isn't kept. This pulls your ALV, reserve guarantee, and pay rate.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .navigationTitle("keep-logging")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await vm.load(token: token) }
+        .alert("Error", isPresented: .init(get: { vm.error != nil }, set: { if !$0 { vm.error = nil } })) {
+            Button("OK") {}
+        } message: { Text(vm.error ?? "") }
+        .alert("Done", isPresented: .init(get: { vm.message != nil }, set: { if !$0 { vm.message = nil } })) {
+            Button("OK") {}
+        } message: { Text(vm.message ?? "") }
     }
 }

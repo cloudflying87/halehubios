@@ -229,6 +229,52 @@ struct PayImportSummary: Codable, Sendable {
     let years: [Int]
 }
 
+// MARK: - keep-logging (ALV / pay rate / paycheck split)
+
+struct KeepLoggingStatus: Codable, Sendable {
+    let connected: Bool
+    let username: String
+    let lastSyncedAt: String?
+}
+
+struct KLConnectRequest: Codable, Sendable {
+    let username: String
+    let password: String
+}
+
+struct KLBlock: Codable, Sendable {
+    let connected: Bool
+    let error: String?
+    let alv: Double?
+    let alvRange: String?
+    let reserveGuarantee: Double?
+    let category: String?
+    let position: String?
+    let aircraft: String?
+    let payRate: Double?
+    let payRateEffectiveDate: String?
+    let tripCount: Int?
+    let totalTafbHours: Double?
+    let creditAvailable: Bool
+    let monthlyCredit: Double?
+}
+
+struct PaycheckSplit: Codable, Sendable {
+    let rate: Double?
+    let fullPay: Double?
+    let advance: Double?
+    let remainder: Double?
+}
+
+struct PayMonthDetail: Codable, Sendable {
+    let year: Int
+    let month: Int
+    let halehubCredit: Double
+    let halehubRate: Double?
+    let keeplogging: KLBlock
+    let paycheck: PaycheckSplit
+}
+
 // MARK: - Paychecks (upload + detail)
 
 struct Employer: Identifiable, Codable, Sendable {
