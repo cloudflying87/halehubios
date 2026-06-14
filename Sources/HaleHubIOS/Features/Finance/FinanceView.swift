@@ -186,6 +186,19 @@ struct FinanceView: View {
                 assetPillar(label: "Investments", value: s.assetsBreakdown.investments)
                 Spacer()
                 assetPillar(label: "Retirement", value: s.assetsBreakdown.retirement)
+                if let other = s.assetsBreakdown.other, other > 0 {
+                    Spacer()
+                    assetPillar(label: "Other", value: other)
+                }
+            }
+            NavigationLink(destination: OtherAccountsView()) {
+                HStack {
+                    Text("Assets & Debts")
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
         }
         .padding(16)
@@ -531,9 +544,14 @@ struct FinanceView: View {
 
     private func trendsSection(_ trends: FinanceTrends) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Last 6 Months")
-                .font(.headline)
-            let points = Array(trends.months.suffix(6))
+            HStack {
+                Text("Income vs Spending").font(.headline)
+                Spacer()
+                Button { Task { await vm.stepTrendsYear(-1, token: auth.accessToken ?? "") } } label: { Image(systemName: "chevron.left") }
+                Text(String(vm.trendsYear)).font(.subheadline).fontWeight(.medium).frame(minWidth: 44)
+                Button { Task { await vm.stepTrendsYear(1, token: auth.accessToken ?? "") } } label: { Image(systemName: "chevron.right") }
+            }
+            let points = trends.months.filter { ($0.income ?? 0) > 0 || ($0.spending ?? 0) > 0 }
             Chart {
                 ForEach(points, id: \.month) { point in
                     if let income = point.income {

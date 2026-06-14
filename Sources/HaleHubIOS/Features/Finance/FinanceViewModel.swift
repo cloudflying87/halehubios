@@ -7,8 +7,18 @@ class FinanceViewModel: ObservableObject {
     @Published var paychecks: [FinancePaycheck] = []
     @Published var brokerageAccounts: [BrokerageAccountSummary] = []
     @Published var trends: FinanceTrends?
+    @Published var trendsYear: Int = Calendar.current.component(.year, from: Date())
     @Published var isLoading = false
     @Published var error: String?
+
+    func stepTrendsYear(_ delta: Int, token: String) async {
+        trendsYear += delta
+        do {
+            trends = try await APIClient.shared.get("/finance/trends/?year=\(trendsYear)", token: token)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
 
     func load(token: String) async {
         isLoading = true
@@ -18,7 +28,7 @@ class FinanceViewModel: ObservableObject {
             async let loansFetch: [FinanceLoan] = APIClient.shared.get("/finance/loans/", token: token)
             async let paychecksFetch: [FinancePaycheck] = APIClient.shared.get("/finance/paychecks/?limit=10", token: token)
             async let brokerageFetch: [BrokerageAccountSummary] = APIClient.shared.get("/finance/brokerage/", token: token)
-            async let trendsFetch: FinanceTrends = APIClient.shared.get("/finance/trends/", token: token)
+            async let trendsFetch: FinanceTrends = APIClient.shared.get("/finance/trends/?year=\(trendsYear)", token: token)
 
             let (s, l, p, b, t) = try await (summaryFetch, loansFetch, paychecksFetch, brokerageFetch, trendsFetch)
             summary = s

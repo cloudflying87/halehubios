@@ -71,6 +71,11 @@ struct PaychecksView: View {
         }
         .navigationTitle("Paychecks")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                NavigationLink(destination: PaycheckYearView()) {
+                    Image(systemName: "calendar")
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showAdd = true } label: { Image(systemName: "plus") }
             }
@@ -344,19 +349,37 @@ struct PaycheckDetailView: View {
     }
 
     private func lineItemsCard(_ items: [PaycheckLineItemValue]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Line Items").font(.headline)
-            ForEach(items) { item in
-                HStack {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(item.name).font(.subheadline)
-                        Text(item.itemType.capitalized).font(.caption2).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Text(LoanFormatters.money(item.amount)).font(.subheadline)
+        let groups: [(String, String)] = [
+            ("INCOME", "Income"), ("TAX", "Taxes"),
+            ("DEDUCTION", "Deductions"), ("SAVINGS", "Savings"),
+        ]
+        return VStack(alignment: .leading, spacing: 4) {
+            Text("Line Items").font(.headline).padding(.bottom, 4)
+            ForEach(groups, id: \.0) { type, label in
+                let groupItems = items.filter {
+                    $0.itemType.uppercased() == type && $0.name.lowercased() != "total"
                 }
-                .padding(.vertical, 2)
-                Divider()
+                if !groupItems.isEmpty {
+                    let subtotal = groupItems.reduce(0) { $0 + $1.amount }
+                    DisclosureGroup {
+                        ForEach(groupItems) { item in
+                            HStack {
+                                Text(item.name).font(.subheadline).foregroundStyle(.secondary)
+                                Spacer()
+                                Text(LoanFormatters.money(item.amount)).font(.subheadline)
+                            }
+                            .padding(.vertical, 3)
+                        }
+                    } label: {
+                        HStack {
+                            Text(label).font(.subheadline).fontWeight(.semibold)
+                            Spacer()
+                            Text(LoanFormatters.money(subtotal)).font(.subheadline).fontWeight(.semibold)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                    Divider()
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -424,6 +447,116 @@ struct PaycheckEditSheet: View {
                         }
                     }
                     .disabled(vm.saving)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Yearly paycheck summary (grouped by type, me / family)
+
+@MainActor
+final class PaycheckYearViewModel: ObservableObject {
+    @Published var summary: PaycheckYearSummary?
+    @Published var isLoading = false
+    @Published var error: String?
+    @Published var year: Int
+    @Published var scope: String = "me"   // "me" | "family"
+
+    init() { year = Calendar.current.component(.year, from: Date()) }
+
+    func load(token: String) async {
+        isLoading = true; error = nil
+        do {
+            summary = try await APIClient.shared.get("/finance/paychecks/summary/?year=\(year)&scope=\(scope)", token: token)
+        } catch { self.error = error.localizedDescription }
+        isLoading = false
+    }
+    func step(_ d: Int) { year += d }
+}
+
+struct PaycheckYearView: View {
+    @EnvironmentObject var auth: AuthManager
+    @StateObject private var vm = PaycheckYearViewModel()
+    private var token: String { auth.accessToken ?? "" }
+
+    var body: some View {
+        List {
+            Section {
+                HStack {
+                    Button { vm.step(-1) } label: { Image(systemName: "chevron.left") }
+                    Spacer()
+                    Text(String(vm.year)).font(.headline)
+                    Spacer()
+                    Button { vm.step(1) } label: { Image(systemName: "chevron.right") }
+                }
+                Picker("Scope", selection: $vm.scope) {
+                    Text("Me").tag("me")
+                    Text("Family").tag("family")
+                }
+                .pickerStyle(.segmented)
+            }
+            if let s = vm.summary {
+                Section("\(s.checkCount) checks") {
+                    catRow("Gross income", s.totals.gross, .green)
+                    catRow("Taxes", s.totals.tax, .orange)
+                    catRow("Deductions", s.totals.deduction, .red)
+                    catRow("Savings", s.totals.savings, .blue)
+                    catRow("Net pay", s.totals.net, .primary, bold: true)
+                }
+                detailSection("Income", s.byType.income)
+                detailSection("Taxes", s.byType.tax)
+                detailSection("Deductions", s.byType.deduction)
+                detailSection("Savings", s.byType.savings)
+                Section("Checks") {
+                    ForEach(s.checks) { ck in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(LoanFormatters.fullDate(ck.date)).font(.subheadline)
+                                Text(vm.scope == "family" ? ck.user : ck.employer)
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(LoanFormatters.money(ck.gross, fractionDigits: 0)).font(.subheadline).fontWeight(.medium)
+                                Text("Net \(LoanFormatters.money(ck.net, fractionDigits: 0))").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            } else if vm.isLoading {
+                Section { HStack { Spacer(); ProgressView(); Spacer() } }
+            }
+        }
+        .navigationTitle("Paycheck Year")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await vm.load(token: token) }
+        .onChange(of: vm.year) { Task { await vm.load(token: token) } }
+        .onChange(of: vm.scope) { Task { await vm.load(token: token) } }
+        .refreshable { await vm.load(token: token) }
+        .alert("Error", isPresented: .init(get: { vm.error != nil }, set: { if !$0 { vm.error = nil } })) {
+            Button("OK") {}
+        } message: { Text(vm.error ?? "") }
+    }
+
+    private func catRow(_ label: String, _ value: Double, _ color: Color, bold: Bool = false) -> some View {
+        HStack {
+            Text(label).fontWeight(bold ? .semibold : .regular)
+            Spacer()
+            Text(LoanFormatters.money(value, fractionDigits: 0))
+                .fontWeight(bold ? .semibold : .medium).foregroundStyle(color)
+        }
+    }
+
+    @ViewBuilder private func detailSection(_ title: String, _ items: [PaycheckLineTotal]) -> some View {
+        if !items.isEmpty {
+            Section(title) {
+                ForEach(items) { it in
+                    HStack {
+                        Text(it.name).font(.subheadline).foregroundStyle(.secondary)
+                        Spacer()
+                        Text(LoanFormatters.money(it.amount, fractionDigits: 0)).font(.subheadline)
+                    }
                 }
             }
         }

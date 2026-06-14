@@ -14,6 +14,77 @@ struct AssetsBreakdown: Codable, Sendable {
     let cash: Double
     let investments: Double
     let retirement: Double
+    let other: Double?
+}
+
+// MARK: - Paycheck year summary (grouped by type)
+
+struct PaycheckTotals: Codable, Sendable {
+    let gross: Double
+    let net: Double
+    let income: Double
+    let deduction: Double
+    let tax: Double
+    let savings: Double
+}
+
+struct PaycheckLineTotal: Codable, Sendable, Identifiable {
+    var id: String { name }
+    let name: String
+    let amount: Double
+}
+
+struct PaycheckByType: Codable, Sendable {
+    let income: [PaycheckLineTotal]
+    let deduction: [PaycheckLineTotal]
+    let tax: [PaycheckLineTotal]
+    let savings: [PaycheckLineTotal]
+}
+
+struct PaycheckRowTypes: Codable, Sendable {
+    let income: Double
+    let deduction: Double
+    let tax: Double
+    let savings: Double
+}
+
+struct PaycheckSummaryRow: Codable, Sendable, Identifiable {
+    let id: Int
+    let date: String
+    let employer: String
+    let user: String
+    let gross: Double
+    let net: Double
+    let byType: PaycheckRowTypes
+}
+
+struct PaycheckYearSummary: Codable, Sendable {
+    let year: Int
+    let scope: String
+    let checkCount: Int
+    let totals: PaycheckTotals
+    let byType: PaycheckByType
+    let checks: [PaycheckSummaryRow]
+}
+
+// MARK: - Other accounts (manual assets / liabilities, synced credit cards)
+
+struct OtherAccount: Codable, Sendable, Identifiable {
+    let id: Int
+    let name: String
+    let kind: String        // asset | liability
+    let category: String    // real_estate | credit_card | vehicle | mortgage | cash | other
+    let value: Double
+    let source: String      // manual | ynab
+    let isActive: Bool
+    let notes: String
+}
+
+struct OtherAccountRequest: Codable, Sendable {
+    let name: String
+    let kind: String
+    let category: String
+    let value: Double
 }
 
 struct MonthlySnapshot: Codable, Sendable {
