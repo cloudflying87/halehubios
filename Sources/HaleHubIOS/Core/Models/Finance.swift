@@ -194,6 +194,17 @@ struct TitheSummary: Codable, Sendable {
     let remaining: Double
     let pctGiven: Double
     let history: [TitheMonthPoint]
+    let years: [TitheYearPoint]?
+}
+
+struct TitheYearPoint: Codable, Sendable, Identifiable {
+    var id: Int { year }
+    let year: Int
+    let gross: Double
+    let target: Double
+    let given: Double
+    let remaining: Double
+    let pctGiven: Double
 }
 
 struct TitheMonthPoint: Codable, Sendable, Identifiable {
@@ -493,4 +504,40 @@ struct MonthlyTrendPoint: Codable, Sendable {
 
 struct FinanceTrends: Codable, Sendable {
     let months: [MonthlyTrendPoint]
+}
+
+// MARK: - Family full-year income prediction
+
+struct RecurringIncome: Codable, Sendable, Identifiable {
+    let id: Int
+    let person: String
+    let label: String
+    let amount: Double
+    let frequency: String        // weekly|biweekly|semimonthly|monthly|annual
+    let periodsPerYear: Int
+    let annual: Double
+    let isActive: Bool
+}
+
+struct RecurringIncomeRequest: Codable, Sendable {
+    let person: String
+    let label: String?
+    let amount: Double
+    let frequency: String
+}
+
+struct FamilyEarner: Codable, Sendable, Identifiable {
+    var id: String { name + "-" + source }
+    let name: String
+    let source: String           // pay_hours | recurring
+    let annual: Double
+    let monthly: [Double]
+}
+
+struct FamilyPrediction: Codable, Sendable {
+    let year: Int
+    let earners: [FamilyEarner]
+    let recurringSources: [RecurringIncome]
+    let monthlyTotals: [Double]
+    let totalAnnual: Double
 }

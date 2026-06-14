@@ -137,36 +137,74 @@ struct FinanceView: View {
     // MARK: - Unlocked Dashboard
 
     private var unlockedContent: some View {
-        ScrollView {
-            if vm.isLoading && vm.summary == nil {
-                ProgressView("Loading…")
-                    .frame(maxWidth: .infinity, minHeight: 200)
-            } else {
-                LazyVStack(spacing: 16) {
-                    if let s = vm.summary {
-                        netWorthCard(s)
-                        thisMonthSection(s.currentMonth)
+        VStack(spacing: 0) {
+            quickJumpBar
+            ScrollView {
+                if vm.isLoading && vm.summary == nil {
+                    ProgressView("Loading…")
+                        .frame(maxWidth: .infinity, minHeight: 200)
+                } else {
+                    LazyVStack(spacing: 16) {
+                        if let s = vm.summary {
+                            netWorthCard(s)
+                            thisMonthSection(s.currentMonth)
+                        }
+                        if !vm.loans.isEmpty {
+                            loansSection
+                        }
+                        if !vm.brokerageAccounts.isEmpty {
+                            investmentsSection
+                        }
+                        if !vm.paychecks.isEmpty {
+                            recentPaychecksSection
+                        }
+                        if let t = vm.trends, !t.months.isEmpty {
+                            trendsSection(t)
+                        }
                     }
-                    titheNavCard
-                    budgetNavCard
-                    payHoursNavCard
-                    if !vm.loans.isEmpty {
-                        loansSection
-                    }
-                    if !vm.brokerageAccounts.isEmpty {
-                        investmentsSection
-                    }
-                    if !vm.paychecks.isEmpty {
-                        recentPaychecksSection
-                    }
-                    if let t = vm.trends, !t.months.isEmpty {
-                        trendsSection(t)
-                    }
+                    .padding(16)
                 }
-                .padding(16)
             }
+            .refreshable { await vm.load(token: auth.accessToken ?? "") }
         }
-        .refreshable { await vm.load(token: auth.accessToken ?? "") }
+    }
+
+    // MARK: - Quick-jump bar
+
+    /// Pinned horizontal chip bar — one tap to every finance sub-section, so the
+    /// dashboard below stays a quick glance instead of a long scroll of links.
+    private var quickJumpBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                jumpChip("Budget", "chart.pie.fill", AnyView(BudgetView()))
+                jumpChip("Pay Hours", "clock.badge.checkmark.fill", AnyView(PayHoursView()))
+                jumpChip("Family Year", "person.2.fill", AnyView(FamilyIncomeView()))
+                jumpChip("Paychecks", "doc.text.fill", AnyView(PaychecksView()))
+                jumpChip("Loans", "creditcard.fill", AnyView(FinanceLoansView()))
+                jumpChip("Tithe", "hands.sparkles.fill", AnyView(TitheView()))
+                jumpChip("Assets & Debts", "house.fill", AnyView(OtherAccountsView()))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+        }
+        .background(.bar)
+        .overlay(alignment: .bottom) {
+            Divider()
+        }
+    }
+
+    private func jumpChip(_ title: String, _ icon: String, _ destination: AnyView) -> some View {
+        NavigationLink(destination: destination) {
+            HStack(spacing: 5) {
+                Image(systemName: icon).font(.caption)
+                Text(title).font(.subheadline).fontWeight(.medium)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Net Worth Card

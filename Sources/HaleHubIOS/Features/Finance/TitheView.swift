@@ -85,6 +85,9 @@ struct TitheView: View {
                         setupPrompt
                     }
                     summaryCard(s)
+                    if let years = s.years, !years.isEmpty {
+                        yearBreakdown(years)
+                    }
                     if !s.history.isEmpty {
                         historyChart(s.history)
                         historyList(s.history)
@@ -188,6 +191,53 @@ struct TitheView: View {
             Text(label).font(.caption).foregroundStyle(.secondary).frame(width: 78, alignment: .leading)
             Text(value).font(.subheadline).fontWeight(.semibold).foregroundStyle(color)
         }
+    }
+
+    private func yearBreakdown(_ years: [TitheYearPoint]) -> some View {
+        let totalGiven = years.reduce(0) { $0 + $1.given }
+        let totalTarget = years.reduce(0) { $0 + $1.target }
+        let totalRemaining = totalTarget - totalGiven
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("By Year").font(.headline)
+            ForEach(years) { y in
+                HStack(alignment: .firstTextBaseline) {
+                    Text(String(y.year)).font(.subheadline).fontWeight(.medium)
+                        .frame(width: 56, alignment: .leading)
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(LoanFormatters.money(y.given, fractionDigits: 0)) / \(LoanFormatters.money(y.target, fractionDigits: 0))")
+                            .font(.subheadline)
+                        if y.target > 0 {
+                            Text(y.remaining <= 0 ? "Met (\(Int(y.pctGiven.rounded()))%)" : "\(LoanFormatters.money(y.remaining, fractionDigits: 0)) to go")
+                                .font(.caption2)
+                                .foregroundStyle(y.remaining <= 0 ? .green : .orange)
+                        } else {
+                            Text("no paychecks yet").font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(.vertical, 3)
+                Divider()
+            }
+            HStack(alignment: .firstTextBaseline) {
+                Text("Total").font(.subheadline).fontWeight(.bold).frame(width: 56, alignment: .leading)
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(LoanFormatters.money(totalGiven, fractionDigits: 0)) / \(LoanFormatters.money(totalTarget, fractionDigits: 0))")
+                        .font(.subheadline).fontWeight(.bold)
+                    if totalTarget > 0 {
+                        Text(totalRemaining <= 0 ? "Surplus \(LoanFormatters.money(-totalRemaining, fractionDigits: 0))" : "\(LoanFormatters.money(totalRemaining, fractionDigits: 0)) to go")
+                            .font(.caption2)
+                            .foregroundStyle(totalRemaining <= 0 ? .green : .orange)
+                    }
+                }
+            }
+            .padding(.top, 2)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     private func historyChart(_ history: [TitheMonthPoint]) -> some View {
