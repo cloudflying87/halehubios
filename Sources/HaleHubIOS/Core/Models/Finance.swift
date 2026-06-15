@@ -634,3 +634,29 @@ struct MonteCarloRequest: Codable, Sendable {
     let volatility: Double
     let numSimulations: Int
 }
+
+// MARK: - Investments (non-retirement holdings)
+
+struct InvestmentHolding: Codable, Sendable, Identifiable {
+    let id: Int
+    let name: String
+    let investmentType: String
+    let symbol: String
+    let currentValue: Double
+    let initialInvestment: Double
+    let sharesQuantity: Double
+    let purchasePrice: Double
+    let currentPrice: Double
+    let purchaseDate: String?
+    let gainLoss: Double
+    let gainLossPct: Double
+    let isActive: Bool
+}
+
+struct InvestmentRequest: Codable, Sendable {
+    let name: String
+    let investmentType: String
+    let symbol: String?
+    let currentValue: Double
+    let purchaseDate: String?
+}

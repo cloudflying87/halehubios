@@ -222,7 +222,10 @@ struct FinanceView: View {
             HStack {
                 assetPillar(label: "Cash", value: s.assetsBreakdown.cash)
                 Spacer()
-                assetPillar(label: "Investments", value: s.assetsBreakdown.investments)
+                NavigationLink(destination: InvestmentsView()) {
+                    assetPillar(label: "Investments", value: s.assetsBreakdown.investments)
+                }
+                .buttonStyle(.plain)
                 Spacer()
                 NavigationLink(destination: RetirementDetailView()) {
                     assetPillar(label: "Retirement", value: s.assetsBreakdown.retirement)
