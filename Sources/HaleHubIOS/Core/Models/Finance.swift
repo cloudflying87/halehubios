@@ -562,3 +562,29 @@ struct FamilyPrediction: Codable, Sendable {
     let monthlyTotals: [Double]
     let totalAnnual: Double
 }
+
+// MARK: - Retirement (Fidelity accounts, detailed)
+
+struct RetirementHistoryPoint: Codable, Sendable, Identifiable {
+    var id: String { date }
+    let date: String       // "YYYY-MM-DD"
+    let balance: Double
+}
+
+struct RetirementAccount: Codable, Sendable, Identifiable {
+    var id: String { name }
+    let name: String
+    let latestBalance: Double
+    let latestDate: String
+    let contributions: Double
+    let earnings: Double
+    let fees: Double
+    let valueChange: Double
+    let reportCount: Int
+    let history: [RetirementHistoryPoint]
+}
+
+struct RetirementSummary: Codable, Sendable {
+    let total: Double
+    let accounts: [RetirementAccount]
+}

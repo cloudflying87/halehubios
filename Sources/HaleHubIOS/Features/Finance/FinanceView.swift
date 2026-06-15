@@ -223,7 +223,10 @@ struct FinanceView: View {
                 Spacer()
                 assetPillar(label: "Investments", value: s.assetsBreakdown.investments)
                 Spacer()
-                assetPillar(label: "Retirement", value: s.assetsBreakdown.retirement)
+                NavigationLink(destination: RetirementDetailView()) {
+                    assetPillar(label: "Retirement", value: s.assetsBreakdown.retirement)
+                }
+                .buttonStyle(.plain)
                 if let other = s.assetsBreakdown.other, other > 0 {
                     Spacer()
                     assetPillar(label: "Other", value: other)
