@@ -588,3 +588,49 @@ struct RetirementSummary: Codable, Sendable {
     let total: Double
     let accounts: [RetirementAccount]
 }
+
+// MARK: - Monte Carlo simulation
+
+struct MonteCarloPercentiles: Codable, Sendable {
+    let p5: Double
+    let p10: Double
+    let p25: Double
+    let p50: Double
+    let p75: Double
+    let p90: Double
+    let p95: Double
+}
+
+struct MonteCarloResults: Codable, Sendable {
+    let finalValues: MonteCarloPercentiles
+    let growthOnly: MonteCarloPercentiles
+    let mean: Double
+    let stdDev: Double
+    let min: Double
+    let max: Double
+    let probabilityOfGain: Double
+    let meanGrowth: Double
+}
+
+struct MonteCarloSimulation: Codable, Sendable, Identifiable {
+    let id: Int
+    let name: String
+    let initialInvestment: Double
+    let monthlyContribution: Double
+    let years: Int
+    let expectedAnnualReturn: Double
+    let volatility: Double
+    let numSimulations: Int
+    let createdAt: String?
+    let results: MonteCarloResults?
+}
+
+struct MonteCarloRequest: Codable, Sendable {
+    let name: String
+    let initialInvestment: Double
+    let monthlyContribution: Double
+    let years: Int
+    let expectedAnnualReturn: Double
+    let volatility: Double
+    let numSimulations: Int
+}
