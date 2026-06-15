@@ -176,6 +176,8 @@ actor APIClient {
         }
         if let employerId { textField("employer_id", "\(employerId)") }
         if let employerName, !employerName.isEmpty { textField("employer_name", employerName) }
+        // Hold parsed line items for the in-app review step (don't auto-commit).
+        textField("commit_line_items", "false")
         body.append("--\(boundary)\(crlf)".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"pdf\"; filename=\"\(filename)\"\(crlf)".data(using: .utf8)!)
         body.append("Content-Type: application/pdf\(crlf)\(crlf)".data(using: .utf8)!)

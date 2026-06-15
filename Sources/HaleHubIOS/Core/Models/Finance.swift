@@ -406,9 +406,30 @@ struct PaycheckDetail: Identifiable, Codable, Sendable {
     let lineItems: [PaycheckLineItemValue]?
 }
 
+/// Editable line item used by the in-app review step. `id` is local-only (not
+/// sent to / received from the server); the wire shape is name/amount/ytdAmount/type.
+struct ReviewLineItem: Identifiable, Codable, Sendable {
+    var id = UUID()
+    var name: String
+    var amount: Double
+    var ytdAmount: Double
+    var type: String   // INCOME | DEDUCTION | TAX | SAVINGS
+
+    enum CodingKeys: String, CodingKey { case name, amount, ytdAmount, type }
+
+    init(id: UUID = UUID(), name: String, amount: Double, ytdAmount: Double, type: String) {
+        self.id = id; self.name = name; self.amount = amount; self.ytdAmount = ytdAmount; self.type = type
+    }
+}
+
 struct PaycheckUploadResponse: Codable, Sendable {
     let paycheck: PaycheckDetail
     let parsedOk: Bool
+    let parsedLineItems: [ReviewLineItem]?
+}
+
+struct CommitLineItemsRequest: Codable, Sendable {
+    let lineItems: [ReviewLineItem]
 }
 
 struct PaycheckEditRequest: Codable, Sendable {

@@ -26,13 +26,29 @@ final class PaychecksViewModel: ObservableObject {
         isLoading = false
     }
 
-    func upload(pdfData: Data, filename: String, employerId: Int?, employerName: String?, token: String) async -> Bool {
+    /// Uploads the PDF; the backend parses it but holds the line items for review.
+    /// Returns the response (paycheck + parsed line items) so the caller can show
+    /// the review screen, or nil on failure.
+    func upload(pdfData: Data, filename: String, employerId: Int?, employerName: String?, token: String) async -> PaycheckUploadResponse? {
         uploading = true
         defer { uploading = false }
         do {
-            _ = try await APIClient.shared.uploadPaycheck(
+            return try await APIClient.shared.uploadPaycheck(
                 pdfData: pdfData, filename: filename,
                 employerId: employerId, employerName: employerName, token: token
+            )
+        } catch {
+            self.error = error.localizedDescription
+            return nil
+        }
+    }
+
+    /// Commits the user-reviewed line items for a paycheck.
+    func commitLineItems(paycheckId: Int, items: [ReviewLineItem], token: String) async -> Bool {
+        do {
+            let req = CommitLineItemsRequest(lineItems: items)
+            let _: PaycheckDetail = try await APIClient.shared.post(
+                "/finance/paychecks/\(paycheckId)/line-items/", body: req, token: token
             )
             await load(token: token)
             return true
@@ -123,6 +139,7 @@ struct AddPaycheckSheet: View {
     @State private var useNewEmployer = false
     @State private var showImporter = false
     @State private var localError: String?
+    @State private var review: PaycheckReviewContext?
 
     private var token: String { auth.accessToken ?? "" }
 
@@ -174,6 +191,9 @@ struct AddPaycheckSheet: View {
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.pdf]) { result in
                 handlePick(result)
             }
+            .navigationDestination(item: $review) { ctx in
+                PaycheckReviewView(ctx: ctx, vm: vm) { dismiss() }
+            }
             .task { if vm.employers.isEmpty { await vm.load(token: token) } }
         }
     }
@@ -192,12 +212,131 @@ struct AddPaycheckSheet: View {
             let employerId = useNewEmployer ? nil : selectedEmployerId
             let employerName = useNewEmployer ? newEmployerName.trimmingCharacters(in: .whitespaces) : nil
             Task {
-                let ok = await vm.upload(
+                if let resp = await vm.upload(
                     pdfData: data, filename: url.lastPathComponent,
                     employerId: employerId, employerName: employerName, token: token
-                )
-                if ok { dismiss() }
+                ) {
+                    review = PaycheckReviewContext(
+                        paycheckId: resp.paycheck.id,
+                        employerName: resp.paycheck.employerName,
+                        payDate: resp.paycheck.payDate,
+                        items: resp.parsedLineItems ?? []
+                    )
+                }
             }
+        }
+    }
+}
+
+// MARK: - Review step (confirm parsed line items before saving)
+
+struct PaycheckReviewContext: Identifiable {
+    let id = UUID()
+    let paycheckId: Int
+    let employerName: String
+    let payDate: String
+    let items: [ReviewLineItem]
+}
+
+struct PaycheckReviewView: View {
+    let ctx: PaycheckReviewContext
+    @ObservedObject var vm: PaychecksViewModel
+    let onDone: () -> Void
+    @EnvironmentObject var auth: AuthManager
+
+    @State private var items: [ReviewLineItem]
+    @State private var saving = false
+
+    private let types = ["INCOME", "DEDUCTION", "TAX", "SAVINGS"]
+    private var token: String { auth.accessToken ?? "" }
+
+    init(ctx: PaycheckReviewContext, vm: PaychecksViewModel, onDone: @escaping () -> Void) {
+        self.ctx = ctx
+        self.vm = vm
+        self.onDone = onDone
+        _items = State(initialValue: ctx.items)
+    }
+
+    var body: some View {
+        List {
+            Section {
+                Text("\(ctx.employerName) · \(LoanFormatters.fullDate(ctx.payDate))")
+                    .font(.subheadline).fontWeight(.medium)
+                Text("Review the line items read from the PDF. Edit, add, or remove anything, then Save.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            ForEach($items) { $item in
+                VStack(alignment: .leading, spacing: 8) {
+                    TextField("Name", text: $item.name)
+                        .font(.subheadline).fontWeight(.medium)
+                    HStack {
+                        Picker("", selection: $item.type) {
+                            ForEach(types, id: \.self) { Text(label($0)).tag($0) }
+                        }
+                        .pickerStyle(.menu).labelsHidden()
+                        Spacer()
+                        TextField("Amount", value: $item.amount, format: .currency(code: "USD"))
+                            .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 130)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .onDelete { items.remove(atOffsets: $0) }
+
+            Button {
+                items.append(ReviewLineItem(name: "", amount: 0, ytdAmount: 0, type: "DEDUCTION"))
+            } label: {
+                Label("Add line item", systemImage: "plus.circle.fill")
+            }
+
+            Section {
+                summaryRow("Income", incomeTotal, .green)
+                summaryRow("Withheld (tax/deduction/savings)", withheldTotal, .secondary)
+            } footer: {
+                Text("Empty-name rows are ignored when saving.")
+            }
+        }
+        .navigationTitle("Review Line Items")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button(saving ? "Saving…" : "Save") {
+                    Task {
+                        saving = true
+                        let ok = await vm.commitLineItems(paycheckId: ctx.paycheckId, items: items, token: token)
+                        saving = false
+                        if ok { onDone() }
+                    }
+                }
+                .disabled(saving)
+            }
+        }
+    }
+
+    private var incomeTotal: Double {
+        items.filter { $0.type == "INCOME" }.reduce(0) { $0 + $1.amount }
+    }
+    private var withheldTotal: Double {
+        items.filter { $0.type != "INCOME" }.reduce(0) { $0 + $1.amount }
+    }
+
+    private func summaryRow(_ label: String, _ value: Double, _ color: Color) -> some View {
+        HStack {
+            Text(label).font(.caption).foregroundStyle(.secondary)
+            Spacer()
+            Text(LoanFormatters.money(value, fractionDigits: 0)).font(.caption.bold()).foregroundStyle(color)
+        }
+    }
+
+    private func label(_ t: String) -> String {
+        switch t {
+        case "INCOME": return "Income"
+        case "DEDUCTION": return "Deduction"
+        case "TAX": return "Tax"
+        case "SAVINGS": return "Savings"
+        default: return t
         }
     }
 }
