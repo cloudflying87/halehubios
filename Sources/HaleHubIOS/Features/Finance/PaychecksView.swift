@@ -230,7 +230,7 @@ struct AddPaycheckSheet: View {
 
 // MARK: - Review step (confirm parsed line items before saving)
 
-struct PaycheckReviewContext: Identifiable {
+struct PaycheckReviewContext: Identifiable, Hashable {
     let id = UUID()
     let paycheckId: Int
     let employerName: String

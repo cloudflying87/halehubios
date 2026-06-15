@@ -408,7 +408,7 @@ struct PaycheckDetail: Identifiable, Codable, Sendable {
 
 /// Editable line item used by the in-app review step. `id` is local-only (not
 /// sent to / received from the server); the wire shape is name/amount/ytdAmount/type.
-struct ReviewLineItem: Identifiable, Codable, Sendable {
+struct ReviewLineItem: Identifiable, Codable, Sendable, Hashable {
     var id = UUID()
     var name: String
     var amount: Double
