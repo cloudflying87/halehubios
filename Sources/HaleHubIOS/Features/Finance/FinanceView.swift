@@ -183,6 +183,7 @@ struct FinanceView: View {
                 jumpChip("Loans", "creditcard.fill", AnyView(FinanceLoansView()))
                 jumpChip("Tithe", "hands.sparkles.fill", AnyView(TitheView()))
                 jumpChip("Assets & Debts", "house.fill", AnyView(OtherAccountsView()))
+                jumpChip("Insurance", "shield.lefthalf.filled", AnyView(LifeInsuranceView()))
                 jumpChip("Monte Carlo", "dice.fill", AnyView(MonteCarloView()))
             }
             .padding(.horizontal, 16)

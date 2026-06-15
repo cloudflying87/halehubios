@@ -660,3 +660,36 @@ struct InvestmentRequest: Codable, Sendable {
     let currentValue: Double
     let purchaseDate: String?
 }
+
+// MARK: - Life insurance policies (sensitive, finance-gated)
+
+struct LifeInsurancePolicy: Codable, Sendable, Identifiable {
+    let id: Int
+    let insurer: String
+    let insuredPerson: String
+    let policyType: String
+    let policyNumber: String
+    let coverageAmount: Double
+    let premium: Double
+    let premiumFrequency: String
+    let annualPremium: Double
+    let cashValue: Double
+    let beneficiary: String
+    let startDate: String?
+    let endDate: String?
+    let isActive: Bool
+    let notes: String
+}
+
+struct LifeInsuranceRequest: Codable, Sendable {
+    let insurer: String
+    let insuredPerson: String
+    let policyType: String
+    let policyNumber: String?
+    let coverageAmount: Double
+    let premium: Double
+    let premiumFrequency: String
+    let cashValue: Double?
+    let beneficiary: String?
+    let notes: String?
+}
