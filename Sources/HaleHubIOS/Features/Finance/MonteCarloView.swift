@@ -15,6 +15,13 @@ final class MonteCarloViewModel: ObservableObject {
     @Published var volatility: Double = 15
     @Published var numSimulations: Int = 1000
 
+    func applySeed(_ seed: MonteCarloSeed) {
+        initialInvestment = seed.initialInvestment
+        monthlyContribution = seed.monthlyContribution
+        expectedReturn = seed.expectedAnnualReturn
+        volatility = seed.volatility
+    }
+
     func run(token: String) async {
         running = true
         error = nil
@@ -41,9 +48,13 @@ struct MonteCarloView: View {
     @StateObject private var vm = MonteCarloViewModel()
     private var token: String { auth.accessToken ?? "" }
 
+    /// Optional pre-fill from the user's own retirement history.
+    var seed: MonteCarloSeed? = nil
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
+                if seed != nil { seededBanner }
                 inputsCard
                 if vm.running {
                     ProgressView("Running \(vm.numSimulations) simulations…")
@@ -58,15 +69,30 @@ struct MonteCarloView: View {
         }
         .navigationTitle("Monte Carlo")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { if let seed { vm.applySeed(seed) } }
         .alert("Error", isPresented: .init(get: { vm.error != nil }, set: { if !$0 { vm.error = nil } })) {
             Button("OK") {}
         } message: { Text(vm.error ?? "") }
     }
 
+    private var seededBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "wand.and.stars")
+            Text("Pre-filled from your retirement history — adjust anything below.")
+                .font(.caption)
+            Spacer()
+        }
+        .foregroundStyle(.blue)
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.blue.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
     private var inputsCard: some View {
         VStack(spacing: 14) {
-            sliderRow("Initial investment", value: $vm.initialInvestment, range: 0...500000, step: 1000, money: true)
-            sliderRow("Monthly contribution", value: $vm.monthlyContribution, range: 0...10000, step: 50, money: true)
+            sliderRow("Initial investment", value: $vm.initialInvestment, range: 0...3_000_000, step: 1000, money: true)
+            sliderRow("Monthly contribution", value: $vm.monthlyContribution, range: 0...20000, step: 50, money: true)
             stepperRow("Years", value: $vm.years, range: 1...50, suffix: "yr")
             sliderRow("Expected return", value: $vm.expectedReturn, range: 1...15, step: 0.5, percent: true)
             sliderRow("Volatility", value: $vm.volatility, range: 1...40, step: 1, percent: true)

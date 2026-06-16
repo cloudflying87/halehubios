@@ -587,6 +587,45 @@ struct RetirementAccount: Codable, Sendable, Identifiable {
 struct RetirementSummary: Codable, Sendable {
     let total: Double
     let accounts: [RetirementAccount]
+    let analysis: RetirementAnalysis?
+}
+
+// Year-over-year performance + overall metrics + a Monte Carlo seed,
+// computed server-side from the combined Fidelity report history.
+struct RetirementAnalysis: Codable, Sendable {
+    let metrics: RetirementMetrics
+    let yearly: [RetirementYear]
+    let monteCarloSeed: MonteCarloSeed
+}
+
+struct RetirementMetrics: Codable, Sendable {
+    let totalContributions: Double
+    let totalEarnings: Double
+    let totalFees: Double
+    let netGain: Double
+    let roiPct: Double
+    let annualizedReturnPct: Double
+    let yearsTracked: Double
+    let currentBalance: Double
+    let startBalance: Double
+}
+
+struct RetirementYear: Codable, Sendable, Identifiable {
+    var id: Int { year }
+    let year: Int
+    let endBalance: Double
+    let contributions: Double
+    let earnings: Double
+    let fees: Double
+    let returnPct: Double
+    let isPartial: Bool
+}
+
+struct MonteCarloSeed: Codable, Sendable {
+    let initialInvestment: Double
+    let monthlyContribution: Double
+    let expectedAnnualReturn: Double
+    let volatility: Double
 }
 
 // MARK: - Monte Carlo simulation
