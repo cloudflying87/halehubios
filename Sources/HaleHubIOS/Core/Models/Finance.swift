@@ -693,3 +693,35 @@ struct LifeInsuranceRequest: Codable, Sendable {
     let beneficiary: String?
     let notes: String?
 }
+
+// MARK: - HSA accounts
+
+struct HSAAccount: Codable, Sendable, Identifiable {
+    let id: Int
+    let provider: String
+    let accountHolder: String
+    let accountNumber: String
+    let coverageType: String
+    let currentBalance: Double
+    let investedBalance: Double
+    let ytdContribution: Double
+    let ytdEmployerContribution: Double
+    let contributionLimit: Double
+    let totalContributed: Double
+    let remainingRoom: Double
+    let isActive: Bool
+    let notes: String
+}
+
+struct HSARequest: Codable, Sendable {
+    let provider: String
+    let accountHolder: String
+    let accountNumber: String?
+    let coverageType: String
+    let currentBalance: Double
+    let investedBalance: Double
+    let ytdContribution: Double
+    let ytdEmployerContribution: Double
+    let contributionLimit: Double
+    let notes: String?
+}
