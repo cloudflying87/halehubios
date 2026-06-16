@@ -109,8 +109,23 @@ struct LifeInsuranceView: View {
             }
             Text("\(typeLabel(p.policyType)) · insures \(p.insuredPerson)\(p.beneficiary.isEmpty ? "" : " · to \(p.beneficiary)")")
                 .font(.caption2).foregroundStyle(.secondary)
+            if let end = endLabel(p) {
+                HStack(spacing: 4) {
+                    Image(systemName: p.isExpired ? "exclamationmark.triangle.fill" : "calendar")
+                        .font(.caption2)
+                    Text(p.isExpired ? "Expired \(end)" : "Ends \(end)")
+                        .font(.caption2).fontWeight(.medium)
+                }
+                .foregroundStyle(p.isExpired ? .red : .blue)
+            }
         }
         .padding(.vertical, 4)
+    }
+
+    /// Formatted calculated end date ("Jun 2042"), or nil for permanent coverage.
+    private func endLabel(_ p: LifeInsurancePolicy) -> String? {
+        guard let raw = p.effectiveEndDate, let d = LifeInsuranceFormSheet.parseYMD(raw) else { return nil }
+        return d.formatted(.dateTime.month(.abbreviated).year())
     }
 
     private func typeLabel(_ t: String) -> String { lifePolicyTypes.first { $0.0 == t }?.1 ?? t }
@@ -133,7 +148,16 @@ struct LifeInsuranceFormSheet: View {
     @State private var cashValue: Double = 0
     @State private var beneficiary = ""
     @State private var notes = ""
+    @State private var hasStartDate = false
+    @State private var startDate = Date()
+    @State private var termYears: Int = 0
     @State private var saving = false
+
+    /// Live-calculated coverage end from start date + term length.
+    private var computedEnd: Date? {
+        guard hasStartDate, termYears > 0 else { return nil }
+        return Calendar.current.date(byAdding: .year, value: termYears, to: startDate)
+    }
 
     var body: some View {
         NavigationStack {
@@ -149,6 +173,37 @@ struct LifeInsuranceFormSheet: View {
                     money("Premium", $premium)
                     Picker("Frequency", selection: $frequency) { ForEach(lifePremiumFrequencies, id: \.0) { Text($0.1).tag($0.0) } }
                     money("Cash value (optional)", $cashValue)
+                }
+                Section {
+                    Toggle("Has a start date", isOn: $hasStartDate.animation())
+                    if hasStartDate {
+                        DatePicker("Started", selection: $startDate, displayedComponents: .date)
+                        Stepper(value: $termYears, in: 0...100) {
+                            HStack {
+                                Text("Term length")
+                                Spacer()
+                                Text(termYears == 0 ? "—" : "\(termYears) yr").foregroundStyle(.secondary)
+                            }
+                        }
+                        if let end = computedEnd {
+                            HStack {
+                                Text("Policy ends").fontWeight(.semibold)
+                                Spacer()
+                                Text(end.formatted(date: .abbreviated, time: .omitted))
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(end < Date() ? .red : .blue)
+                            }
+                        } else if termYears == 0 {
+                            Text("Add a term length to calculate the end date.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Coverage period")
+                } footer: {
+                    if hasStartDate && termYears > 0 {
+                        Text("End date is calculated from the start date plus the term length.")
+                    }
                 }
                 Section("Other") {
                     TextField("Beneficiary (optional)", text: $beneficiary)
@@ -175,6 +230,10 @@ struct LifeInsuranceFormSheet: View {
                                 policyNumber: policyNumber.isEmpty ? nil : policyNumber,
                                 coverageAmount: coverage, premium: premium, premiumFrequency: frequency,
                                 cashValue: cashValue, beneficiary: beneficiary.isEmpty ? nil : beneficiary,
+                                startDate: hasStartDate ? Self.ymd(startDate) : nil,
+                                termYears: (hasStartDate && termYears > 0) ? termYears : nil,
+                                // Let the backend calculate the end from start + term.
+                                endDate: nil,
                                 notes: notes.isEmpty ? nil : notes
                             ))
                             saving = false
@@ -189,6 +248,11 @@ struct LifeInsuranceFormSheet: View {
                     insurer = e.insurer; insured = e.insuredPerson; type = e.policyType
                     policyNumber = e.policyNumber; coverage = e.coverageAmount; premium = e.premium
                     frequency = e.premiumFrequency; cashValue = e.cashValue; beneficiary = e.beneficiary; notes = e.notes
+                    if let s = e.startDate, let d = Self.parseYMD(s) {
+                        hasStartDate = true
+                        startDate = d
+                    }
+                    termYears = e.termYears ?? 0
                 }
             }
         }
@@ -201,5 +265,21 @@ struct LifeInsuranceFormSheet: View {
             Text("$").foregroundStyle(.secondary)
             TextField("0", value: value, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing)
         }
+    }
+
+    /// Date → "yyyy-MM-dd" (the API's date format).
+    static func ymd(_ d: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: d)
+    }
+
+    /// "yyyy-MM-dd" → Date.
+    static func parseYMD(_ s: String) -> Date? {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return f.date(from: String(s.prefix(10)))
     }
 }

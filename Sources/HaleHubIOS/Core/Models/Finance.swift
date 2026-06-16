@@ -715,7 +715,11 @@ struct LifeInsurancePolicy: Codable, Sendable, Identifiable {
     let cashValue: Double
     let beneficiary: String
     let startDate: String?
+    let termYears: Int?
     let endDate: String?
+    /// Calculated coverage end (manual endDate, or startDate + termYears). nil = permanent.
+    let effectiveEndDate: String?
+    let isExpired: Bool
     let isActive: Bool
     let notes: String
 }
@@ -730,6 +734,9 @@ struct LifeInsuranceRequest: Codable, Sendable {
     let premiumFrequency: String
     let cashValue: Double?
     let beneficiary: String?
+    let startDate: String?
+    let termYears: Int?
+    let endDate: String?
     let notes: String?
 }
 
