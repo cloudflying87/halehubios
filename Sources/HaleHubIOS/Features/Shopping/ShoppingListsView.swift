@@ -7,14 +7,53 @@ struct ShoppingListsView: View {
     @State private var showCreateSheet = false
     @State private var navigateToNewList: ShoppingList? = nil
 
+    @Environment(\.horizontalSizeClass) private var hSize
+    @State private var selectedListID: ShoppingList.ID?
+
     var body: some View {
+        // iPad (regular) → list sidebar + detail pane. iPhone (compact) → the
+        // existing push stack, unchanged.
+        Group {
+            if hSize == .regular {
+                splitBody
+            } else {
+                stackBody
+            }
+        }
+        // Action errors (delete/create) when lists are loaded — present as an
+        // alert instead of hijacking the screen.
+        .alert(
+            "Couldn't complete that action",
+            isPresented: Binding(
+                get: { vm.error != nil && !vm.lists.isEmpty },
+                set: { if !$0 { vm.error = nil } }
+            ),
+            presenting: vm.error
+        ) { _ in
+            Button("OK") { vm.error = nil }
+        } message: { msg in
+            Text(msg)
+        }
+        .sheet(isPresented: $showCreateSheet) {
+            CreateShoppingListSheet(vm: vm) { newList in
+                if hSize == .regular {
+                    selectedListID = newList.id
+                } else {
+                    navigateToNewList = newList
+                }
+            }
+            .environmentObject(auth)
+        }
+        .task { await vm.load(token: auth.accessToken ?? "", isConnected: network.isConnected) }
+    }
+
+    // MARK: iPhone — push stack
+
+    private var stackBody: some View {
         Group {
             if vm.isLoading && vm.lists.isEmpty {
                 ProgressView("Loading lists…").frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if vm.lists.isEmpty, let error = vm.error {
-                // Only show the full-screen error when there are NO lists to display.
-                // Errors from individual actions (delete/create) surface as an alert
-                // below so they don't mask the working list view.
                 ContentUnavailableView(
                     "Couldn't Load Lists",
                     systemImage: "exclamationmark.triangle",
@@ -35,52 +74,83 @@ struct ShoppingListsView: View {
                         NavigationLink(destination: ShoppingListDetailView(list: list)) {
                             ShoppingListRow(list: list)
                         }
-                        .swipeActions(edge: .trailing) {
-                            if network.isConnected {
-                                Button(role: .destructive) {
-                                    Task { await vm.deleteList(id: list.id, token: auth.accessToken ?? "") }
-                                } label: { Label("Delete", systemImage: "trash") }
-                            }
-                        }
+                        .swipeActions(edge: .trailing) { deleteAction(list) }
                     }
                     .refreshable { await vm.load(token: auth.accessToken ?? "", isConnected: network.isConnected) }
                 }
             }
         }
-        // Action errors (delete/create) when lists are loaded — present as an
-        // alert instead of hijacking the screen.
-        .alert(
-            "Couldn't complete that action",
-            isPresented: Binding(
-                get: { vm.error != nil && !vm.lists.isEmpty },
-                set: { if !$0 { vm.error = nil } }
-            ),
-            presenting: vm.error
-        ) { _ in
-            Button("OK") { vm.error = nil }
-        } message: { msg in
-            Text(msg)
-        }
         .navigationTitle("Shopping")
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showCreateSheet = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
-        }
-        .sheet(isPresented: $showCreateSheet) {
-            CreateShoppingListSheet(vm: vm) { newList in
-                navigateToNewList = newList
-            }
-            .environmentObject(auth)
-        }
+        .toolbar { ToolbarItem(placement: .primaryAction) { addButton } }
         .navigationDestination(item: $navigateToNewList) { list in
             ShoppingListDetailView(list: list)
         }
-        .task { await vm.load(token: auth.accessToken ?? "", isConnected: network.isConnected) }
+    }
+
+    // MARK: iPad — split view
+
+    private var splitBody: some View {
+        NavigationSplitView {
+            Group {
+                if !network.isConnected {
+                    VStack(spacing: 0) {
+                        OfflineBanner(cacheDate: vm.cacheDate)
+                        sidebarList
+                    }
+                } else {
+                    sidebarList
+                }
+            }
+            .navigationTitle("Shopping")
+            .toolbar { ToolbarItem(placement: .primaryAction) { addButton } }
+        } detail: {
+            NavigationStack {
+                if let id = selectedListID, let list = vm.lists.first(where: { $0.id == id }) {
+                    ShoppingListDetailView(list: list)
+                } else {
+                    ContentUnavailableView(
+                        "Select a List",
+                        systemImage: "cart",
+                        description: Text("Pick a shopping list to view its items.")
+                    )
+                }
+            }
+        }
+    }
+
+    private var sidebarList: some View {
+        List(selection: $selectedListID) {
+            ForEach(vm.lists) { list in
+                ShoppingListRow(list: list)
+                    .tag(list.id)
+                    .swipeActions(edge: .trailing) { deleteAction(list) }
+            }
+        }
+        .overlay {
+            if vm.lists.isEmpty && !vm.isLoading {
+                ContentUnavailableView(
+                    "No Shopping Lists",
+                    systemImage: "cart",
+                    description: Text("Tap + to create a shopping list.")
+                )
+            }
+        }
+        .refreshable { await vm.load(token: auth.accessToken ?? "", isConnected: network.isConnected) }
+    }
+
+    // MARK: Shared bits
+
+    @ViewBuilder
+    private func deleteAction(_ list: ShoppingList) -> some View {
+        if network.isConnected {
+            Button(role: .destructive) {
+                Task { await vm.deleteList(id: list.id, token: auth.accessToken ?? "") }
+            } label: { Label("Delete", systemImage: "trash") }
+        }
+    }
+
+    private var addButton: some View {
+        Button { showCreateSheet = true } label: { Image(systemName: "plus") }
     }
 }
 
