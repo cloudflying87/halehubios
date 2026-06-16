@@ -80,6 +80,27 @@ struct VehicleDetailView: View {
                         }
                     }
 
+                    // License plate + registration status
+                    if vehicle.plateLabel != nil || vehicle.registrationBadge != nil {
+                        VStack(alignment: .leading, spacing: 6) {
+                            if let plate = vehicle.plateLabel {
+                                Label(plate, systemImage: "char.textbox")
+                                    .font(.subheadline.weight(.medium))
+                            }
+                            if let badge = vehicle.registrationBadge {
+                                let c: Color = badge.color == "red" ? .red
+                                    : badge.color == "orange" ? .orange : .green
+                                Label(badge.text, systemImage: "checkmark.seal.fill")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(c)
+                            }
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.secondarySystemGroupedBackground),
+                                    in: RoundedRectangle(cornerRadius: 10))
+                    }
+
                     // Stats cards — tappable to switch chart
                     if let s = stats {
                         StatsRow(vehicle: vehicle, stats: s, selectedChart: $selectedChart)

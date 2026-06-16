@@ -15,8 +15,47 @@ struct Vehicle: Identifiable, Codable, Sendable {
     let totalFuelCost: Double?
     let totalMaintenanceCost: Double?
     let displayUnit: String?
+    let vin: String?
+    let licensePlate: String?
+    let plateState: String?
+    let registrationExpires: String?       // "YYYY-MM-DD"
+    let registrationStatus: String?        // "expired" | "expiring" | "valid"
+    let registrationDaysLeft: Int?
 
     var isBoat: Bool { vehicleType == "boat" || vehicleType == "other" }
+
+    /// Plate label like "HALE-1 (MN)", or nil if no plate recorded.
+    var plateLabel: String? {
+        guard let plate = licensePlate, !plate.isEmpty else { return nil }
+        if let st = plateState, !st.isEmpty { return "\(plate) (\(st))" }
+        return plate
+    }
+
+    /// Registration badge text + SwiftUI color name, or nil if not tracked.
+    var registrationBadge: (text: String, color: String)? {
+        guard let status = registrationStatus else { return nil }
+        let on = registrationExpiresDisplay.map { " · \($0)" } ?? ""
+        switch status {
+        case "expired": return ("Registration expired\(on)", "red")
+        case "expiring":
+            let d = registrationDaysLeft.map { " (\($0)d)" } ?? ""
+            return ("Registration due\(on)\(d)", "orange")
+        case "valid": return ("Registered to\(on)", "green")
+        default: return nil
+        }
+    }
+
+    /// "YYYY-MM-DD" → "Mar 1, 2027".
+    var registrationExpiresDisplay: String? {
+        guard let raw = registrationExpires else { return nil }
+        let isoIn = DateFormatter()
+        isoIn.locale = Locale(identifier: "en_US_POSIX")
+        isoIn.dateFormat = "yyyy-MM-dd"
+        guard let date = isoIn.date(from: String(raw.prefix(10))) else { return raw }
+        let out = DateFormatter()
+        out.dateFormat = "MMM d, yyyy"
+        return out.string(from: date)
+    }
     var unitAbbrev: String { isBoat ? "hrs" : "mi" }
     var subtitle: String {
         [year.map(String.init), make, model]
