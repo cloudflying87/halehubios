@@ -34,6 +34,9 @@ struct TotesListView: View {
     @State private var showCreate = false
     @State private var showQRBatch = false
 
+    @Environment(\.horizontalSizeClass) private var hSize
+    @State private var selectedToteID: String?
+
     /// The canonical location key for a tote — prefer the FK id, fall back to legacy slug.
     private func locationKey(for tote: Tote) -> String {
         tote.locationObjId ?? tote.locationName ?? tote.id
@@ -73,71 +76,116 @@ struct TotesListView: View {
 
     var body: some View {
         Group {
-            if vm.isLoading && vm.totes.isEmpty {
-                ProgressView("Loading totes…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let errorMsg = vm.error, vm.totes.isEmpty {
-                ContentUnavailableView {
-                    Label("Couldn't Load Totes", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(errorMsg)
-                } actions: {
-                    Button("Retry") {
-                        Task { await vm.load(token: auth.accessToken ?? "") }
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-            } else if vm.totes.isEmpty {
-                ContentUnavailableView {
-                    Label("No Totes", systemImage: "shippingbox")
-                } description: {
-                    Text("Tap the + button in the top right to add your first tote.")
-                } actions: {
-                    Button {
-                        showCreate = true
-                    } label: {
-                        Label("New Tote", systemImage: "shippingbox.badge.plus")
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
+            if hSize == .regular {
+                splitBody
             } else {
-                VStack(spacing: 0) {
-                    // Grand total across all locations (matches the web's count)
-                    HStack {
-                        Text("\(vm.totes.count) tote\(vm.totes.count == 1 ? "" : "s")")
-                            .font(.subheadline.weight(.semibold))
-                        if presentLocationKeys.count > 1 {
-                            Text("· \(presentLocationKeys.count) locations")
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }
-                    .font(.subheadline)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
+                stackBody
+            }
+        }
+        .task { await vm.load(token: auth.accessToken ?? "") }
+        .alert("Error", isPresented: .constant(vm.error != nil && !vm.totes.isEmpty)) {
+            Button("OK") { vm.error = nil }
+        } message: { Text(vm.error ?? "") }
+        .sheet(isPresented: $showScanner) {
+            ToteScannerSheet { tote in scannedTote = tote }
+                .environmentObject(auth)
+        }
+        .sheet(isPresented: $showCreate) {
+            CreateToteSheet(qrIdentifier: nil) { newTote in
+                vm.totes.insert(newTote, at: 0)
+                if hSize == .regular { selectedToteID = newTote.id }
+            }
+            .environmentObject(auth)
+        }
+        .sheet(isPresented: $showQRBatch) {
+            QRBatchSheet().environmentObject(auth)
+        }
+        .onChange(of: scannedTote) { _, newValue in
+            // On iPad, route a scanned tote into the detail pane instead of pushing.
+            if hSize == .regular, let t = newValue {
+                selectedToteID = t.id
+                scannedTote = nil
+            }
+        }
+    }
 
-                    // Location filter chips
-                    if presentLocationKeys.count > 1 {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                LocationFilterChip(
-                                    label: "All",
-                                    isSelected: searchLocation == "all"
-                                ) { searchLocation = "all" }
+    // MARK: iPhone — push stack
 
-                                ForEach(presentLocationKeys, id: \.self) { key in
-                                    LocationFilterChip(
-                                        label: locationLabel(for: key, totes: vm.totes),
-                                        isSelected: searchLocation == key
-                                    ) { searchLocation = key }
+    private var stackBody: some View {
+        totesContent(selectable: false)
+            .navigationTitle("Totes")
+            .toolbar { toteToolbar }
+            .navigationDestination(item: $scannedTote) { tote in
+                ToteDetailView(toteId: tote.id, toteName: tote.name)
+            }
+    }
+
+    // MARK: iPad — split view
+
+    private var splitBody: some View {
+        NavigationSplitView {
+            totesContent(selectable: true)
+                .navigationTitle("Totes")
+                .toolbar { toteToolbar }
+        } detail: {
+            NavigationStack {
+                if let id = selectedToteID, let tote = vm.totes.first(where: { $0.id == id }) {
+                    ToteDetailView(toteId: tote.id, toteName: tote.name)
+                } else {
+                    ContentUnavailableView(
+                        "Select a Tote",
+                        systemImage: "shippingbox",
+                        description: Text("Pick a tote to see its contents.")
+                    )
+                }
+            }
+        }
+    }
+
+    // MARK: Shared content
+
+    @ViewBuilder
+    private func totesContent(selectable: Bool) -> some View {
+        if vm.isLoading && vm.totes.isEmpty {
+            ProgressView("Loading totes…")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let errorMsg = vm.error, vm.totes.isEmpty {
+            ContentUnavailableView {
+                Label("Couldn't Load Totes", systemImage: "exclamationmark.triangle")
+            } description: {
+                Text(errorMsg)
+            } actions: {
+                Button("Retry") { Task { await vm.load(token: auth.accessToken ?? "") } }
+                    .buttonStyle(.borderedProminent)
+            }
+        } else if vm.totes.isEmpty {
+            ContentUnavailableView {
+                Label("No Totes", systemImage: "shippingbox")
+            } description: {
+                Text("Tap the + button in the top right to add your first tote.")
+            } actions: {
+                Button { showCreate = true } label: {
+                    Label("New Tote", systemImage: "shippingbox.badge.plus")
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        } else {
+            VStack(spacing: 0) {
+                countHeader
+                chipsBar
+                if selectable {
+                    List(selection: $selectedToteID) {
+                        ForEach(groupedTotes, id: \.key) { group in
+                            Section {
+                                ForEach(group.totes) { tote in
+                                    ToteRow(tote: tote).tag(tote.id)
                                 }
-                            }
-                            .padding(.horizontal, 16)
+                            } header: { groupHeader(group) }
                         }
-                        .padding(.vertical, 8)
-                        Divider()
                     }
-
+                    .listStyle(.insetGrouped)
+                    .refreshable { await vm.load(token: auth.accessToken ?? "") }
+                } else {
                     List {
                         ForEach(groupedTotes, id: \.key) { group in
                             Section {
@@ -148,22 +196,7 @@ struct TotesListView: View {
                                         ToteRow(tote: tote)
                                     }
                                 }
-                            } header: {
-                                HStack {
-                                    Label(
-                                        locationLabel(for: group.key, totes: group.totes),
-                                        systemImage: "mappin.circle"
-                                    )
-                                    .font(.subheadline.weight(.semibold))
-                                    .textCase(nil)
-                                    .foregroundStyle(.primary)
-                                    Spacer()
-                                    Text("\(group.totes.count) tote\(group.totes.count == 1 ? "" : "s")")
-                                        .font(.caption)
-                                        .textCase(nil)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
+                            } header: { groupHeader(group) }
                         }
                     }
                     .listStyle(.insetGrouped)
@@ -171,58 +204,86 @@ struct TotesListView: View {
                 }
             }
         }
-        .navigationTitle("Totes")
-        .task { await vm.load(token: auth.accessToken ?? "") }
-        .alert("Error", isPresented: .constant(vm.error != nil && !vm.totes.isEmpty)) {
-            Button("OK") { vm.error = nil }
-        } message: { Text(vm.error ?? "") }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showScanner = true
-                } label: {
-                    Image(systemName: "qrcode.viewfinder")
+    }
+
+    // Grand total across all locations (matches the web's count)
+    private var countHeader: some View {
+        HStack {
+            Text("\(vm.totes.count) tote\(vm.totes.count == 1 ? "" : "s")")
+                .font(.subheadline.weight(.semibold))
+            if presentLocationKeys.count > 1 {
+                Text("· \(presentLocationKeys.count) locations")
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .font(.subheadline)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private var chipsBar: some View {
+        if presentLocationKeys.count > 1 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    LocationFilterChip(label: "All", isSelected: searchLocation == "all") {
+                        searchLocation = "all"
+                    }
+                    ForEach(presentLocationKeys, id: \.self) { key in
+                        LocationFilterChip(
+                            label: locationLabel(for: key, totes: vm.totes),
+                            isSelected: searchLocation == key
+                        ) { searchLocation = key }
+                    }
                 }
-                .accessibilityLabel("Scan tote QR code")
+                .padding(.horizontal, 16)
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    Button("New Tote", systemImage: "shippingbox.badge.plus") {
-                        showCreate = true
-                    }
-                    Button("Print Blank QR Codes", systemImage: "printer") {
-                        showQRBatch = true
-                    }
-                    Divider()
-                    // Escape hatch for users (e.g. totes-only) who might not
-                    // have access to the More/Account tab. Always reachable.
-                    Button(role: .destructive) {
-                        auth.logout()
-                    } label: {
-                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                    }
+            .padding(.vertical, 8)
+            Divider()
+        }
+    }
+
+    private func groupHeader(_ group: (key: String, totes: [Tote])) -> some View {
+        HStack {
+            Label(
+                locationLabel(for: group.key, totes: group.totes),
+                systemImage: "mappin.circle"
+            )
+            .font(.subheadline.weight(.semibold))
+            .textCase(nil)
+            .foregroundStyle(.primary)
+            Spacer()
+            Text("\(group.totes.count) tote\(group.totes.count == 1 ? "" : "s")")
+                .font(.caption)
+                .textCase(nil)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toteToolbar: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button { showScanner = true } label: {
+                Image(systemName: "qrcode.viewfinder")
+            }
+            .accessibilityLabel("Scan tote QR code")
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Menu {
+                Button("New Tote", systemImage: "shippingbox.badge.plus") { showCreate = true }
+                Button("Print Blank QR Codes", systemImage: "printer") { showQRBatch = true }
+                Divider()
+                // Escape hatch for users (e.g. totes-only) who might not have
+                // access to the More/Account tab. Always reachable.
+                Button(role: .destructive) {
+                    auth.logout()
                 } label: {
-                    Image(systemName: "plus")
+                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                 }
+            } label: {
+                Image(systemName: "plus")
             }
-        }
-        .sheet(isPresented: $showScanner) {
-            ToteScannerSheet { tote in
-                scannedTote = tote
-            }
-            .environmentObject(auth)
-        }
-        .sheet(isPresented: $showCreate) {
-            CreateToteSheet(qrIdentifier: nil) { newTote in
-                vm.totes.insert(newTote, at: 0)
-            }
-            .environmentObject(auth)
-        }
-        .sheet(isPresented: $showQRBatch) {
-            QRBatchSheet().environmentObject(auth)
-        }
-        .navigationDestination(item: $scannedTote) { tote in
-            ToteDetailView(toteId: tote.id, toteName: tote.name)
         }
     }
 }
