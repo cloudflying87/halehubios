@@ -41,6 +41,12 @@ struct VehicleDetailView: View {
     @State private var isUploadingPhoto = false
     @State private var vehiclePhotoUrl: String?
     @State private var isUpdatingStatus = false
+    @State private var showEditSheet = false
+    /// Local override applied after an in-app edit, so the card reflects changes immediately.
+    @State private var liveVehicle: Vehicle?
+
+    /// The vehicle to display — the locally-edited copy if present, else the passed-in one.
+    private var shownVehicle: Vehicle { liveVehicle ?? vehicle }
 
     var dueSchedules: [MaintenanceSchedule] { schedules.filter { $0.isDue } }
     var filteredEvents: [VehicleEvent] {
@@ -81,13 +87,13 @@ struct VehicleDetailView: View {
                     }
 
                     // License plate + registration status
-                    if vehicle.plateLabel != nil || vehicle.registrationBadge != nil {
+                    if shownVehicle.plateLabel != nil || shownVehicle.registrationBadge != nil {
                         VStack(alignment: .leading, spacing: 6) {
-                            if let plate = vehicle.plateLabel {
+                            if let plate = shownVehicle.plateLabel {
                                 Label(plate, systemImage: "char.textbox")
                                     .font(.subheadline.weight(.medium))
                             }
-                            if let badge = vehicle.registrationBadge {
+                            if let badge = shownVehicle.registrationBadge {
                                 let c: Color = badge.color == "red" ? .red
                                     : badge.color == "orange" ? .orange : .green
                                 Label(badge.text, systemImage: "checkmark.seal.fill")
@@ -220,6 +226,9 @@ struct VehicleDetailView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    Button("Edit Details", systemImage: "pencil") {
+                        showEditSheet = true
+                    }
                     Button("Outings Summary", systemImage: "map") {
                         showOutings = true
                     }
@@ -255,6 +264,10 @@ struct VehicleDetailView: View {
             ) {
                 Task { await loadData() }
             }
+        }
+        .sheet(isPresented: $showEditSheet) {
+            VehicleEditSheet(vehicle: shownVehicle) { updated in liveVehicle = updated }
+                .environmentObject(auth)
         }
         .confirmationDialog("Vehicle Photo", isPresented: $showPhotoActionSheet, titleVisibility: .visible) {
             Button("Take Photo") { showCamera = true }

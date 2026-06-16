@@ -70,6 +70,7 @@
 		92CB91D03662E6106C02EED7 /* RecipesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38E93521147DA51107C96ABA /* RecipesListView.swift */; };
 		94D27B0D068B8688771F729B /* ResourceEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B850A78801A49015E962D7B /* ResourceEditorSheet.swift */; };
 		9B9348553D9A7A0E97A6E5C9 /* LogEventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 026B9CBC27B5BDAB71949F45 /* LogEventSheet.swift */; };
+		AE17ED110000000000000001 /* VehicleEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE17ED110000000000000002 /* VehicleEditSheet.swift */; };
 		9C3F6E3B9748C95BBB6AAD63 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43CB5F5CE1DA94DB05CEFAB1 /* MainTabView.swift */; };
 		A94D98CBBDCCC001230A0FC1 /* AddReadingEntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D0F8FA6169AFB6A1408AC1 /* AddReadingEntrySheet.swift */; };
 		A9D2FFBFE877D843C3A6F456 /* ReadingDayDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1979192C8C8DBC508631A28E /* ReadingDayDetailView.swift */; };
@@ -103,6 +104,7 @@
 
 /* Begin PBXFileReference section */
 		026B9CBC27B5BDAB71949F45 /* LogEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogEventSheet.swift; sourceTree = "<group>"; };
+		AE17ED110000000000000002 /* VehicleEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleEditSheet.swift; sourceTree = "<group>"; };
 		040BCD9171AD5B0D521CFD48 /* ReadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingView.swift; sourceTree = "<group>"; };
 		082F8360E610399CB9791E01 /* ShoppingListsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListsView.swift; sourceTree = "<group>"; };
 		0BF696F77373A167292BC317 /* CacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheManager.swift; sourceTree = "<group>"; };
@@ -291,6 +293,7 @@
 			isa = PBXGroup;
 			children = (
 				026B9CBC27B5BDAB71949F45 /* LogEventSheet.swift */,
+				AE17ED110000000000000002 /* VehicleEditSheet.swift */,
 				9CD4130D14F56C5404DD4F9D /* MaintenanceHistoryView.swift */,
 				E947BD3D8138984D1A9AA070 /* MaintenanceScheduleManagerView.swift */,
 				D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */,
@@ -599,6 +602,7 @@
 				5153DFD64BF9325FEFC74E64 /* LetterEditorSheet.swift in Sources */,
 				D5D1582EF5D926ED63EC7881 /* LoanCalculatorView.swift in Sources */,
 				9B9348553D9A7A0E97A6E5C9 /* LogEventSheet.swift in Sources */,
+				AE17ED110000000000000001 /* VehicleEditSheet.swift in Sources */,
 				4F3EE32CA697D673557F7F60 /* LoginView.swift in Sources */,
 				9C3F6E3B9748C95BBB6AAD63 /* MainTabView.swift in Sources */,
 				8B4AAD519B389AE6E8ABE5BE /* MaintenanceHistoryView.swift in Sources */,
