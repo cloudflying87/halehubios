@@ -8,26 +8,17 @@ struct RecipesListView: View {
     @State private var navigateToImported = false
     @State private var searchTask: Task<Void, Never>?
 
+    @Environment(\.horizontalSizeClass) private var hSize
+    @State private var selectedRecipeID: Recipe.ID?
+
     var body: some View {
-        // The search bar lives on this always-present container so it is never
-        // torn down and recreated when loading state changes — that teardown was
-        // what made the field jump and lose focus mid-typing.
-        VStack(spacing: 0) {
-            FilterBar(vm: vm)
-                .padding(.vertical, 8)
-            Divider()
-            recipeContent
-        }
-        .navigationDestination(isPresented: $navigateToImported) {
-            if let imported = importedRecipe {
-                RecipeDetailView(recipe: imported).environmentObject(auth)
+        Group {
+            if hSize == .regular {
+                splitBody
+            } else {
+                stackBody
             }
         }
-        .searchable(
-            text: $vm.searchQuery,
-            placement: .navigationBarDrawer(displayMode: .always),
-            prompt: "Search recipes…"
-        )
         .onChange(of: vm.searchQuery) { _, query in
             // Results filter instantly client-side (vm.filtered). This debounced
             // server search just augments for large libraries; cancel the prior
@@ -40,64 +31,86 @@ struct RecipesListView: View {
                 await vm.search(query: query, token: token)
             }
         }
-        .navigationTitle("Recipes")
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button { Task { await vm.load(token: auth.accessToken ?? "", isConnected: true) } } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .disabled(vm.isLoading)
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Section("Sort") {
-                        ForEach(RecipeSortOrder.allCases) { order in
-                            Button {
-                                vm.sortOrder = order
-                                Task { await vm.load(token: auth.accessToken ?? "") }
-                            } label: {
-                                if vm.sortOrder == order {
-                                    Label(order.rawValue, systemImage: "checkmark")
-                                } else {
-                                    Text(order.rawValue)
-                                }
-                            }
-                        }
-                    }
-                    Section {
-                        Button {
-                            vm.showFavoritesOnly.toggle()
-                        } label: {
-                            Label(
-                                vm.showFavoritesOnly ? "All Recipes" : "Favorites Only",
-                                systemImage: vm.showFavoritesOnly ? "heart.slash" : "heart.fill"
-                            )
-                        }
-                    }
-                    Section {
-                        Button {
-                            showImportURL = true
-                        } label: {
-                            Label("Import from URL", systemImage: "square.and.arrow.down")
-                        }
-                    }
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                }
-            }
-        }
         .sheet(isPresented: $showImportURL) {
             ImportRecipeFromURLSheet(vm: vm) { recipe in
                 importedRecipe = recipe
-                navigateToImported = true
+                if hSize == .regular {
+                    selectedRecipeID = recipe.id
+                } else {
+                    navigateToImported = true
+                }
             }
             .environmentObject(auth)
         }
         .task { await vm.load(token: auth.accessToken ?? "") }
     }
 
+    // MARK: iPhone — push stack
+
+    private var stackBody: some View {
+        // The search bar lives on this always-present container so it is never
+        // torn down and recreated when loading state changes — that teardown was
+        // what made the field jump and lose focus mid-typing.
+        recipeMain(selectable: false)
+            .navigationDestination(isPresented: $navigateToImported) {
+                if let imported = importedRecipe {
+                    RecipeDetailView(recipe: imported).environmentObject(auth)
+                }
+            }
+            .searchable(
+                text: $vm.searchQuery,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "Search recipes…"
+            )
+            .navigationTitle("Recipes")
+            .toolbar { recipeToolbar }
+    }
+
+    // MARK: iPad — split view
+
+    private var splitBody: some View {
+        NavigationSplitView {
+            recipeMain(selectable: true)
+                .searchable(
+                    text: $vm.searchQuery,
+                    placement: .navigationBarDrawer(displayMode: .always),
+                    prompt: "Search recipes…"
+                )
+                .navigationTitle("Recipes")
+                .toolbar { recipeToolbar }
+        } detail: {
+            NavigationStack {
+                if let id = selectedRecipeID, let recipe = vm.recipes.first(where: { $0.id == id }) {
+                    RecipeDetailView(recipe: recipe, onDelete: { deletedID in
+                        vm.recipes.removeAll { $0.id.uuidString.lowercased() == deletedID.lowercased() }
+                        selectedRecipeID = nil
+                    })
+                    .environmentObject(auth)
+                    .id(id)
+                } else {
+                    ContentUnavailableView(
+                        "Select a Recipe",
+                        systemImage: "fork.knife",
+                        description: Text("Pick a recipe to view it here.")
+                    )
+                }
+            }
+        }
+    }
+
+    // MARK: Shared content
+
+    private func recipeMain(selectable: Bool) -> some View {
+        VStack(spacing: 0) {
+            FilterBar(vm: vm)
+                .padding(.vertical, 8)
+            Divider()
+            recipeContent(selectable: selectable)
+        }
+    }
+
     @ViewBuilder
-    private var recipeContent: some View {
+    private func recipeContent(selectable: Bool) -> some View {
         // Only show the full-screen spinner on the initial load (no recipes yet
         // and not searching) — never while typing a search, so the field stays put.
         if vm.isLoading && vm.recipes.isEmpty && vm.searchQuery.isEmpty {
@@ -113,6 +126,13 @@ struct RecipesListView: View {
                      : "No recipes match \u{201C}\(vm.searchQuery)\u{201D}.")
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if selectable {
+            List(selection: $selectedRecipeID) {
+                ForEach(vm.filtered) { recipe in
+                    RecipeRow(recipe: recipe).tag(recipe.id)
+                }
+            }
+            .listStyle(.plain)
         } else {
             List {
                 ForEach(vm.filtered) { recipe in
@@ -124,6 +144,53 @@ struct RecipesListView: View {
                 }
             }
             .listStyle(.plain)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var recipeToolbar: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            Button { Task { await vm.load(token: auth.accessToken ?? "", isConnected: true) } } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .disabled(vm.isLoading)
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Menu {
+                Section("Sort") {
+                    ForEach(RecipeSortOrder.allCases) { order in
+                        Button {
+                            vm.sortOrder = order
+                            Task { await vm.load(token: auth.accessToken ?? "") }
+                        } label: {
+                            if vm.sortOrder == order {
+                                Label(order.rawValue, systemImage: "checkmark")
+                            } else {
+                                Text(order.rawValue)
+                            }
+                        }
+                    }
+                }
+                Section {
+                    Button {
+                        vm.showFavoritesOnly.toggle()
+                    } label: {
+                        Label(
+                            vm.showFavoritesOnly ? "All Recipes" : "Favorites Only",
+                            systemImage: vm.showFavoritesOnly ? "heart.slash" : "heart.fill"
+                        )
+                    }
+                }
+                Section {
+                    Button {
+                        showImportURL = true
+                    } label: {
+                        Label("Import from URL", systemImage: "square.and.arrow.down")
+                    }
+                }
+            } label: {
+                Image(systemName: "line.3.horizontal.decrease.circle")
+            }
         }
     }
 }
