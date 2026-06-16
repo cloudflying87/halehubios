@@ -6,10 +6,16 @@ struct FinanceView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm = FinanceViewModel()
 
+    @Environment(\.horizontalSizeClass) private var hSize
+
     @State private var isUnlocked = false
     @State private var authError: String?
     @State private var biometryType: LABiometryType = .none
     @State private var hasTriggeredAuth = false
+
+    /// iPad sidebar selection. Defaults to the Overview dashboard so the detail
+    /// pane is never empty on launch.
+    @State private var section: FinanceSection? = .overview
 
     private let currencyFormatter: NumberFormatter = {
         let f = NumberFormatter()
@@ -136,36 +142,114 @@ struct FinanceView: View {
 
     // MARK: - Unlocked Dashboard
 
+    @ViewBuilder
     private var unlockedContent: some View {
-        VStack(spacing: 0) {
-            quickJumpBar
-            ScrollView {
-                if vm.isLoading && vm.summary == nil {
-                    ProgressView("Loading…")
-                        .frame(maxWidth: .infinity, minHeight: 200)
-                } else {
-                    LazyVStack(spacing: 16) {
-                        if let s = vm.summary {
-                            netWorthCard(s)
-                            thisMonthSection(s.currentMonth)
-                        }
-                        if !vm.loans.isEmpty {
-                            loansSection
-                        }
-                        if !vm.brokerageAccounts.isEmpty {
-                            investmentsSection
-                        }
-                        if !vm.paychecks.isEmpty {
-                            recentPaychecksSection
-                        }
-                        if let t = vm.trends, !t.months.isEmpty {
-                            trendsSection(t)
-                        }
+        // Regular width (iPad / large) → two-pane split with a section sidebar.
+        // Compact width (iPhone) → the familiar dashboard + quick-jump chip bar.
+        if hSize == .regular {
+            splitView
+        } else {
+            VStack(spacing: 0) {
+                quickJumpBar
+                dashboardScroll
+            }
+        }
+    }
+
+    /// The net-worth + this-month + loans/investments/paychecks/trends scroll.
+    /// Shared by the iPhone dashboard and the iPad "Overview" detail pane.
+    private var dashboardScroll: some View {
+        ScrollView {
+            if vm.isLoading && vm.summary == nil {
+                ProgressView("Loading…")
+                    .frame(maxWidth: .infinity, minHeight: 200)
+            } else {
+                LazyVStack(spacing: 16) {
+                    if let s = vm.summary {
+                        netWorthCard(s)
+                        thisMonthSection(s.currentMonth)
                     }
-                    .padding(16)
+                    if !vm.loans.isEmpty {
+                        loansSection
+                    }
+                    if !vm.brokerageAccounts.isEmpty {
+                        investmentsSection
+                    }
+                    if !vm.paychecks.isEmpty {
+                        recentPaychecksSection
+                    }
+                    if let t = vm.trends, !t.months.isEmpty {
+                        trendsSection(t)
+                    }
+                }
+                .padding(16)
+                .frame(maxWidth: 900)            // keep cards readable on wide iPad panes
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .refreshable { await vm.load(token: auth.accessToken ?? "") }
+    }
+
+    // MARK: - iPad Split View
+
+    private var splitView: some View {
+        NavigationSplitView {
+            List(selection: $section) {
+                sidebarRow(.overview)
+                Section("Cash Flow") {
+                    sidebarRow(.budget)
+                    sidebarRow(.payHours)
+                    sidebarRow(.familyYear)
+                    sidebarRow(.paychecks)
+                    sidebarRow(.tithe)
+                }
+                Section("Wealth") {
+                    sidebarRow(.investments)
+                    sidebarRow(.retirement)
+                    sidebarRow(.assetsDebts)
+                    sidebarRow(.loans)
+                    sidebarRow(.hsa)
+                    sidebarRow(.insurance)
+                }
+                Section("Planning") {
+                    sidebarRow(.monteCarlo)
                 }
             }
-            .refreshable { await vm.load(token: auth.accessToken ?? "") }
+            .navigationTitle("Finance")
+            .navigationBarTitleDisplayMode(.inline)
+        } detail: {
+            // Fresh stack per section so deep pushes (loan detail, etc.) work and
+            // reset when you switch sections.
+            NavigationStack {
+                sectionDetail(section ?? .overview)
+            }
+        }
+        .navigationSplitViewStyle(.balanced)
+    }
+
+    private func sidebarRow(_ s: FinanceSection) -> some View {
+        Label(s.title, systemImage: s.icon).tag(s)
+    }
+
+    @ViewBuilder
+    private func sectionDetail(_ s: FinanceSection) -> some View {
+        switch s {
+        case .overview:
+            dashboardScroll
+                .navigationTitle("Overview")
+                .navigationBarTitleDisplayMode(.inline)
+        case .budget:      BudgetView()
+        case .payHours:    PayHoursView()
+        case .familyYear:  FamilyIncomeView()
+        case .paychecks:   PaychecksView()
+        case .tithe:       TitheView()
+        case .investments: InvestmentsView()
+        case .retirement:  RetirementDetailView()
+        case .assetsDebts: OtherAccountsView()
+        case .loans:       FinanceLoansView()
+        case .hsa:         HSAView()
+        case .insurance:   LifeInsuranceView()
+        case .monteCarlo:  MonteCarloView()
         }
     }
 
@@ -667,6 +751,54 @@ struct FinanceView: View {
         let out = DateFormatter()
         out.dateFormat = "MMM yyyy"
         return out.string(from: d)
+    }
+}
+
+// MARK: - Finance sections (iPad sidebar)
+
+/// Every navigable area of the finance app. Drives the iPad split-view sidebar;
+/// the iPhone layout keeps the equivalent quick-jump chip bar.
+enum FinanceSection: String, CaseIterable, Identifiable, Hashable {
+    case overview, budget, payHours, familyYear, paychecks, tithe
+    case investments, retirement, assetsDebts, loans, hsa, insurance
+    case monteCarlo
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .overview:    return "Overview"
+        case .budget:      return "Budget"
+        case .payHours:    return "Pay Hours"
+        case .familyYear:  return "Family Year"
+        case .paychecks:   return "Paychecks"
+        case .tithe:       return "Tithe"
+        case .investments: return "Investments"
+        case .retirement:  return "Retirement"
+        case .assetsDebts: return "Assets & Debts"
+        case .loans:       return "Loans"
+        case .hsa:         return "HSA"
+        case .insurance:   return "Insurance"
+        case .monteCarlo:  return "Monte Carlo"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .overview:    return "square.grid.2x2.fill"
+        case .budget:      return "chart.pie.fill"
+        case .payHours:    return "clock.badge.checkmark.fill"
+        case .familyYear:  return "person.2.fill"
+        case .paychecks:   return "doc.text.fill"
+        case .tithe:       return "hands.sparkles.fill"
+        case .investments: return "chart.line.uptrend.xyaxis"
+        case .retirement:  return "figure.walk.motion"
+        case .assetsDebts: return "house.fill"
+        case .loans:       return "creditcard.fill"
+        case .hsa:         return "cross.case.fill"
+        case .insurance:   return "shield.lefthalf.filled"
+        case .monteCarlo:  return "dice.fill"
+        }
     }
 }
 
