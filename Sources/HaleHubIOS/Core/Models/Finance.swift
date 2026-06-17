@@ -106,6 +106,7 @@ struct FinanceLoan: Identifiable, Codable, Sendable {
     let monthlyPayment: Double
     let payoffDate: String?
     let progressPct: Double
+    let totalMonthlyHousingCost: Double?
 }
 
 // MARK: - Loan detail / management
@@ -143,6 +144,15 @@ struct LoanDetail: Identifiable, Codable, Sendable {
     let payments: [LoanPayment]?
     let checkpoints: [LoanCheckpoint]?
     let amortization: [AmortizationRow]?
+    // PITI fields (mortgages only — nil for other loan types)
+    let monthlyPmi: Double?
+    let pmiEndDate: String?
+    let monthlyInsurance: Double?
+    let monthlyPropertyTax: Double?
+    let escrowEndDate: String?
+    let effectivePmi: Double?
+    let effectiveEscrow: Double?
+    let totalMonthlyHousingCost: Double?
 }
 
 struct AmortizationRow: Identifiable, Codable, Sendable {

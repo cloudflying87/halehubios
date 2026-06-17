@@ -363,7 +363,24 @@ struct LoanDetailView: View {
             Divider()
             statRow("Interest Rate", "\(String(format: "%.3f", loan.interestRate))%")
             Divider()
-            statRow("Monthly Payment", LoanFormatters.money(loan.monthlyPayment))
+            statRow("P&I Payment", LoanFormatters.money(loan.monthlyPayment))
+            if loan.loanType == "mortgage", let total = loan.totalMonthlyHousingCost, total > loan.monthlyPayment {
+                if let pmi = loan.effectivePmi, pmi > 0 {
+                    Divider()
+                    statRow("PMI", LoanFormatters.money(pmi))
+                }
+                if let escrow = loan.effectiveEscrow, escrow > 0 {
+                    Divider()
+                    statRow("Taxes & Insurance", LoanFormatters.money(escrow))
+                }
+                Divider()
+                HStack {
+                    Text("Total (PITI)").font(.subheadline).fontWeight(.semibold)
+                    Spacer()
+                    Text(LoanFormatters.money(total)).font(.subheadline).fontWeight(.semibold)
+                }
+                .padding(.vertical, 12)
+            }
             Divider()
             statRow("Payoff Date", LoanFormatters.monthYear(loan.payoffDate))
             if let rem = loan.remainingPayments {

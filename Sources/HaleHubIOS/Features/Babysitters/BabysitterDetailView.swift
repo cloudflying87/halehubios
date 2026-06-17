@@ -57,6 +57,18 @@ class BabysitterDetailViewModel: ObservableObject {
             banner = "Couldn't send: \(error.localizedDescription)"
         }
     }
+
+    func recalculateUnpaid(babysitterId: String, token: String) async {
+        do {
+            let resp: RecalculateResponse = try await APIClient.shared.postEmpty(
+                "/babysitters/\(babysitterId)/recalculate/", token: token
+            )
+            await load(babysitterId: babysitterId, token: token)
+            banner = "Recalculated \(resp.updated) unpaid session\(resp.updated == 1 ? "" : "s") at \(BabysitterFormat.money(resp.newRate))/hr."
+        } catch {
+            banner = "Couldn't recalculate: \(error.localizedDescription)"
+        }
+    }
 }
 
 struct BabysitterDetailView: View {
@@ -100,6 +112,13 @@ struct BabysitterDetailView: View {
                         Task { await vm.sendReport(babysitterId: babysitter.id, token: token) }
                     } label: {
                         Label("Email Report to Sitter", systemImage: "envelope")
+                    }
+                }
+                if canEdit {
+                    Button {
+                        Task { await vm.recalculateUnpaid(babysitterId: babysitter.id, token: token) }
+                    } label: {
+                        Label("Recalculate Unpaid Sessions", systemImage: "arrow.clockwise.circle")
                     }
                 }
             }

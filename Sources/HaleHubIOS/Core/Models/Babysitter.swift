@@ -135,6 +135,11 @@ struct SendReportResponse: Decodable, Sendable {
     let to: String?
 }
 
+struct RecalculateResponse: Decodable, Sendable {
+    let updated: Int
+    let newRate: Double
+}
+
 // MARK: - Formatting helpers
 
 enum BabysitterFormat {
