@@ -327,6 +327,9 @@ struct LoanDetailView: View {
                     paymentsCard(payments)
                 }
                 checkpointsCard(loan)
+                if loan.matchedTransactions != nil {
+                    matchedTransactionsCard(loan)
+                }
             }
             .padding(16)
         }
@@ -505,6 +508,50 @@ struct LoanDetailView: View {
                     .font(.subheadline).foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 8)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+    private func matchedTransactionsCard(_ loan: LoanDetail) -> some View {
+        let transactions = loan.matchedTransactions ?? []
+        let importedCount = transactions.filter { $0.imported }.count
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("YNAB Transactions").font(.headline)
+                Spacer()
+                if !transactions.isEmpty {
+                    Text("\(transactions.count) matched · \(importedCount) imported")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if transactions.isEmpty {
+                Text("No matching transactions found. Check your YNAB filter settings.")
+                    .font(.subheadline).foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
+            } else {
+                ForEach(transactions) { tx in
+                    HStack(spacing: 10) {
+                        Circle()
+                            .fill(tx.imported ? Color.green : Color.orange)
+                            .frame(width: 8, height: 8)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(tx.payee).font(.subheadline).fontWeight(.medium)
+                                .lineLimit(1)
+                            Text(tx.account).font(.caption).foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(LoanFormatters.money(tx.amount)).font(.subheadline).fontWeight(.semibold)
+                            Text(LoanFormatters.fullDate(tx.date)).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 3)
+                }
             }
         }
         .padding(16)

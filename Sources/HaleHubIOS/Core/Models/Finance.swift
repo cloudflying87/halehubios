@@ -118,6 +118,16 @@ struct LoanCheckpoint: Identifiable, Codable, Sendable {
     let notes: String
 }
 
+struct LoanMatchedTransaction: Identifiable, Codable, Sendable {
+    var id: String { ynabId }
+    let ynabId: String
+    let date: String            // "YYYY-MM-DD"
+    let payee: String
+    let account: String
+    let amount: Double
+    let imported: Bool
+}
+
 struct LoanCheckpointRequest: Codable, Sendable {
     let checkpointDate: String
     let balance: Double
@@ -139,11 +149,14 @@ struct LoanDetail: Identifiable, Codable, Sendable {
     let progressPct: Double
     let payoffDate: String?
     let ynabCategory: String?
+    let ynabPayee: String?
+    let ynabAccount: String?
     let totalInterest: Double?
     let remainingPayments: Int?
     let payments: [LoanPayment]?
     let checkpoints: [LoanCheckpoint]?
     let amortization: [AmortizationRow]?
+    let matchedTransactions: [LoanMatchedTransaction]?
     // PITI fields (mortgages only — nil for other loan types)
     let monthlyPmi: Double?
     let pmiEndDate: String?
