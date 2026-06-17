@@ -110,6 +110,19 @@ struct FinanceLoan: Identifiable, Codable, Sendable {
 
 // MARK: - Loan detail / management
 
+struct LoanCheckpoint: Identifiable, Codable, Sendable {
+    let id: Int
+    let checkpointDate: String   // "YYYY-MM-DD"
+    let balance: Double
+    let notes: String
+}
+
+struct LoanCheckpointRequest: Codable, Sendable {
+    let checkpointDate: String
+    let balance: Double
+    let notes: String
+}
+
 struct LoanDetail: Identifiable, Codable, Sendable {
     let id: Int
     let name: String
@@ -128,6 +141,7 @@ struct LoanDetail: Identifiable, Codable, Sendable {
     let totalInterest: Double?
     let remainingPayments: Int?
     let payments: [LoanPayment]?
+    let checkpoints: [LoanCheckpoint]?
     let amortization: [AmortizationRow]?
 }
 

@@ -154,6 +154,32 @@ final class LoanDetailViewModel: ObservableObject {
             return false
         }
     }
+
+    func addCheckpoint(loanId: Int, req: LoanCheckpointRequest, token: String) async -> Bool {
+        saving = true
+        defer { saving = false }
+        do {
+            let _: LoanCheckpoint = try await APIClient.shared.post(
+                "/finance/loans/\(loanId)/checkpoints/", body: req, token: token
+            )
+            await load(id: loanId, token: token)
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            return false
+        }
+    }
+
+    func deleteCheckpoint(loanId: Int, checkpointId: Int, token: String) async {
+        do {
+            try await APIClient.shared.delete(
+                "/finance/loans/\(loanId)/checkpoints/\(checkpointId)/", token: token
+            )
+            await load(id: loanId, token: token)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
 }
 
 // MARK: - Loans List
@@ -233,6 +259,7 @@ struct LoanDetailView: View {
     @State private var showPayment = false
     @State private var showAmortization = false
     @State private var confirmDelete = false
+    @State private var showAddCheckpoint = false
 
     var body: some View {
         Group {
@@ -299,8 +326,14 @@ struct LoanDetailView: View {
                 if let payments = loan.payments, !payments.isEmpty {
                     paymentsCard(payments)
                 }
+                checkpointsCard(loan)
             }
             .padding(16)
+        }
+        .sheet(isPresented: $showAddCheckpoint) {
+            AddCheckpointSheet(saving: vm.saving) { req in
+                await vm.addCheckpoint(loanId: loanId, req: req, token: auth.accessToken ?? "")
+            }
         }
     }
 
@@ -413,6 +446,105 @@ struct LoanDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func checkpointsCard(_ loan: LoanDetail) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Balance Checkpoints").font(.headline)
+                Spacer()
+                Button { showAddCheckpoint = true } label: {
+                    Image(systemName: "plus.circle").foregroundStyle(.blue)
+                }
+            }
+            Text("Anchors the YNAB backfill to a verified statement balance.")
+                .font(.caption).foregroundStyle(.secondary)
+            if let checkpoints = loan.checkpoints, !checkpoints.isEmpty {
+                ForEach(checkpoints) { cp in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(LoanFormatters.fullDate(cp.checkpointDate))
+                                .font(.subheadline).fontWeight(.medium)
+                            if !cp.notes.isEmpty {
+                                Text(cp.notes).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        Text(LoanFormatters.money(cp.balance)).font(.subheadline).fontWeight(.semibold)
+                        Button {
+                            Task {
+                                await vm.deleteCheckpoint(loanId: loanId, checkpointId: cp.id, token: auth.accessToken ?? "")
+                            }
+                        } label: {
+                            Image(systemName: "trash").foregroundStyle(.red).font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.leading, 8)
+                    }
+                    .padding(.vertical, 4)
+                }
+            } else {
+                Text("No checkpoints yet.")
+                    .font(.subheadline).foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+// MARK: - Add Checkpoint Sheet
+
+struct AddCheckpointSheet: View {
+    let saving: Bool
+    let onSave: (LoanCheckpointRequest) async -> Bool
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var date = Date()
+    @State private var balance: Double = 0
+    @State private var notes = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Checkpoint") {
+                    DatePicker("Statement Date", selection: $date, displayedComponents: .date)
+                    HStack {
+                        Text("Verified Balance")
+                        Spacer()
+                        TextField("0.00", value: $balance, format: .currency(code: "USD"))
+                            .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
+                    }
+                    TextField("Notes (e.g. March statement)", text: $notes)
+                }
+                Section {
+                    Text("After saving, run the backfill command on the server to reconstruct payment history from this checkpoint.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Add Checkpoint")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        Task {
+                            let req = LoanCheckpointRequest(
+                                checkpointDate: LoanFormatters.ymd(date),
+                                balance: balance,
+                                notes: notes
+                            )
+                            if await onSave(req) { dismiss() }
+                        }
+                    }
+                    .disabled(saving || balance <= 0)
+                }
+            }
+        }
     }
 }
 
