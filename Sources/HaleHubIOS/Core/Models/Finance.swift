@@ -453,6 +453,12 @@ struct PaycheckEditRequest: Codable, Sendable {
     let notes: String
 }
 
+struct BrokerageTopHolding: Codable, Sendable {
+    let description: String
+    let currentValue: Double
+    let percentOfAccount: Double
+}
+
 struct BrokerageAccountSummary: Identifiable, Codable, Sendable {
     let id: Int
     let name: String
@@ -460,6 +466,7 @@ struct BrokerageAccountSummary: Identifiable, Codable, Sendable {
     let institution: String?
     let latestBalance: Double?
     let latestImportDate: Date?
+    let topHoldings: [BrokerageTopHolding]
 }
 
 // MARK: - YNAB + Budget
