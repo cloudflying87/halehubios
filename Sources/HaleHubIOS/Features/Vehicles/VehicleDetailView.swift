@@ -1067,12 +1067,12 @@ struct EditEventSheet: View {
             } message: {
                 Text("This cannot be undone.")
             }
-        } // end else
-        .task {
-            if event.eventType == "outing" {
-                await loadLocations()
+            .task {
+                if event.eventType == "outing" {
+                    await loadLocations()
+                }
             }
-        }
+        } // end else
         } // end NavigationStack
     }
 
