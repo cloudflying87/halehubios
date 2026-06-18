@@ -628,6 +628,24 @@ struct RetirementHistoryPoint: Codable, Sendable, Identifiable {
     var id: String { date }
     let date: String       // "YYYY-MM-DD"
     let balance: Double
+    let earnings: Double
+    let contributions: Double
+    let employeeContribution: Double?
+    let employerContribution: Double?
+    let fees: Double
+    let valueChange: Double
+    let performancePct: Double
+}
+
+struct RetirementYTD: Codable, Sendable {
+    let earnings: Double
+    let contributions: Double
+    let employeeContribution: Double?
+    let employerContribution: Double?
+    let fees: Double
+    let startBalance: Double
+    let endBalance: Double
+    let performancePct: Double
 }
 
 struct RetirementAccount: Codable, Sendable, Identifiable {
@@ -635,12 +653,14 @@ struct RetirementAccount: Codable, Sendable, Identifiable {
     let name: String
     let latestBalance: Double
     let latestDate: String
-    let contributions: Double
-    let earnings: Double
-    let fees: Double
+    let contributions: Double      // latest month (kept for compat)
+    let earnings: Double           // latest month
+    let fees: Double               // latest month
     let valueChange: Double
     let reportCount: Int
+    let availableYears: [Int]
     let history: [RetirementHistoryPoint]
+    let ytdByYear: [String: RetirementYTD]
 }
 
 struct RetirementSummary: Codable, Sendable {

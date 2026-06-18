@@ -23,6 +23,9 @@ struct RetirementDetailView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm = RetirementViewModel()
 
+    @State private var selectedYear: Int = Calendar.current.component(.year, from: Date())
+    @State private var selectedMonth: RetirementHistoryPoint? = nil
+
     private var token: String { auth.accessToken ?? "" }
 
     var body: some View {
@@ -203,19 +206,189 @@ struct RetirementDetailView: View {
         .buttonStyle(.plain)
     }
 
-    private func accountCard(_ a: RetirementAccount) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(a.name).font(.headline)
-                Spacer()
-                Text(LoanFormatters.money(a.latestBalance, fractionDigits: 0))
-                    .font(.headline).foregroundStyle(.green)
-            }
-            Text("As of \(LoanFormatters.fullDate(a.latestDate)) · \(a.reportCount) reports")
-                .font(.caption).foregroundStyle(.secondary)
+    // MARK: Account card (redesigned)
 
-            if a.history.count > 1 {
-                Chart(a.history) { point in
+    private func accountCard(_ a: RetirementAccount) -> some View {
+        let yearMonths = a.history
+            .filter { historyYear($0.date) == selectedYear }
+            .reversed() as [RetirementHistoryPoint]
+        let ytd = a.ytdByYear[String(selectedYear)]
+
+        return VStack(alignment: .leading, spacing: 16) {
+
+            // Section 1 — Header + year picker
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(a.name).font(.headline)
+                        Text("As of \(LoanFormatters.fullDate(a.latestDate)) · \(a.reportCount) reports")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text(LoanFormatters.money(a.latestBalance, fractionDigits: 0))
+                        .font(.headline).foregroundStyle(.green)
+                }
+
+                if !a.availableYears.isEmpty {
+                    Picker("Year", selection: $selectedYear) {
+                        ForEach(a.availableYears, id: \.self) { Text(String($0)).tag($0) }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onAppear {
+                        if let first = a.availableYears.first { selectedYear = first }
+                    }
+                }
+            }
+
+            Divider()
+
+            // Section 2 — YTD summary
+            if let ytd {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("YTD \(selectedYear)").font(.subheadline).fontWeight(.semibold)
+
+                    ytdRow("YTD Return",
+                           String(format: "%+.2f%%", ytd.performancePct),
+                           ytd.performancePct >= 0 ? .green : .red)
+                    Divider()
+
+                    if let emp = ytd.employeeContribution {
+                        ytdRow("Your Contributions",
+                               LoanFormatters.money(emp, fractionDigits: 0),
+                               .primary)
+                        Divider()
+                    }
+                    if let employer = ytd.employerContribution {
+                        ytdRow("Company Match",
+                               LoanFormatters.money(employer, fractionDigits: 0),
+                               .primary)
+                        Divider()
+                    }
+                    if ytd.employeeContribution == nil && ytd.employerContribution == nil {
+                        ytdRow("Contributions",
+                               LoanFormatters.money(ytd.contributions, fractionDigits: 0),
+                               .primary)
+                        Divider()
+                    }
+
+                    ytdRow("Earnings",
+                           LoanFormatters.money(ytd.earnings, fractionDigits: 0),
+                           .green)
+                    Divider()
+
+                    ytdRow("Fees",
+                           LoanFormatters.money(ytd.fees, fractionDigits: 0),
+                           ytd.fees > 0 ? .orange : .secondary)
+                    Divider()
+
+                    ytdRow("Start Balance",
+                           LoanFormatters.money(ytd.startBalance, fractionDigits: 0),
+                           .secondary)
+                    Divider()
+
+                    ytdRow("End Balance",
+                           LoanFormatters.money(ytd.endBalance, fractionDigits: 0),
+                           .primary)
+                }
+            } else {
+                Text("No data for \(selectedYear)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            // Section 3 — Selected month detail
+            if let month = selectedMonth {
+                Divider()
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text(shortMonthYear(month.date))
+                            .font(.subheadline).fontWeight(.semibold)
+                        Spacer()
+                        Button {
+                            selectedMonth = nil
+                        } label: {
+                            Text("✕ Clear").font(.caption).foregroundStyle(.blue)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    monthDetailRow("Balance",
+                                   LoanFormatters.money(month.balance, fractionDigits: 0),
+                                   .primary)
+                    Divider()
+
+                    let returnLabel = String(format: "%+.2f%%", month.performancePct)
+                    monthDetailRow("Earnings",
+                                   "\(LoanFormatters.money(month.earnings, fractionDigits: 0)) (\(returnLabel))",
+                                   month.earnings >= 0 ? .green : .red)
+                    Divider()
+
+                    if let emp = month.employeeContribution {
+                        monthDetailRow("Your Contributions",
+                                       LoanFormatters.money(emp, fractionDigits: 0),
+                                       .primary)
+                        Divider()
+                    }
+                    if let employer = month.employerContribution {
+                        monthDetailRow("Company Match",
+                                       LoanFormatters.money(employer, fractionDigits: 0),
+                                       .primary)
+                        Divider()
+                    }
+
+                    monthDetailRow("Total Contributions",
+                                   LoanFormatters.money(month.contributions, fractionDigits: 0),
+                                   .primary)
+                    Divider()
+
+                    monthDetailRow("Fees",
+                                   LoanFormatters.money(month.fees, fractionDigits: 0),
+                                   month.fees > 0 ? .orange : .secondary)
+                }
+            }
+
+            // Section 4 — Monthly history list for selected year
+            if !yearMonths.isEmpty {
+                Divider()
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Monthly History").font(.subheadline).fontWeight(.semibold)
+                        .padding(.bottom, 8)
+
+                    ForEach(yearMonths) { point in
+                        Button {
+                            selectedMonth = (selectedMonth?.id == point.id) ? nil : point
+                        } label: {
+                            HStack {
+                                Text(shortMonthYear(point.date))
+                                    .font(.subheadline)
+                                    .foregroundStyle(selectedMonth?.id == point.id ? .blue : .primary)
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text(LoanFormatters.money(point.balance, fractionDigits: 0))
+                                        .font(.subheadline).fontWeight(.semibold)
+                                    if point.performancePct != 0 {
+                                        Text(String(format: "%+.2f%%", point.performancePct))
+                                            .font(.caption2)
+                                            .foregroundStyle(point.performancePct >= 0 ? .green : .red)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        Divider()
+                    }
+                }
+            }
+
+            // Section 5 — Balance chart for selected year
+            if yearMonths.count > 1 {
+                Divider()
+                let chartPoints = Array(yearMonths.reversed())
+                Chart(chartPoints) { point in
                     AreaMark(
                         x: .value("Date", point.date),
                         y: .value("Balance", point.balance)
@@ -244,21 +417,46 @@ struct RetirementDetailView: View {
                 }
                 .frame(height: 160)
             }
-
-            Divider()
-            HStack {
-                metric("Earnings", a.earnings, a.earnings >= 0 ? .green : .red)
-                Spacer()
-                metric("Contributions", a.contributions, .primary)
-                Spacer()
-                metric("Fees", a.fees, a.fees > 0 ? .orange : .secondary)
-            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
+
+    // MARK: - Account card helpers
+
+    private func ytdRow(_ label: String, _ value: String, _ color: Color) -> some View {
+        HStack {
+            Text(label).font(.subheadline).foregroundStyle(.secondary)
+            Spacer()
+            Text(value).font(.subheadline).fontWeight(.semibold).foregroundStyle(color)
+        }
+    }
+
+    private func monthDetailRow(_ label: String, _ value: String, _ color: Color) -> some View {
+        HStack {
+            Text(label).font(.subheadline).foregroundStyle(.secondary)
+            Spacer()
+            Text(value).font(.subheadline).fontWeight(.semibold).foregroundStyle(color)
+        }
+    }
+
+    private func shortMonthYear(_ ymd: String) -> String {
+        let parts = ymd.split(separator: "-")
+        guard parts.count >= 2,
+              let m = Int(parts[1]), (1...12).contains(m) else { return ymd }
+        let symbols = Calendar.current.monthSymbols
+        return "\(symbols[m - 1]) \(parts[0])"
+    }
+
+    private func historyYear(_ ymd: String) -> Int {
+        let parts = ymd.split(separator: "-")
+        guard let y = Int(parts.first ?? "") else { return 0 }
+        return y
+    }
+
+    // MARK: - Shared helpers
 
     private func metric(_ label: String, _ value: Double, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
