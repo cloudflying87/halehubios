@@ -166,6 +166,7 @@ struct LoanDetail: Identifiable, Codable, Sendable {
     let effectivePmi: Double?
     let effectiveEscrow: Double?
     let totalMonthlyHousingCost: Double?
+    let propertyValue: Double?
 }
 
 struct AmortizationRow: Identifiable, Codable, Sendable {
@@ -203,6 +204,20 @@ struct LoanRequest: Codable, Sendable {
     let isActive: Bool
     let isInvestment: Bool
     let ynabCategory: String?
+    let ynabPayee: String?
+    let ynabAccount: String?
+    let monthlyPmi: Double?
+    let pmiEndDate: String?
+    let monthlyInsurance: Double?
+    let monthlyPropertyTax: Double?
+    let escrowEndDate: String?
+    let propertyValue: Double?
+}
+
+struct YNABSuggestions: Codable, Sendable {
+    let categories: [String]
+    let payees: [String]
+    let accounts: [String]
 }
 
 struct PaymentRequest: Codable, Sendable {
