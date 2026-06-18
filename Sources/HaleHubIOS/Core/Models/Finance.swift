@@ -850,3 +850,36 @@ struct HSARequest: Codable, Sendable {
     let contributionLimit: Double
     let notes: String?
 }
+
+// MARK: - YNAB Reconciliation
+
+struct ReconciliationRow: Codable, Sendable, Identifiable {
+    var id: String { "\(kind)-\(date)-\(ynabAmount ?? 0)-\(pcNet ?? 0)" }
+    let kind: String
+    let date: String
+    let ynabDate: String?
+    let ynabAmount: Double?
+    let pcEmployer: String?
+    let pcEarner: String?
+    let pcNet: Double?
+    let pcGross: Double?
+    let dateDiff: Int?
+    let amountDiff: Double?
+}
+
+struct ReconciliationTotals: Codable, Sendable {
+    let matchedYnab: Double
+    let matchedPcNet: Double
+    let ynabOnly: Double
+    let pcOnlyNet: Double
+}
+
+struct ReconciliationResponse: Codable, Sendable {
+    let year: Int
+    let availableYears: [Int]
+    let matchedCount: Int
+    let ynabOnlyCount: Int
+    let pcOnlyCount: Int
+    let totals: ReconciliationTotals
+    let rows: [ReconciliationRow]
+}
