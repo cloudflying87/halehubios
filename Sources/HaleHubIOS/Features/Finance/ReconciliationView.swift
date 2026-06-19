@@ -160,7 +160,7 @@ struct ReconciliationView: View {
                         Spacer()
                         Text("Δ \(fmtDollars(abs(diff)))")
                             .font(.caption2)
-                            .foregroundStyle(abs(diff) < 50 ? .secondary : .orange)
+                            .foregroundStyle(abs(diff) < 50 ? Color.secondary : Color.orange)
                     }
                 }
             } else if row.kind == "ynab_only" {
