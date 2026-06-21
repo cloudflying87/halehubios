@@ -8,10 +8,26 @@ class ResourcesHubViewModel: ObservableObject {
     @Published var letters: [Letter] = []
     @Published var isLoading = false
     @Published var error: String?
+    /// Slugs of letters whose detail is saved for offline reading.
+    @Published var downloadedSlugs: Set<String> = []
+    @Published var downloadingSlugs: Set<String> = []
+
+    private let lettersKey = "letters_list"
+    private let resourcesKey = "resources_list"
+    private func detailKey(_ slug: String) -> String { "letter_detail_\(slug)" }
 
     func load(token: String) async {
         isLoading = true
         error = nil
+
+        // Cache-first: show the saved list instantly and as the offline fallback.
+        if letters.isEmpty, let cachedL: [Letter] = await CacheManager.shared.load(key: lettersKey) {
+            letters = cachedL.sorted { $0.year > $1.year }
+        }
+        if resources.isEmpty, let cachedR: [Resource] = await CacheManager.shared.load(key: resourcesKey) {
+            resources = cachedR
+        }
+        await refreshDownloaded()
 
         async let resourcesTask: [Resource] = APIClient.shared.get("/resources/", token: token)
         async let lettersTask: [Letter] = APIClient.shared.get("/letters/", token: token)
@@ -20,11 +36,44 @@ class ResourcesHubViewModel: ObservableObject {
             let (r, l) = try await (resourcesTask, lettersTask)
             resources = r
             letters = l.sorted { $0.year > $1.year }
+            await CacheManager.shared.save(r, key: resourcesKey)
+            await CacheManager.shared.save(l, key: lettersKey)
+        } catch {
+            // Offline with a cached list → keep showing it silently.
+            if letters.isEmpty && resources.isEmpty {
+                self.error = error.localizedDescription
+            }
+        }
+
+        await refreshDownloaded()
+        isLoading = false
+    }
+
+    /// Recompute which letters have a cached detail (the offline badge).
+    func refreshDownloaded() async {
+        var found: Set<String> = []
+        for letter in letters {
+            if let _: LetterDetail = await CacheManager.shared.load(key: detailKey(letter.slug)) {
+                found.insert(letter.slug)
+            }
+        }
+        downloadedSlugs = found
+    }
+
+    /// Save a letter (text + photos) for offline reading, straight from the list.
+    func downloadLetter(slug: String, token: String) async {
+        downloadingSlugs.insert(slug)
+        defer { downloadingSlugs.remove(slug) }
+        do {
+            let detail: LetterDetail = try await APIClient.shared.get("/letters/\(slug)/", token: token)
+            await CacheManager.shared.save(detail, key: detailKey(slug))
+            for photo in detail.photos {
+                await OfflineImageStore.shared.download(photo.url)
+            }
+            downloadedSlugs.insert(slug)
         } catch {
             self.error = error.localizedDescription
         }
-
-        isLoading = false
     }
 
     func archiveLetter(slug: String, token: String) async {
@@ -132,7 +181,19 @@ struct ResourcesHubView: View {
                         NavigationLink(
                             destination: LetterDetailView(letter: letter).environmentObject(auth)
                         ) {
-                            LetterRow(letter: letter)
+                            LetterRow(
+                                letter: letter,
+                                isDownloaded: vm.downloadedSlugs.contains(letter.slug),
+                                isDownloading: vm.downloadingSlugs.contains(letter.slug)
+                            )
+                        }
+                        .swipeActions(edge: .leading) {
+                            if !vm.downloadedSlugs.contains(letter.slug) {
+                                Button("Download", systemImage: "arrow.down.circle") {
+                                    Task { await vm.downloadLetter(slug: letter.slug, token: auth.accessToken ?? "") }
+                                }
+                                .tint(.blue)
+                            }
                         }
                         .swipeActions(edge: .trailing) {
                             if letter.canEdit {
@@ -196,6 +257,8 @@ struct ResourcesHubView: View {
 
 private struct LetterRow: View {
     let letter: Letter
+    var isDownloaded: Bool = false
+    var isDownloading: Bool = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -208,9 +271,19 @@ private struct LetterRow: View {
                 .fixedSize()
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(letter.title)
-                    .font(.headline)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(letter.title)
+                        .font(.headline)
+                        .lineLimit(1)
+                    if isDownloading {
+                        ProgressView().controlSize(.mini)
+                    } else if isDownloaded {
+                        Image(systemName: "checkmark.icloud.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .accessibilityLabel("Available offline")
+                    }
+                }
 
                 HStack(spacing: 10) {
                     if let eventDate = letter.eventDate {

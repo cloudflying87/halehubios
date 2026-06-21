@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import WebKit
 
 // MARK: - ViewModel
@@ -11,16 +12,69 @@ class LetterDetailViewModel: ObservableObject {
     @Published var rsvpSuccess = false
     @Published var rsvpError: String?
     @Published var isSubmittingRSVP = false
+    @Published var isDownloading = false
+    @Published var isDownloaded = false
+
+    private func cacheKey(_ slug: String) -> String { "letter_detail_\(slug)" }
 
     func load(slug: String, token: String) async {
         isLoading = true
         error = nil
-        do {
-            detail = try await APIClient.shared.get("/letters/\(slug)/", token: token)
-        } catch {
-            self.error = error.localizedDescription
+        // Show any cached copy immediately — instant render and the offline fallback.
+        if detail == nil, let cached: LetterDetail = await CacheManager.shared.load(key: cacheKey(slug)) {
+            detail = cached
         }
+        do {
+            let fresh: LetterDetail = try await APIClient.shared.get("/letters/\(slug)/", token: token)
+            detail = fresh
+            await CacheManager.shared.save(fresh, key: cacheKey(slug))
+        } catch {
+            // Offline (or failed) with a cached copy → keep showing it silently.
+            if detail == nil { self.error = error.localizedDescription }
+        }
+        await refreshDownloadedState(slug: slug)
         isLoading = false
+    }
+
+    /// A letter counts as "downloaded" when its detail JSON is cached and every
+    /// photo is on disk.
+    func refreshDownloadedState(slug: String) async {
+        guard let cached: LetterDetail = await CacheManager.shared.load(key: cacheKey(slug)) else {
+            isDownloaded = false
+            return
+        }
+        for photo in cached.photos {
+            let onDisk = await OfflineImageStore.shared.isCached(photo.url)
+            if !onDisk {
+                isDownloaded = false
+                return
+            }
+        }
+        isDownloaded = true
+    }
+
+    /// Save the letter (text + every photo) for offline reading.
+    func downloadForOffline(slug: String, token: String) async {
+        isDownloading = true
+        var letterToCache = detail
+        do {
+            let fresh: LetterDetail = try await APIClient.shared.get("/letters/\(slug)/", token: token)
+            detail = fresh
+            letterToCache = fresh
+            await CacheManager.shared.save(fresh, key: cacheKey(slug))
+        } catch {
+            // Offline: fall back to whatever we already have cached.
+            if letterToCache == nil {
+                letterToCache = await CacheManager.shared.load(key: cacheKey(slug))
+            }
+        }
+        if let letterToCache {
+            for photo in letterToCache.photos {
+                await OfflineImageStore.shared.download(photo.url)
+            }
+        }
+        await refreshDownloadedState(slug: slug)
+        isDownloading = false
     }
 
     func submitRSVP(slug: String, rsvp: RSVPRequest, token: String) async {
@@ -81,6 +135,19 @@ struct LetterDetailView: View {
         .navigationTitle(letter.title)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if vm.isDownloading {
+                    ProgressView()
+                } else {
+                    Button {
+                        Task { await vm.downloadForOffline(slug: letter.slug, token: auth.accessToken ?? "") }
+                    } label: {
+                        Image(systemName: vm.isDownloaded ? "checkmark.icloud.fill" : "arrow.down.circle")
+                    }
+                    .accessibilityLabel(vm.isDownloaded ? "Saved for offline" : "Download for offline")
+                    .disabled(vm.detail == nil)
+                }
+            }
             if let detail = vm.detail, detail.canEdit {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Edit") { showEdit = true }
@@ -219,27 +286,62 @@ private struct PhotoThumbnail: View {
     let photo: LetterPhoto
 
     var body: some View {
-        Group {
-            if let url = URL(string: photo.url) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image): image.resizable().scaledToFill()
-                    case .failure: placeholder
-                    default: Color(.systemGray5).overlay(ProgressView())
-                    }
-                }
-            } else { placeholder }
+        CachedAsyncImage(urlString: photo.url) { image in
+            image.resizable().scaledToFill()
+        } placeholder: {
+            Color(.systemGray5).overlay(
+                Image(systemName: "photo").foregroundStyle(.tertiary).font(.title2)
+            )
         }
         .frame(maxWidth: .infinity)
         .aspectRatio(1, contentMode: .fill)
         .clipped()
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
+}
 
-    private var placeholder: some View {
-        Color(.systemGray5).overlay(
-            Image(systemName: "photo").foregroundStyle(.tertiary).font(.title2)
-        )
+// MARK: - Cached Async Image
+
+/// Like `AsyncImage`, but it prefers a copy from `OfflineImageStore` (so letter
+/// photos show without a connection) and caches any network fetch for next time.
+struct CachedAsyncImage<Content: View, Placeholder: View>: View {
+    let urlString: String
+    @ViewBuilder let content: (Image) -> Content
+    @ViewBuilder let placeholder: () -> Placeholder
+
+    @State private var loaded: Image?
+    @State private var didFail = false
+
+    var body: some View {
+        Group {
+            if let loaded {
+                content(loaded)
+            } else if didFail {
+                placeholder()
+            } else {
+                placeholder().task { await load() }
+            }
+        }
+    }
+
+    @MainActor
+    private func load() async {
+        // 1. Offline copy on disk.
+        if let data = await OfflineImageStore.shared.data(for: urlString),
+           let ui = UIImage(data: data) {
+            loaded = Image(uiImage: ui)
+            return
+        }
+        // 2. Network — and cache it for offline next time.
+        guard let url = URL(string: urlString) else { didFail = true; return }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            guard let ui = UIImage(data: data) else { didFail = true; return }
+            await OfflineImageStore.shared.store(data, for: urlString)
+            loaded = Image(uiImage: ui)
+        } catch {
+            didFail = true
+        }
     }
 }
 
@@ -253,15 +355,10 @@ private struct PhotoFullScreenView: View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
-                if let url = URL(string: photo.url) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
-                        default:
-                            Image(systemName: "photo.slash").font(.largeTitle).foregroundStyle(.white.opacity(0.5))
-                        }
-                    }
+                CachedAsyncImage(urlString: photo.url) { image in
+                    image.resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
+                } placeholder: {
+                    Image(systemName: "photo.slash").font(.largeTitle).foregroundStyle(.white.opacity(0.5))
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// File-based JSON cache. Each key maps to a JSON file in the app's Documents/HaleHubCache directory.
@@ -60,6 +61,67 @@ actor CacheManager {
     private func ensureCacheDirExists() {
         if !fileManager.fileExists(atPath: cacheDir.path) {
             try? fileManager.createDirectory(at: cacheDir, withIntermediateDirectories: true)
+        }
+    }
+}
+
+/// On-disk cache for downloaded images (e.g. letter photos) so they render
+/// offline. Files live in Documents/HaleHubImages, named by a stable hash of
+/// the source URL.
+actor OfflineImageStore {
+    static let shared = OfflineImageStore()
+
+    private let fileManager = FileManager.default
+
+    private var dir: URL {
+        let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return docs.appendingPathComponent("HaleHubImages", isDirectory: true)
+    }
+
+    private func fileURL(for remoteURL: String) -> URL {
+        let digest = SHA256.hash(data: Data(remoteURL.utf8))
+        let name = digest.map { String(format: "%02x", $0) }.joined()
+        return dir.appendingPathComponent(name)
+    }
+
+    /// Whether the image for this URL has already been saved to disk.
+    func isCached(_ remoteURL: String) -> Bool {
+        fileManager.fileExists(atPath: fileURL(for: remoteURL).path)
+    }
+
+    /// Previously-downloaded bytes for an image, or nil if not cached.
+    func data(for remoteURL: String) -> Data? {
+        try? Data(contentsOf: fileURL(for: remoteURL))
+    }
+
+    /// Persist freshly-fetched bytes (used when a view downloads on first view).
+    func store(_ data: Data, for remoteURL: String) {
+        ensureDirExists()
+        try? data.write(to: fileURL(for: remoteURL))
+    }
+
+    /// Fetch and persist an image unless it is already on disk. Returns whether
+    /// the image is available on disk afterwards.
+    @discardableResult
+    func download(_ remoteURL: String) async -> Bool {
+        if isCached(remoteURL) { return true }
+        guard let url = URL(string: remoteURL) else { return false }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            store(data, for: remoteURL)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    func clearAll() {
+        try? fileManager.removeItem(at: dir)
+    }
+
+    private func ensureDirExists() {
+        if !fileManager.fileExists(atPath: dir.path) {
+            try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
         }
     }
 }
