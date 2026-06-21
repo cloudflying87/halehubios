@@ -106,7 +106,7 @@ struct ShoppingListsView: View {
         } detail: {
             NavigationStack {
                 if let id = selectedListID, let list = vm.lists.first(where: { $0.id == id }) {
-                    ShoppingListDetailView(list: list)
+                    ShoppingListDetailView(list: list).id(id)
                 } else {
                     ContentUnavailableView(
                         "Select a List",

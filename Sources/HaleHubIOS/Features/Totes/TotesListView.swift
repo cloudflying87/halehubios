@@ -100,10 +100,10 @@ struct TotesListView: View {
         .sheet(isPresented: $showQRBatch) {
             QRBatchSheet().environmentObject(auth)
         }
-        .onChange(of: scannedTote) { _, newValue in
+        .onChange(of: scannedTote?.id) { _, newID in
             // On iPad, route a scanned tote into the detail pane instead of pushing.
-            if hSize == .regular, let t = newValue {
-                selectedToteID = t.id
+            if hSize == .regular, let id = newID {
+                selectedToteID = id
                 scannedTote = nil
             }
         }
@@ -130,7 +130,7 @@ struct TotesListView: View {
         } detail: {
             NavigationStack {
                 if let id = selectedToteID, let tote = vm.totes.first(where: { $0.id == id }) {
-                    ToteDetailView(toteId: tote.id, toteName: tote.name)
+                    ToteDetailView(toteId: tote.id, toteName: tote.name).id(tote.id)
                 } else {
                     ContentUnavailableView(
                         "Select a Tote",
