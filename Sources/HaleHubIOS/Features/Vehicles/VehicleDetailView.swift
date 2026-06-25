@@ -985,6 +985,7 @@ struct EditEventSheet: View {
     @State private var isDeleting = false
     @State private var showDeleteConfirm = false
     @State private var errorMessage: String?
+    @State private var savedGasEvent: VehicleEvent?
 
     init(event: VehicleEvent, vehicle: Vehicle, onSaved: @escaping () -> Void, onDeleted: (() -> Void)? = nil) {
         self.event = event
@@ -1001,6 +1002,12 @@ struct EditEventSheet: View {
 
     var body: some View {
         NavigationStack {
+            if let saved = savedGasEvent {
+                GasSuccessCard(event: saved, vehicle: vehicle) {
+                    onSaved()
+                    dismiss()
+                }
+            } else {
             Form {
                 Section("Details") {
                     DatePicker("Date", selection: $date, displayedComponents: .date)
@@ -1060,12 +1067,13 @@ struct EditEventSheet: View {
             } message: {
                 Text("This cannot be undone.")
             }
-        }
-        .task {
-            if event.eventType == "outing" {
-                await loadLocations()
+            .task {
+                if event.eventType == "outing" {
+                    await loadLocations()
+                }
             }
-        }
+        } // end else
+        } // end NavigationStack
     }
 
     private var eventTypeTitle: String {
@@ -1120,11 +1128,15 @@ struct EditEventSheet: View {
         }
 
         do {
-            let _: VehicleEvent = try await APIClient.shared.patch(
+            let updated: VehicleEvent = try await APIClient.shared.patch(
                 "/vehicles/events/\(event.id)/", body: body, token: token
             )
-            onSaved()
-            dismiss()
+            if event.eventType == "gas" {
+                savedGasEvent = updated  // show recalculated stats card
+            } else {
+                onSaved()
+                dismiss()
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

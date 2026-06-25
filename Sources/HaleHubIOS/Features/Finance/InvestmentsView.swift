@@ -3,14 +3,17 @@ import SwiftUI
 @MainActor
 final class InvestmentsViewModel: ObservableObject {
     @Published var investments: [InvestmentHolding] = []
+    @Published var brokerageAccounts: [BrokerageAccountSummary] = []
     @Published var isLoading = false
     @Published var error: String?
 
     func load(token: String) async {
         isLoading = true
         error = nil
+        async let inv: [InvestmentHolding] = APIClient.shared.get("/finance/investments/", token: token)
+        async let brok: [BrokerageAccountSummary] = APIClient.shared.get("/finance/brokerage/", token: token)
         do {
-            investments = try await APIClient.shared.get("/finance/investments/", token: token)
+            (investments, brokerageAccounts) = try await (inv, brok)
         } catch {
             self.error = error.localizedDescription
         }
@@ -48,7 +51,9 @@ final class InvestmentsViewModel: ObservableObject {
         }
     }
 
-    var total: Double { investments.filter { $0.isActive }.reduce(0) { $0 + $1.currentValue } }
+    var brokerageTotal: Double { brokerageAccounts.compactMap(\.latestBalance).reduce(0, +) }
+    var manualTotal: Double { investments.filter { $0.isActive }.reduce(0) { $0 + $1.currentValue } }
+    var grandTotal: Double { brokerageTotal + manualTotal }
 }
 
 let investmentTypes: [(String, String)] = [
@@ -69,19 +74,10 @@ struct InvestmentsView: View {
         ScrollView {
             LazyVStack(spacing: 16) {
                 totalCard
-                if vm.investments.isEmpty && !vm.isLoading {
-                    ContentUnavailableView(
-                        "No Investments",
-                        systemImage: "chart.line.uptrend.xyaxis",
-                        description: Text("Tap + to add an investment. Retirement is tracked separately.")
-                    )
-                    .frame(minHeight: 140)
-                } else {
-                    ForEach(vm.investments) { inv in
-                        Button { editing = inv } label: { row(inv) }
-                            .buttonStyle(.plain)
-                    }
+                if !vm.brokerageAccounts.isEmpty {
+                    brokerageSection
                 }
+                manualSection
             }
             .padding(16)
         }
@@ -111,17 +107,122 @@ struct InvestmentsView: View {
 
     private var totalCard: some View {
         VStack(spacing: 4) {
-            Text("Total Investments").font(.caption).foregroundStyle(.secondary)
-            Text(LoanFormatters.money(vm.total, fractionDigits: 0))
+            Text("Total Portfolio").font(.caption).foregroundStyle(.secondary)
+            Text(LoanFormatters.money(vm.grandTotal, fractionDigits: 0))
                 .font(.system(size: 30, weight: .bold, design: .rounded)).foregroundStyle(.green)
-            Text("Non-retirement holdings").font(.caption2).foregroundStyle(.tertiary)
+            if vm.brokerageTotal > 0 && vm.manualTotal > 0 {
+                HStack(spacing: 12) {
+                    Label(LoanFormatters.money(vm.brokerageTotal, fractionDigits: 0), systemImage: "building.columns")
+                        .font(.caption2).foregroundStyle(.secondary)
+                    Label(LoanFormatters.money(vm.manualTotal, fractionDigits: 0), systemImage: "list.bullet")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+            }
         }
         .padding(18).frame(maxWidth: .infinity)
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
-    private func row(_ inv: InvestmentHolding) -> some View {
+    private var brokerageSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Brokerage Accounts", systemImage: "building.columns")
+                    .font(.subheadline).fontWeight(.semibold)
+                Spacer()
+                Text(LoanFormatters.money(vm.brokerageTotal, fractionDigits: 0))
+                    .font(.subheadline).fontWeight(.semibold).foregroundStyle(.green)
+            }
+            .padding(.horizontal, 4)
+
+            ForEach(vm.brokerageAccounts) { account in
+                brokerageRow(account)
+            }
+
+            Text("Import CSVs from the web to update balances.")
+                .font(.caption2).foregroundStyle(.tertiary)
+                .padding(.horizontal, 4)
+        }
+    }
+
+    private func brokerageRow(_ account: BrokerageAccountSummary) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(account.name).font(.subheadline).fontWeight(.medium)
+                    Text([account.institution, accountTypeLabel(account.accountType)]
+                        .compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    if let bal = account.latestBalance {
+                        Text(LoanFormatters.money(bal, fractionDigits: 0))
+                            .font(.subheadline).fontWeight(.semibold)
+                    } else {
+                        Text("No data").font(.caption).foregroundStyle(.tertiary)
+                    }
+                    if let d = account.latestImportDate {
+                        Text(d, style: .date).font(.caption2).foregroundStyle(.tertiary)
+                    }
+                }
+            }
+
+            if !account.topHoldings.isEmpty {
+                VStack(spacing: 4) {
+                    ForEach(account.topHoldings, id: \.description) { h in
+                        HStack {
+                            Text(h.description).font(.caption2).foregroundStyle(.secondary)
+                            Spacer()
+                            Text(String(format: "%.1f%%", h.percentOfAccount))
+                                .font(.caption2).foregroundStyle(.tertiary)
+                            Text(LoanFormatters.money(h.currentValue, fractionDigits: 0))
+                                .font(.caption2).fontWeight(.medium)
+                        }
+                    }
+                }
+                .padding(8)
+                .background(Color(.tertiarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+        .padding(12)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var manualSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !vm.brokerageAccounts.isEmpty {
+                HStack {
+                    Label("Manual Holdings", systemImage: "list.bullet")
+                        .font(.subheadline).fontWeight(.semibold)
+                    Spacer()
+                    if vm.manualTotal > 0 {
+                        Text(LoanFormatters.money(vm.manualTotal, fractionDigits: 0))
+                            .font(.subheadline).fontWeight(.semibold).foregroundStyle(.green)
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+
+            if vm.investments.isEmpty && !vm.isLoading {
+                ContentUnavailableView(
+                    "No Manual Investments",
+                    systemImage: "chart.line.uptrend.xyaxis",
+                    description: Text("Tap + to add an investment. Retirement is tracked separately.")
+                )
+                .frame(minHeight: 120)
+            } else {
+                ForEach(vm.investments) { inv in
+                    Button { editing = inv } label: { manualRow(inv) }
+                        .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func manualRow(_ inv: InvestmentHolding) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(inv.name).font(.subheadline).fontWeight(.medium)
@@ -142,6 +243,17 @@ struct InvestmentsView: View {
 
     private func typeLabel(_ t: String) -> String {
         investmentTypes.first { $0.0 == t }?.1 ?? t
+    }
+
+    private func accountTypeLabel(_ t: String) -> String {
+        switch t {
+        case "brokerage": return "Brokerage"
+        case "ira": return "IRA"
+        case "roth_ira": return "Roth IRA"
+        case "401k": return "401(k)"
+        case "hsa": return "HSA"
+        default: return t
+        }
     }
 }
 

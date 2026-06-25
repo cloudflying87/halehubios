@@ -213,6 +213,7 @@ struct FinanceView: View {
                 }
                 Section("Planning") {
                     sidebarRow(.monteCarlo)
+                    sidebarRow(.reconciliation)
                 }
             }
             .navigationTitle("Finance")
@@ -250,6 +251,7 @@ struct FinanceView: View {
         case .hsa:         HSAView()
         case .insurance:   LifeInsuranceView()
         case .monteCarlo:  MonteCarloView()
+        case .reconciliation: ReconciliationView()
         }
     }
 
@@ -270,6 +272,7 @@ struct FinanceView: View {
                 jumpChip("Insurance", "shield.lefthalf.filled", AnyView(LifeInsuranceView()))
                 jumpChip("HSA", "cross.case.fill", AnyView(HSAView()))
                 jumpChip("Monte Carlo", "dice.fill", AnyView(MonteCarloView()))
+                jumpChip("Reconciliation", "checkmark.circle.fill", AnyView(ReconciliationView()))
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
@@ -761,7 +764,7 @@ struct FinanceView: View {
 enum FinanceSection: String, CaseIterable, Identifiable, Hashable {
     case overview, budget, payHours, familyYear, paychecks, tithe
     case investments, retirement, assetsDebts, loans, hsa, insurance
-    case monteCarlo
+    case monteCarlo, reconciliation
 
     var id: String { rawValue }
 
@@ -779,7 +782,8 @@ enum FinanceSection: String, CaseIterable, Identifiable, Hashable {
         case .loans:       return "Loans"
         case .hsa:         return "HSA"
         case .insurance:   return "Insurance"
-        case .monteCarlo:  return "Monte Carlo"
+        case .monteCarlo:      return "Monte Carlo"
+        case .reconciliation:  return "Reconciliation"
         }
     }
 
@@ -797,7 +801,8 @@ enum FinanceSection: String, CaseIterable, Identifiable, Hashable {
         case .loans:       return "creditcard.fill"
         case .hsa:         return "cross.case.fill"
         case .insurance:   return "shield.lefthalf.filled"
-        case .monteCarlo:  return "dice.fill"
+        case .monteCarlo:      return "dice.fill"
+        case .reconciliation:  return "checkmark.circle.fill"
         }
     }
 }

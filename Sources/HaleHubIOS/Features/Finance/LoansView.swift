@@ -108,16 +108,24 @@ final class LoanDetailViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var saving = false
     @Published var error: String?
+    @Published var ynabSuggestions: YNABSuggestions?
 
     func load(id: Int, token: String) async {
         isLoading = true
         error = nil
         do {
             loan = try await APIClient.shared.get("/finance/loans/\(id)/", token: token)
+            await loadYNABSuggestions(token: token)
         } catch {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+
+    func loadYNABSuggestions(token: String) async {
+        do {
+            ynabSuggestions = try await APIClient.shared.get("/finance/ynab-suggestions/", token: token)
+        } catch { }
     }
 
     func recordPayment(id: Int, req: PaymentRequest, token: String) async -> Bool {
@@ -154,6 +162,32 @@ final class LoanDetailViewModel: ObservableObject {
             return false
         }
     }
+
+    func addCheckpoint(loanId: Int, req: LoanCheckpointRequest, token: String) async -> Bool {
+        saving = true
+        defer { saving = false }
+        do {
+            let _: LoanCheckpoint = try await APIClient.shared.post(
+                "/finance/loans/\(loanId)/checkpoints/", body: req, token: token
+            )
+            await load(id: loanId, token: token)
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            return false
+        }
+    }
+
+    func deleteCheckpoint(loanId: Int, checkpointId: Int, token: String) async {
+        do {
+            try await APIClient.shared.delete(
+                "/finance/loans/\(loanId)/checkpoints/\(checkpointId)/", token: token
+            )
+            await load(id: loanId, token: token)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
 }
 
 // MARK: - Loans List
@@ -186,7 +220,7 @@ struct FinanceLoansView: View {
             }
         }
         .sheet(isPresented: $showAdd) {
-            LoanFormSheet(existing: nil) { req in
+            LoanFormSheet(existing: nil, suggestions: nil) { req in
                 await vm.create(req, token: auth.accessToken ?? "")
             }
         }
@@ -233,6 +267,7 @@ struct LoanDetailView: View {
     @State private var showPayment = false
     @State private var showAmortization = false
     @State private var confirmDelete = false
+    @State private var showAddCheckpoint = false
 
     var body: some View {
         Group {
@@ -259,7 +294,7 @@ struct LoanDetailView: View {
         }
         .sheet(isPresented: $showEdit) {
             if let loan = vm.loan {
-                LoanFormSheet(existing: loan) { req in
+                LoanFormSheet(existing: loan, suggestions: vm.ynabSuggestions) { req in
                     await vm.update(id: loanId, req: req, token: auth.accessToken ?? "")
                 }
             }
@@ -299,8 +334,17 @@ struct LoanDetailView: View {
                 if let payments = loan.payments, !payments.isEmpty {
                     paymentsCard(payments)
                 }
+                checkpointsCard(loan)
+                if loan.matchedTransactions != nil {
+                    matchedTransactionsCard(loan)
+                }
             }
             .padding(16)
+        }
+        .sheet(isPresented: $showAddCheckpoint) {
+            AddCheckpointSheet(saving: vm.saving) { req in
+                await vm.addCheckpoint(loanId: loanId, req: req, token: auth.accessToken ?? "")
+            }
         }
     }
 
@@ -330,7 +374,24 @@ struct LoanDetailView: View {
             Divider()
             statRow("Interest Rate", "\(String(format: "%.3f", loan.interestRate))%")
             Divider()
-            statRow("Monthly Payment", LoanFormatters.money(loan.monthlyPayment))
+            statRow("P&I Payment", LoanFormatters.money(loan.monthlyPayment))
+            if loan.loanType == "mortgage", let total = loan.totalMonthlyHousingCost, total > loan.monthlyPayment {
+                if let pmi = loan.effectivePmi, pmi > 0 {
+                    Divider()
+                    statRow("PMI", LoanFormatters.money(pmi))
+                }
+                if let escrow = loan.effectiveEscrow, escrow > 0 {
+                    Divider()
+                    statRow("Taxes & Insurance", LoanFormatters.money(escrow))
+                }
+                Divider()
+                HStack {
+                    Text("Total (PITI)").font(.subheadline).fontWeight(.semibold)
+                    Spacer()
+                    Text(LoanFormatters.money(total)).font(.subheadline).fontWeight(.semibold)
+                }
+                .padding(.vertical, 12)
+            }
             Divider()
             statRow("Payoff Date", LoanFormatters.monthYear(loan.payoffDate))
             if let rem = loan.remainingPayments {
@@ -343,6 +404,12 @@ struct LoanDetailView: View {
             }
             Divider()
             statRow("Start Date", LoanFormatters.fullDate(loan.startDate))
+            if loan.loanType == "mortgage", let pv = loan.propertyValue, pv > 0 {
+                Divider()
+                statRow("Property Value", LoanFormatters.money(pv, fractionDigits: 0))
+                Divider()
+                statRow("Equity", LoanFormatters.money(pv - loan.currentBalance, fractionDigits: 0))
+            }
         }
         .padding(.horizontal, 16)
         .background(Color(.secondarySystemGroupedBackground))
@@ -414,6 +481,149 @@ struct LoanDetailView: View {
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
+
+    private func checkpointsCard(_ loan: LoanDetail) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Balance Checkpoints").font(.headline)
+                Spacer()
+                Button { showAddCheckpoint = true } label: {
+                    Image(systemName: "plus.circle").foregroundStyle(.blue)
+                }
+            }
+            Text("Anchors the YNAB backfill to a verified statement balance.")
+                .font(.caption).foregroundStyle(.secondary)
+            if let checkpoints = loan.checkpoints, !checkpoints.isEmpty {
+                ForEach(checkpoints) { cp in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(LoanFormatters.fullDate(cp.checkpointDate))
+                                .font(.subheadline).fontWeight(.medium)
+                            if !cp.notes.isEmpty {
+                                Text(cp.notes).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        Text(LoanFormatters.money(cp.balance)).font(.subheadline).fontWeight(.semibold)
+                        Button {
+                            Task {
+                                await vm.deleteCheckpoint(loanId: loanId, checkpointId: cp.id, token: auth.accessToken ?? "")
+                            }
+                        } label: {
+                            Image(systemName: "trash").foregroundStyle(.red).font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.leading, 8)
+                    }
+                    .padding(.vertical, 4)
+                }
+            } else {
+                Text("No checkpoints yet.")
+                    .font(.subheadline).foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+    private func matchedTransactionsCard(_ loan: LoanDetail) -> some View {
+        let transactions = loan.matchedTransactions ?? []
+        let importedCount = transactions.filter { $0.imported }.count
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("YNAB Transactions").font(.headline)
+                Spacer()
+                if !transactions.isEmpty {
+                    Text("\(transactions.count) matched · \(importedCount) imported")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if transactions.isEmpty {
+                Text("No matching transactions found. Check your YNAB filter settings.")
+                    .font(.subheadline).foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
+            } else {
+                ForEach(transactions) { tx in
+                    HStack(spacing: 10) {
+                        Circle()
+                            .fill(tx.imported ? Color.green : Color.orange)
+                            .frame(width: 8, height: 8)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(tx.payee).font(.subheadline).fontWeight(.medium)
+                                .lineLimit(1)
+                            Text(tx.account).font(.caption).foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(LoanFormatters.money(tx.amount)).font(.subheadline).fontWeight(.semibold)
+                            Text(LoanFormatters.fullDate(tx.date)).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 3)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+// MARK: - Add Checkpoint Sheet
+
+struct AddCheckpointSheet: View {
+    let saving: Bool
+    let onSave: (LoanCheckpointRequest) async -> Bool
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var date = Date()
+    @State private var balance: Double = 0
+    @State private var notes = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Checkpoint") {
+                    DatePicker("Statement Date", selection: $date, displayedComponents: .date)
+                    HStack {
+                        Text("Verified Balance")
+                        Spacer()
+                        TextField("0.00", value: $balance, format: .currency(code: "USD"))
+                            .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
+                    }
+                    TextField("Notes (e.g. March statement)", text: $notes)
+                }
+                Section {
+                    Text("After saving, run the backfill command on the server to reconstruct payment history from this checkpoint.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Add Checkpoint")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        Task {
+                            let req = LoanCheckpointRequest(
+                                checkpointDate: LoanFormatters.ymd(date),
+                                balance: balance,
+                                notes: notes
+                            )
+                            if await onSave(req) { dismiss() }
+                        }
+                    }
+                    .disabled(saving || balance <= 0)
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Record Payment Sheet
@@ -479,10 +689,61 @@ struct RecordPaymentSheet: View {
     }
 }
 
+// MARK: - YNAB Search Sheet
+
+struct YNABSearchSheet: View {
+    let title: String
+    let suggestions: [String]
+    let current: String
+    let onSelect: (String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+
+    private var filtered: [String] {
+        query.isEmpty ? suggestions : suggestions.filter { $0.localizedCaseInsensitiveContains(query) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(filtered, id: \.self) { item in
+                    Button {
+                        onSelect(item)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Text(item).foregroundStyle(.primary)
+                            Spacer()
+                            if item == current {
+                                Image(systemName: "checkmark").foregroundStyle(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+            .searchable(text: $query, prompt: "Search \(title.lowercased())")
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Clear") {
+                        onSelect("")
+                        dismiss()
+                    }
+                    .foregroundStyle(.red)
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Add / Edit Sheet
 
 struct LoanFormSheet: View {
     let existing: LoanDetail?
+    let suggestions: YNABSuggestions?
     let onSave: (LoanRequest) async -> Bool
 
     @Environment(\.dismiss) private var dismiss
@@ -495,8 +756,25 @@ struct LoanFormSheet: View {
     @State private var termMonths = 360
     @State private var monthlyPayment: Double = 0
     @State private var startDate = Date()
+    @State private var isActive = true
     @State private var isInvestment = false
+    // YNAB
     @State private var ynabCategory = ""
+    @State private var ynabPayee = ""
+    @State private var ynabAccount = ""
+    @State private var showCategoryPicker = false
+    @State private var showPayeePicker = false
+    @State private var showAccountPicker = false
+    // Mortgage PITI
+    @State private var propertyValue: Double? = nil
+    @State private var monthlyPmi: Double? = nil
+    @State private var showPmiEndDate = false
+    @State private var pmiEndDate: Date? = nil
+    @State private var monthlyInsurance: Double? = nil
+    @State private var monthlyPropertyTax: Double? = nil
+    @State private var showEscrowEndDate = false
+    @State private var escrowEndDate: Date? = nil
+
     @State private var saving = false
 
     private var isValid: Bool {
@@ -506,12 +784,15 @@ struct LoanFormSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                // 1. Loan identity
                 Section("Loan") {
                     TextField("Name (e.g. Home Mortgage)", text: $name)
                     Picker("Type", selection: $loanType) {
                         ForEach(LoanType.allCases) { Text($0.label).tag($0) }
                     }
                 }
+
+                // 2. Amounts
                 Section("Amounts") {
                     currencyField("Principal", value: $principal)
                     Toggle("Different current balance", isOn: $useBalance)
@@ -519,7 +800,12 @@ struct LoanFormSheet: View {
                         currencyField("Current Balance", value: $balance)
                     }
                     currencyField("Monthly Payment", value: $monthlyPayment)
+                    if loanType == .mortgage {
+                        optionalCurrencyField("Property Value", value: $propertyValue)
+                    }
                 }
+
+                // 3. Terms
                 Section("Terms") {
                     HStack {
                         Text("Interest Rate")
@@ -531,15 +817,61 @@ struct LoanFormSheet: View {
                     Stepper("Term: \(termMonths) months", value: $termMonths, in: 1...600)
                     DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
                 }
-                Section {
+
+                // 4. Options
+                Section("Options") {
+                    Toggle("Active", isOn: $isActive)
                     Toggle("Investment loan", isOn: $isInvestment)
                     Text("Investment loans are excluded from net-worth liabilities.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                Section("Auto-record payments") {
-                    TextField("YNAB category (e.g. Mortgage Payment)", text: $ynabCategory)
-                    Text("Transactions in this YNAB category are recorded as payments and lower the balance on each sync.")
+
+                // 5. YNAB Integration
+                Section("YNAB Integration") {
+                    ynabPickerRow(
+                        label: "Category",
+                        value: ynabCategory,
+                        showSheet: $showCategoryPicker
+                    )
+                    ynabPickerRow(
+                        label: "Payee",
+                        value: ynabPayee,
+                        showSheet: $showPayeePicker
+                    )
+                    ynabPickerRow(
+                        label: "Account",
+                        value: ynabAccount,
+                        showSheet: $showAccountPicker
+                    )
+                    Text("Transactions in the YNAB category are recorded as payments and lower the balance on each sync.")
                         .font(.caption).foregroundStyle(.secondary)
+                }
+
+                // 6. Mortgage PITI (mortgage only)
+                if loanType == .mortgage {
+                    Section("Mortgage PITI") {
+                        optionalCurrencyField("Monthly PMI", value: $monthlyPmi)
+                        Toggle("PMI End Date", isOn: $showPmiEndDate)
+                        if showPmiEndDate {
+                            DatePicker("PMI End Date",
+                                       selection: Binding(
+                                        get: { pmiEndDate ?? Date() },
+                                        set: { pmiEndDate = $0 }
+                                       ),
+                                       displayedComponents: .date)
+                        }
+                        optionalCurrencyField("Monthly Insurance", value: $monthlyInsurance)
+                        optionalCurrencyField("Monthly Property Tax", value: $monthlyPropertyTax)
+                        Toggle("Escrow End Date", isOn: $showEscrowEndDate)
+                        if showEscrowEndDate {
+                            DatePicker("Escrow End Date",
+                                       selection: Binding(
+                                        get: { escrowEndDate ?? Date() },
+                                        set: { escrowEndDate = $0 }
+                                       ),
+                                       displayedComponents: .date)
+                        }
+                    }
                 }
             }
             .navigationTitle(existing == nil ? "Add Loan" : "Edit Loan")
@@ -551,14 +883,25 @@ struct LoanFormSheet: View {
                         Task {
                             saving = true
                             let req = LoanRequest(
-                                name: name, loanType: loanType.rawValue,
+                                name: name,
+                                loanType: loanType.rawValue,
                                 principalAmount: principal,
                                 currentBalance: useBalance ? balance : nil,
-                                interestRate: rate, termMonths: termMonths,
+                                interestRate: rate,
+                                termMonths: termMonths,
                                 monthlyPayment: monthlyPayment,
                                 startDate: LoanFormatters.ymd(startDate),
-                                isActive: true, isInvestment: isInvestment,
-                                ynabCategory: ynabCategory.trimmingCharacters(in: .whitespaces)
+                                isActive: isActive,
+                                isInvestment: isInvestment,
+                                ynabCategory: ynabCategory.isEmpty ? nil : ynabCategory,
+                                ynabPayee: ynabPayee.isEmpty ? nil : ynabPayee,
+                                ynabAccount: ynabAccount.isEmpty ? nil : ynabAccount,
+                                monthlyPmi: monthlyPmi,
+                                pmiEndDate: (showPmiEndDate && pmiEndDate != nil) ? LoanFormatters.ymd(pmiEndDate!) : nil,
+                                monthlyInsurance: monthlyInsurance,
+                                monthlyPropertyTax: monthlyPropertyTax,
+                                escrowEndDate: (showEscrowEndDate && escrowEndDate != nil) ? LoanFormatters.ymd(escrowEndDate!) : nil,
+                                propertyValue: propertyValue
                             )
                             let ok = await onSave(req)
                             saving = false
@@ -569,10 +912,57 @@ struct LoanFormSheet: View {
                 }
             }
             .onAppear { populate() }
+            .sheet(isPresented: $showCategoryPicker) {
+                YNABSearchSheet(
+                    title: "Category",
+                    suggestions: suggestions?.categories ?? [],
+                    current: ynabCategory
+                ) { selected in ynabCategory = selected }
+            }
+            .sheet(isPresented: $showPayeePicker) {
+                YNABSearchSheet(
+                    title: "Payee",
+                    suggestions: suggestions?.payees ?? [],
+                    current: ynabPayee
+                ) { selected in ynabPayee = selected }
+            }
+            .sheet(isPresented: $showAccountPicker) {
+                YNABSearchSheet(
+                    title: "Account",
+                    suggestions: suggestions?.accounts ?? [],
+                    current: ynabAccount
+                ) { selected in ynabAccount = selected }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func ynabPickerRow(label: String, value: String, showSheet: Binding<Bool>) -> some View {
+        Button {
+            showSheet.wrappedValue = true
+        } label: {
+            HStack {
+                Text(label).foregroundStyle(.primary)
+                Spacer()
+                Text(value.isEmpty ? "None selected" : value)
+                    .foregroundStyle(value.isEmpty ? .secondary : .primary)
+                    .lineLimit(1)
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
 
     private func currencyField(_ label: String, value: Binding<Double>) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            TextField(label, value: value, format: .currency(code: "USD"))
+                .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
+        }
+    }
+
+    @ViewBuilder
+    private func optionalCurrencyField(_ label: String, value: Binding<Double?>) -> some View {
         HStack {
             Text(label)
             Spacer()
@@ -591,8 +981,24 @@ struct LoanFormSheet: View {
         rate = loan.interestRate
         termMonths = loan.termMonths
         monthlyPayment = loan.monthlyPayment
+        isActive = loan.isActive
         isInvestment = loan.isInvestment
         ynabCategory = loan.ynabCategory ?? ""
+        ynabPayee = loan.ynabPayee ?? ""
+        ynabAccount = loan.ynabAccount ?? ""
+        // PITI
+        monthlyPmi = loan.monthlyPmi
+        monthlyInsurance = loan.monthlyInsurance
+        monthlyPropertyTax = loan.monthlyPropertyTax
+        propertyValue = loan.propertyValue
+        if let pmiStr = loan.pmiEndDate, let d = LoanFormatters.parseYMD(pmiStr) {
+            pmiEndDate = d
+            showPmiEndDate = true
+        }
+        if let escrowStr = loan.escrowEndDate, let d = LoanFormatters.parseYMD(escrowStr) {
+            escrowEndDate = d
+            showEscrowEndDate = true
+        }
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyy-MM-dd"

@@ -106,9 +106,33 @@ struct FinanceLoan: Identifiable, Codable, Sendable {
     let monthlyPayment: Double
     let payoffDate: String?
     let progressPct: Double
+    let totalMonthlyHousingCost: Double?
 }
 
 // MARK: - Loan detail / management
+
+struct LoanCheckpoint: Identifiable, Codable, Sendable {
+    let id: Int
+    let checkpointDate: String   // "YYYY-MM-DD"
+    let balance: Double
+    let notes: String
+}
+
+struct LoanMatchedTransaction: Identifiable, Codable, Sendable {
+    var id: String { ynabId }
+    let ynabId: String
+    let date: String            // "YYYY-MM-DD"
+    let payee: String
+    let account: String
+    let amount: Double
+    let imported: Bool
+}
+
+struct LoanCheckpointRequest: Codable, Sendable {
+    let checkpointDate: String
+    let balance: Double
+    let notes: String
+}
 
 struct LoanDetail: Identifiable, Codable, Sendable {
     let id: Int
@@ -125,10 +149,24 @@ struct LoanDetail: Identifiable, Codable, Sendable {
     let progressPct: Double
     let payoffDate: String?
     let ynabCategory: String?
+    let ynabPayee: String?
+    let ynabAccount: String?
     let totalInterest: Double?
     let remainingPayments: Int?
     let payments: [LoanPayment]?
+    let checkpoints: [LoanCheckpoint]?
     let amortization: [AmortizationRow]?
+    let matchedTransactions: [LoanMatchedTransaction]?
+    // PITI fields (mortgages only — nil for other loan types)
+    let monthlyPmi: Double?
+    let pmiEndDate: String?
+    let monthlyInsurance: Double?
+    let monthlyPropertyTax: Double?
+    let escrowEndDate: String?
+    let effectivePmi: Double?
+    let effectiveEscrow: Double?
+    let totalMonthlyHousingCost: Double?
+    let propertyValue: Double?
 }
 
 struct AmortizationRow: Identifiable, Codable, Sendable {
@@ -166,6 +204,20 @@ struct LoanRequest: Codable, Sendable {
     let isActive: Bool
     let isInvestment: Bool
     let ynabCategory: String?
+    let ynabPayee: String?
+    let ynabAccount: String?
+    let monthlyPmi: Double?
+    let pmiEndDate: String?
+    let monthlyInsurance: Double?
+    let monthlyPropertyTax: Double?
+    let escrowEndDate: String?
+    let propertyValue: Double?
+}
+
+struct YNABSuggestions: Codable, Sendable {
+    let categories: [String]
+    let payees: [String]
+    let accounts: [String]
 }
 
 struct PaymentRequest: Codable, Sendable {
@@ -439,6 +491,12 @@ struct PaycheckEditRequest: Codable, Sendable {
     let notes: String
 }
 
+struct BrokerageTopHolding: Codable, Sendable {
+    let description: String
+    let currentValue: Double
+    let percentOfAccount: Double
+}
+
 struct BrokerageAccountSummary: Identifiable, Codable, Sendable {
     let id: Int
     let name: String
@@ -446,6 +504,7 @@ struct BrokerageAccountSummary: Identifiable, Codable, Sendable {
     let institution: String?
     let latestBalance: Double?
     let latestImportDate: Date?
+    let topHoldings: [BrokerageTopHolding]
 }
 
 // MARK: - YNAB + Budget
@@ -569,6 +628,24 @@ struct RetirementHistoryPoint: Codable, Sendable, Identifiable {
     var id: String { date }
     let date: String       // "YYYY-MM-DD"
     let balance: Double
+    let earnings: Double
+    let contributions: Double
+    let employeeContribution: Double?
+    let employerContribution: Double?
+    let fees: Double
+    let valueChange: Double
+    let performancePct: Double
+}
+
+struct RetirementYTD: Codable, Sendable {
+    let earnings: Double
+    let contributions: Double
+    let employeeContribution: Double?
+    let employerContribution: Double?
+    let fees: Double
+    let startBalance: Double
+    let endBalance: Double
+    let performancePct: Double
 }
 
 struct RetirementAccount: Codable, Sendable, Identifiable {
@@ -576,12 +653,14 @@ struct RetirementAccount: Codable, Sendable, Identifiable {
     let name: String
     let latestBalance: Double
     let latestDate: String
-    let contributions: Double
-    let earnings: Double
-    let fees: Double
+    let contributions: Double      // latest month (kept for compat)
+    let earnings: Double           // latest month
+    let fees: Double               // latest month
     let valueChange: Double
     let reportCount: Int
+    let availableYears: [Int]
     let history: [RetirementHistoryPoint]
+    let ytdByYear: [String: RetirementYTD]
 }
 
 struct RetirementSummary: Codable, Sendable {
@@ -770,4 +849,37 @@ struct HSARequest: Codable, Sendable {
     let ytdEmployerContribution: Double
     let contributionLimit: Double
     let notes: String?
+}
+
+// MARK: - YNAB Reconciliation
+
+struct ReconciliationRow: Codable, Sendable, Identifiable {
+    var id: String { "\(kind)-\(date)-\(ynabAmount ?? 0)-\(pcNet ?? 0)" }
+    let kind: String
+    let date: String
+    let ynabDate: String?
+    let ynabAmount: Double?
+    let pcEmployer: String?
+    let pcEarner: String?
+    let pcNet: Double?
+    let pcGross: Double?
+    let dateDiff: Int?
+    let amountDiff: Double?
+}
+
+struct ReconciliationTotals: Codable, Sendable {
+    let matchedYnab: Double
+    let matchedPcNet: Double
+    let ynabOnly: Double
+    let pcOnlyNet: Double
+}
+
+struct ReconciliationResponse: Codable, Sendable {
+    let year: Int
+    let availableYears: [Int]
+    let matchedCount: Int
+    let ynabOnlyCount: Int
+    let pcOnlyCount: Int
+    let totals: ReconciliationTotals
+    let rows: [ReconciliationRow]
 }
