@@ -10,6 +10,8 @@
 		02C04EC24E37CB558298C065 /* FinanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3E0F5A841DEE102A2A748E9 /* FinanceView.swift */; };
 		F1A57C0DE0000000000A0001 /* LoansView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000000A0002 /* LoansView.swift */; };
 		F1A57C0DE0000000000B0001 /* TitheView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000000B0002 /* TitheView.swift */; };
+		F1A57C0DE0000000001A01 /* TitheMonthDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000001A02 /* TitheMonthDetailView.swift */; };
+		F1A57C0DE0000000001B01 /* CashflowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000001B02 /* CashflowView.swift */; };
 		F1A57C0DE0000000000C0001 /* PaychecksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000000C0002 /* PaychecksView.swift */; };
 		F1A57C0DE0000000000D0001 /* YNABSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000000D0002 /* YNABSettingsView.swift */; };
 		F1A57C0DE0000000000E0001 /* BudgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000000E0002 /* BudgetView.swift */; };
@@ -174,6 +176,8 @@
 		C3E0F5A841DEE102A2A748E9 /* FinanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceView.swift; sourceTree = "<group>"; };
 		F1A57C0DE0000000000A0002 /* LoansView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoansView.swift; sourceTree = "<group>"; };
 		F1A57C0DE0000000000B0002 /* TitheView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitheView.swift; sourceTree = "<group>"; };
+		F1A57C0DE0000000001A02 /* TitheMonthDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitheMonthDetailView.swift; sourceTree = "<group>"; };
+		F1A57C0DE0000000001B02 /* CashflowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashflowView.swift; sourceTree = "<group>"; };
 		F1A57C0DE0000000000C0002 /* PaychecksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaychecksView.swift; sourceTree = "<group>"; };
 		F1A57C0DE0000000000D0002 /* YNABSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YNABSettingsView.swift; sourceTree = "<group>"; };
 		F1A57C0DE0000000000E0002 /* BudgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetView.swift; sourceTree = "<group>"; };
@@ -314,6 +318,8 @@
 				C3E0F5A841DEE102A2A748E9 /* FinanceView.swift */,
 				F1A57C0DE0000000000A0002 /* LoansView.swift */,
 				F1A57C0DE0000000000B0002 /* TitheView.swift */,
+				F1A57C0DE0000000001A02 /* TitheMonthDetailView.swift */,
+				F1A57C0DE0000000001B02 /* CashflowView.swift */,
 				F1A57C0DE0000000000C0002 /* PaychecksView.swift */,
 				F1A57C0DE0000000000D0002 /* YNABSettingsView.swift */,
 				F1A57C0DE0000000000E0002 /* BudgetView.swift */,
@@ -587,6 +593,8 @@
 				02C04EC24E37CB558298C065 /* FinanceView.swift in Sources */,
 				F1A57C0DE0000000000A0001 /* LoansView.swift in Sources */,
 				F1A57C0DE0000000000B0001 /* TitheView.swift in Sources */,
+				F1A57C0DE0000000001A01 /* TitheMonthDetailView.swift in Sources */,
+				F1A57C0DE0000000001B01 /* CashflowView.swift in Sources */,
 				F1A57C0DE0000000000C0001 /* PaychecksView.swift in Sources */,
 				F1A57C0DE0000000000D0001 /* YNABSettingsView.swift in Sources */,
 				F1A57C0DE0000000000E0001 /* BudgetView.swift in Sources */,

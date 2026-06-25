@@ -265,19 +265,27 @@ struct TitheView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Monthly Breakdown").font(.headline)
             ForEach(history.reversed()) { p in
-                HStack {
-                    Text(longMonth(p.month)).font(.subheadline).frame(width: 110, alignment: .leading)
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("\(LoanFormatters.money(p.given, fractionDigits: 0)) / \(LoanFormatters.money(p.target, fractionDigits: 0))")
-                            .font(.subheadline)
-                        if p.target > 0 {
-                            Text(p.remaining <= 0 ? "Met" : "\(LoanFormatters.money(p.remaining, fractionDigits: 0)) to go")
-                                .font(.caption2)
-                                .foregroundStyle(p.remaining <= 0 ? .green : .orange)
+                NavigationLink {
+                    monthDetail(for: p.month)
+                } label: {
+                    HStack {
+                        Text(longMonth(p.month)).font(.subheadline).frame(width: 110, alignment: .leading)
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("\(LoanFormatters.money(p.given, fractionDigits: 0)) / \(LoanFormatters.money(p.target, fractionDigits: 0))")
+                                .font(.subheadline)
+                            if p.target > 0 {
+                                Text(p.remaining <= 0 ? "Met" : "\(LoanFormatters.money(p.remaining, fractionDigits: 0)) to go")
+                                    .font(.caption2)
+                                    .foregroundStyle(p.remaining <= 0 ? .green : .orange)
+                            }
                         }
+                        Image(systemName: "chevron.right")
+                            .font(.caption2).foregroundStyle(.tertiary)
                     }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
                 .padding(.vertical, 3)
                 Divider()
             }
@@ -286,6 +294,16 @@ struct TitheView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    @ViewBuilder
+    private func monthDetail(for ym: String) -> some View {
+        let parts = ym.split(separator: "-")
+        if parts.count == 2, let y = Int(parts[0]), let m = Int(parts[1]) {
+            TitheMonthDetailView(year: y, month: m)
+        } else {
+            EmptyView()
+        }
     }
 
     private func shortMonth(_ ym: String) -> String {

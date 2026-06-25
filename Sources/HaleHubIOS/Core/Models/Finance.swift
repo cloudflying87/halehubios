@@ -268,6 +268,66 @@ struct TitheMonthPoint: Codable, Sendable, Identifiable {
     let remaining: Double
 }
 
+// MARK: - Cash Flow (year-over-year)
+
+struct CashflowSummary: Codable, Sendable {
+    let years: [CashflowYear]
+    let spending: CashflowSpending
+}
+
+struct CashflowYear: Codable, Sendable, Identifiable {
+    var id: Int { year }
+    let year: Int
+    let income: Double      // money in: net pay from paychecks
+    let spending: Double     // money out: transaction outflow (excl transfers)
+    let net: Double
+}
+
+struct CashflowSpending: Codable, Sendable {
+    let years: [Int]
+    let categories: [CashflowCategory]
+}
+
+struct CashflowCategory: Codable, Sendable, Identifiable {
+    var id: String { name }
+    let name: String
+    let total: Double
+    let byYear: [String: Double]   // "2025" -> amount
+}
+
+struct TitheMonthDetail: Codable, Sendable {
+    let month: String            // "YYYY-MM"
+    let configured: Bool
+    let percentage: Double
+    let givingCategory: String
+    let gross: Double
+    let target: Double
+    let given: Double
+    let remaining: Double
+    let paychecks: [TithePaycheckItem]
+    let giving: [TitheGivingItem]
+}
+
+struct TithePaycheckItem: Codable, Sendable, Identifiable {
+    let id: String
+    let payDate: String          // "YYYY-MM-DD"
+    let employer: String
+    let recipient: String
+    let grossPay: Double
+    let netPay: Double
+}
+
+struct TitheGivingItem: Codable, Sendable, Identifiable {
+    let id: String
+    let date: String             // "YYYY-MM-DD"
+    let payee: String
+    let category: String
+    let account: String
+    let memo: String
+    let recipient: String
+    let amount: Double
+}
+
 struct TitheSettingsData: Codable, Sendable {
     let percentage: Double
     let givingCategory: String
