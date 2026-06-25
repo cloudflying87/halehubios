@@ -29,6 +29,9 @@ struct CashflowView: View {
         ScrollView {
             LazyVStack(spacing: 16) {
                 if let s = vm.summary {
+                    if !s.largeExpenses.isEmpty {
+                        largeExpensesCard(s.largeExpenses)
+                    }
                     if !s.years.isEmpty {
                         chartCard(s.years)
                         inOutCard(s.years)
@@ -47,6 +50,53 @@ struct CashflowView: View {
         .alert("Error", isPresented: .init(get: { vm.error != nil }, set: { if !$0 { vm.error = nil } })) {
             Button("OK") {}
         } message: { Text(vm.error ?? "") }
+    }
+
+    // MARK: - Large purchases
+
+    private func largeExpensesCard(_ items: [LargeExpense]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Large Purchases").font(.headline)
+            Text("Categories over $4,000 in a single month (last 12 months), biggest first. A high multiple of the monthly average is likely a one-off worth a look.")
+                .font(.caption).foregroundStyle(.secondary)
+            ForEach(items) { e in
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(e.category).font(.subheadline).fontWeight(.medium)
+                            if e.abnormal {
+                                Text("abnormal").font(.caption2)
+                                    .padding(.horizontal, 5).padding(.vertical, 1)
+                                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(.orange))
+                                    .foregroundStyle(.orange)
+                            }
+                        }
+                        Text("\(monthLabel(e.month)) · avg \(LoanFormatters.money(e.avgMonthly, fractionDigits: 0))/mo"
+                             + (e.ratio.map { " · \(String(format: "%.1f", $0))× avg" } ?? ""))
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text(LoanFormatters.money(e.amount, fractionDigits: 0))
+                        .font(.subheadline).fontWeight(.bold)
+                        .foregroundStyle(e.abnormal ? .orange : .primary)
+                }
+                .padding(.vertical, 3)
+                Divider()
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func monthLabel(_ ym: String) -> String {
+        let parts = ym.split(separator: "-")
+        guard parts.count == 2, let y = Int(parts[0]), let m = Int(parts[1]) else { return ym }
+        var c = DateComponents(); c.year = y; c.month = m; c.day = 1
+        guard let d = Calendar.current.date(from: c) else { return ym }
+        let f = DateFormatter(); f.dateFormat = "MMM yyyy"
+        return f.string(from: d)
     }
 
     // MARK: - Chart

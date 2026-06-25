@@ -273,6 +273,17 @@ struct TitheMonthPoint: Codable, Sendable, Identifiable {
 struct CashflowSummary: Codable, Sendable {
     let years: [CashflowYear]
     let spending: CashflowSpending
+    let largeExpenses: [LargeExpense]
+}
+
+struct LargeExpense: Codable, Sendable, Identifiable {
+    var id: String { "\(month)-\(category)" }
+    let month: String          // "YYYY-MM"
+    let category: String
+    let amount: Double
+    let avgMonthly: Double
+    let ratio: Double?
+    let abnormal: Bool
 }
 
 struct CashflowYear: Codable, Sendable, Identifiable {
