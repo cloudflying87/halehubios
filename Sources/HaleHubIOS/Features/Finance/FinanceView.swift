@@ -197,7 +197,6 @@ struct FinanceView: View {
             List(selection: $section) {
                 sidebarRow(.overview)
                 Section("Cash Flow") {
-                    sidebarRow(.cashflow)
                     sidebarRow(.budget)
                     sidebarRow(.payHours)
                     sidebarRow(.familyYear)
@@ -240,7 +239,6 @@ struct FinanceView: View {
             dashboardScroll
                 .navigationTitle("Overview")
                 .navigationBarTitleDisplayMode(.inline)
-        case .cashflow:    CashflowView()
         case .budget:      BudgetView()
         case .payHours:    PayHoursView()
         case .familyYear:  FamilyIncomeView()
@@ -264,7 +262,6 @@ struct FinanceView: View {
     private var quickJumpBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                jumpChip("Cash Flow", "arrow.left.arrow.right", AnyView(CashflowView()))
                 jumpChip("Budget", "chart.pie.fill", AnyView(BudgetView()))
                 jumpChip("Pay Hours", "clock.badge.checkmark.fill", AnyView(PayHoursView()))
                 jumpChip("Family Year", "person.2.fill", AnyView(FamilyIncomeView()))
@@ -765,7 +762,7 @@ struct FinanceView: View {
 /// Every navigable area of the finance app. Drives the iPad split-view sidebar;
 /// the iPhone layout keeps the equivalent quick-jump chip bar.
 enum FinanceSection: String, CaseIterable, Identifiable, Hashable {
-    case overview, cashflow, budget, payHours, familyYear, paychecks, tithe
+    case overview, budget, payHours, familyYear, paychecks, tithe
     case investments, retirement, assetsDebts, loans, hsa, insurance
     case monteCarlo, reconciliation
 
@@ -774,7 +771,6 @@ enum FinanceSection: String, CaseIterable, Identifiable, Hashable {
     var title: String {
         switch self {
         case .overview:    return "Overview"
-        case .cashflow:    return "Cash Flow"
         case .budget:      return "Budget"
         case .payHours:    return "Pay Hours"
         case .familyYear:  return "Family Year"
@@ -794,7 +790,6 @@ enum FinanceSection: String, CaseIterable, Identifiable, Hashable {
     var icon: String {
         switch self {
         case .overview:    return "square.grid.2x2.fill"
-        case .cashflow:    return "arrow.left.arrow.right"
         case .budget:      return "chart.pie.fill"
         case .payHours:    return "clock.badge.checkmark.fill"
         case .familyYear:  return "person.2.fill"
