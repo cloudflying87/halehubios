@@ -606,6 +606,38 @@ struct BudgetMonthData: Codable, Sendable {
     let month: String
     let groups: [BudgetGroup]
     let totals: BudgetTotals
+    let comparison: PeriodComparison?
+}
+
+// MARK: - In vs Out comparison (this period vs same period last year)
+
+struct PeriodComparison: Codable, Sendable {
+    let mode: String?
+    let current: PeriodSide
+    let prior: PeriodSide
+    let categories: [PeriodCategory]
+    let bigExpenses: [PeriodBigExpense]
+}
+
+struct PeriodSide: Codable, Sendable {
+    let label: String
+    let income: Double
+    let spending: Double
+    let net: Double
+}
+
+struct PeriodCategory: Codable, Sendable, Identifiable {
+    var id: String { name }
+    let name: String
+    let current: Double
+    let prior: Double
+    let delta: Double
+}
+
+struct PeriodBigExpense: Codable, Sendable, Identifiable {
+    var id: String { category }
+    let category: String
+    let amount: Double
 }
 
 struct MonthlyTrendPoint: Codable, Sendable {

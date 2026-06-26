@@ -54,6 +54,9 @@ struct BudgetView: View {
             LazyVStack(spacing: 16) {
                 monthSelector
                 if let data = vm.data {
+                    if let cmp = data.comparison {
+                        comparisonCard(cmp)
+                    }
                     if data.groups.isEmpty {
                         ContentUnavailableView(
                             "No Budget Data",
@@ -110,6 +113,73 @@ struct BudgetView: View {
             Button { vm.step(1) } label: { Image(systemName: "chevron.right") }
         }
         .padding(.horizontal, 4)
+    }
+
+    private func comparisonCard(_ c: PeriodComparison) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("In vs Out — \(c.current.label) vs \(c.prior.label)").font(.headline)
+
+            // In / Spent / Net, this period vs the same period last year
+            HStack {
+                Text("").frame(maxWidth: .infinity, alignment: .leading)
+                Text(c.current.label).font(.caption2).foregroundStyle(.secondary).frame(width: 90, alignment: .trailing)
+                Text(c.prior.label).font(.caption2).foregroundStyle(.secondary).frame(width: 90, alignment: .trailing)
+            }
+            compareRow("Money In", c.current.income, c.prior.income, .green)
+            compareRow("Spent", c.current.spending, c.prior.spending, .primary)
+            compareRow("Net", c.current.net, c.prior.net, c.current.net >= 0 ? .green : .red, bold: true)
+            Text("Money In = deposits received (excludes transfers). Spent = spending out (excludes transfers).")
+                .font(.caption2).foregroundStyle(.secondary)
+
+            if !c.bigExpenses.isEmpty {
+                Divider()
+                Text("Big Expenses").font(.subheadline).fontWeight(.semibold)
+                ForEach(c.bigExpenses) { e in
+                    HStack {
+                        Text(e.category).font(.subheadline)
+                        Spacer()
+                        Text(LoanFormatters.money(e.amount, fractionDigits: 0)).font(.subheadline).fontWeight(.semibold)
+                    }
+                }
+            }
+
+            if !c.categories.isEmpty {
+                Divider()
+                Text("Spending by Category").font(.subheadline).fontWeight(.semibold)
+                ForEach(c.categories.prefix(12).map { $0 }) { cat in
+                    HStack {
+                        Text(cat.name).font(.subheadline)
+                        Spacer()
+                        Text(LoanFormatters.money(cat.current, fractionDigits: 0)).font(.subheadline)
+                        Text(deltaLabel(cat.delta))
+                            .font(.caption2)
+                            .foregroundStyle(cat.delta > 0 ? .red : (cat.delta < 0 ? .green : .secondary))
+                            .frame(width: 70, alignment: .trailing)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func compareRow(_ label: String, _ cur: Double, _ prior: Double, _ color: Color, bold: Bool = false) -> some View {
+        HStack {
+            Text(label).font(.subheadline).fontWeight(bold ? .bold : .medium)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(LoanFormatters.money(cur, fractionDigits: 0))
+                .font(.subheadline).fontWeight(bold ? .bold : .regular).foregroundStyle(color)
+                .frame(width: 90, alignment: .trailing)
+            Text(LoanFormatters.money(prior, fractionDigits: 0))
+                .font(.subheadline).foregroundStyle(.secondary)
+                .frame(width: 90, alignment: .trailing)
+        }
+    }
+
+    private func deltaLabel(_ d: Double) -> String {
+        (d > 0 ? "+" : "") + LoanFormatters.money(d, fractionDigits: 0)
     }
 
     private func totalsCard(_ t: BudgetTotals) -> some View {
