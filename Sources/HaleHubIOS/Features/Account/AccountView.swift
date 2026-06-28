@@ -113,6 +113,15 @@ struct AccountView: View {
                     }
                 }
 
+                // Jewelry
+                if user?.can("jewelry") ?? false {
+                    Section {
+                        NavigationLink(destination: JewelryListView()) {
+                            CalculatorRow(icon: "💍", title: "Jewelry", subtitle: "Catalog pieces, photos & value report")
+                        }
+                    }
+                }
+
                 // Calculators
                 if user?.can("calculators") ?? false {
                     Section("Calculators") {
