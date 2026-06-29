@@ -161,6 +161,7 @@ struct CreateJewelrySheet: View {
     @State private var categoryId: String = ""
     @State private var description = ""
     @State private var value = ""
+    @State private var hasCertificate = false
     @State private var storage = ""
     @State private var acquired = ""
     @State private var acquiredNotes = ""
@@ -177,11 +178,16 @@ struct CreateJewelrySheet: View {
                     }
                     TextField("Description", text: $description, axis: .vertical).lineLimit(2...4)
                 }
-                Section("Details (optional)") {
+                Section {
                     TextField("Estimated value", text: $value).keyboardType(.decimalPad)
-                    TextField("Where it's stored", text: $storage)
-                    TextField("Acquired date (YYYY-MM-DD)", text: $acquired)
-                    TextField("Acquired notes", text: $acquiredNotes, axis: .vertical).lineLimit(2...3)
+                    Toggle("Has certificate", isOn: $hasCertificate)
+                }
+                Section {
+                    DisclosureGroup("Storage & acquired details") {
+                        TextField("Where it's stored", text: $storage)
+                        TextField("Acquired date (YYYY-MM-DD)", text: $acquired)
+                        TextField("Acquired notes", text: $acquiredNotes, axis: .vertical).lineLimit(2...3)
+                    }
                 }
                 Text("Add photos after saving, from the piece's detail screen.")
                     .font(.caption).foregroundStyle(.secondary)
@@ -199,6 +205,7 @@ struct CreateJewelrySheet: View {
                                 categoryId: categoryId.isEmpty ? nil : categoryId,
                                 description: description,
                                 estimatedValue: Double(value),
+                                hasCertificate: hasCertificate,
                                 storageLocation: storage,
                                 acquiredDate: acquired.isEmpty ? nil : acquired,
                                 acquiredNotes: acquiredNotes)

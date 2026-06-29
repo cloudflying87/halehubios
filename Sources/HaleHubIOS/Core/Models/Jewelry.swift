@@ -7,6 +7,7 @@ struct JewelryPiece: Identifiable, Codable, Sendable, Hashable {
     let categoryId: String?
     let categoryName: String
     let estimatedValue: Double?
+    let hasCertificate: Bool
     let storageLocation: String
     let acquiredDate: String?   // "YYYY-MM-DD"
     let acquiredNotes: String
@@ -44,6 +45,7 @@ struct JewelryPieceRequest: Encodable, Sendable {
     let categoryId: String?
     let description: String
     let estimatedValue: Double?
+    let hasCertificate: Bool
     let storageLocation: String
     let acquiredDate: String?
     let acquiredNotes: String

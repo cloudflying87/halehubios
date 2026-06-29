@@ -151,6 +151,7 @@ struct JewelryDetailView: View {
         VStack(alignment: .leading, spacing: 10) {
             if !p.description.isEmpty { Text(p.description) }
             if let v = p.estimatedValue { row("Estimated value", LoanFormatters.money(v, fractionDigits: 2)) }
+            if p.hasCertificate { row("Certificate", "✅ Yes") }
             if !p.storageLocation.isEmpty { row("Stored", p.storageLocation) }
             if let d = p.acquiredDate { row("Acquired", d) }
             if !p.acquiredNotes.isEmpty { row("Acquired notes", p.acquiredNotes) }
@@ -180,6 +181,7 @@ struct EditJewelrySheet: View {
     @State private var categoryId: String
     @State private var description: String
     @State private var value: String
+    @State private var hasCertificate: Bool
     @State private var storage: String
     @State private var acquired: String
     @State private var acquiredNotes: String
@@ -191,6 +193,7 @@ struct EditJewelrySheet: View {
         _categoryId = State(initialValue: piece.categoryId ?? "")
         _description = State(initialValue: piece.description)
         _value = State(initialValue: piece.estimatedValue.map { String($0) } ?? "")
+        _hasCertificate = State(initialValue: piece.hasCertificate)
         _storage = State(initialValue: piece.storageLocation)
         _acquired = State(initialValue: piece.acquiredDate ?? "")
         _acquiredNotes = State(initialValue: piece.acquiredNotes)
@@ -207,11 +210,16 @@ struct EditJewelrySheet: View {
                     }
                     TextField("Description", text: $description, axis: .vertical).lineLimit(2...4)
                 }
-                Section("Details") {
+                Section {
                     TextField("Estimated value", text: $value).keyboardType(.decimalPad)
-                    TextField("Where it's stored", text: $storage)
-                    TextField("Acquired date (YYYY-MM-DD)", text: $acquired)
-                    TextField("Acquired notes", text: $acquiredNotes, axis: .vertical).lineLimit(2...3)
+                    Toggle("Has certificate", isOn: $hasCertificate)
+                }
+                Section {
+                    DisclosureGroup("Storage & acquired details") {
+                        TextField("Where it's stored", text: $storage)
+                        TextField("Acquired date (YYYY-MM-DD)", text: $acquired)
+                        TextField("Acquired notes", text: $acquiredNotes, axis: .vertical).lineLimit(2...3)
+                    }
                 }
             }
             .navigationTitle("Edit Piece")
@@ -227,6 +235,7 @@ struct EditJewelrySheet: View {
                                 categoryId: categoryId.isEmpty ? nil : categoryId,
                                 description: description,
                                 estimatedValue: Double(value),
+                                hasCertificate: hasCertificate,
                                 storageLocation: storage,
                                 acquiredDate: acquired.isEmpty ? nil : acquired,
                                 acquiredNotes: acquiredNotes))
