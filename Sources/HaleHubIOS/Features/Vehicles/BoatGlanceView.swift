@@ -61,10 +61,23 @@ final class BoatGlanceViewModel: ObservableObject {
 struct BoatGlanceView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm: BoatGlanceViewModel
+    @State private var typedHours = ""
     private var token: String { auth.accessToken ?? "" }
 
     init(vehicle: Vehicle) {
         _vm = StateObject(wrappedValue: BoatGlanceViewModel(vehicle: vehicle))
+    }
+
+    /// Current hours: the typed gauge reading if entered, else the latest logged reading.
+    private var effectiveCurrentHours: Double? {
+        if let typed = Double(typedHours.trimmingCharacters(in: .whitespaces)) { return typed }
+        return vm.currentHours
+    }
+
+    /// Hours run since the last fuel fill-up, using the typed/derived current hours.
+    private var hoursSince: Double? {
+        guard let cur = effectiveCurrentHours, let last = vm.lastFillup?.hours else { return nil }
+        return max(0, cur - last)
     }
 
     var body: some View {
@@ -94,9 +107,9 @@ struct BoatGlanceView: View {
     }
 
     private var hoursCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
             Label("Hours since last fill-up", systemImage: "fuelpump").font(.subheadline).foregroundStyle(.secondary)
-            if let h = vm.hoursSinceFillup {
+            if let h = hoursSince {
                 Text(String(format: "%.1f hrs", h)).font(.system(size: 40, weight: .bold))
             } else {
                 Text("—").font(.system(size: 40, weight: .bold)).foregroundStyle(.secondary)
@@ -108,10 +121,20 @@ struct BoatGlanceView: View {
             } else {
                 Text("No fuel fill-ups logged yet.").font(.caption).foregroundStyle(.secondary)
             }
-            if vm.hoursSinceFillup == 0 {
-                Text("Log an outing's hour-meter reading to track hours run since fueling.")
-                    .font(.caption2).foregroundStyle(.tertiary)
+
+            Divider()
+            HStack {
+                Text("Current hour-meter").font(.subheadline)
+                Spacer()
+                TextField(vm.currentHours.map { String(format: "%.1f", $0) } ?? "e.g. 342.5",
+                          text: $typedHours)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 120)
+                Text("hrs").foregroundStyle(.secondary)
             }
+            Text("Type the reading on your gauge to see hours run since fueling — or log it on an outing and it fills in automatically.")
+                .font(.caption2).foregroundStyle(.tertiary)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
