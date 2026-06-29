@@ -85,6 +85,7 @@
 		B64A219F2C54619AD786BF54 /* VehiclesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */; };
 		BCDE5F88E2E4D735D3B5F9FB /* MealPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 620CC00F94FEC794D68339CD /* MealPlanView.swift */; };
 		C55ECDB11898418FC61A3DBB /* OutingsAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */; };
+		F1A57C0DE0000000003001 /* BoatGlanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000003002 /* BoatGlanceView.swift */; };
 		CC498B37E53DB67811F88BAD /* LetterDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAAD29803F12391B72A484FC /* LetterDetailView.swift */; };
 		D00DF8718C2DD45538075682 /* ReadingCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7FA5E2300153CB3E9C7B100 /* ReadingCalendarView.swift */; };
 		D134B3EE71C1CE50594C9311 /* QRCodeCreateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C6603A1B4CEB94E3C970DF7 /* QRCodeCreateSheet.swift */; };
@@ -199,6 +200,7 @@
 		C8846379DD0DC0029F8B00B6 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		D24B721CFDEC7BEE72927514 /* RecipesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipesViewModel.swift; sourceTree = "<group>"; };
 		D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutingsAnalyticsView.swift; sourceTree = "<group>"; };
+		F1A57C0DE0000000003002 /* BoatGlanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoatGlanceView.swift; sourceTree = "<group>"; };
 		D77C2BBF0F9F154CA449BA91 /* HaleHubIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HaleHubIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E1AD9D996E827387C9F71922 /* FinanceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceViewModel.swift; sourceTree = "<group>"; };
 		E2E42C92988E41BEC50BEFC7 /* AddToteItemSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToteItemSheet.swift; sourceTree = "<group>"; };
@@ -319,6 +321,7 @@
 				9CD4130D14F56C5404DD4F9D /* MaintenanceHistoryView.swift */,
 				E947BD3D8138984D1A9AA070 /* MaintenanceScheduleManagerView.swift */,
 				D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */,
+				F1A57C0DE0000000003002 /* BoatGlanceView.swift */,
 				2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */,
 				5659E674164A8619F674A025 /* TrashView.swift */,
 				E3A0DF54CE532F5E9E5E92AE /* VehicleDetailView.swift */,
@@ -640,6 +643,7 @@
 				8927B65ACE9F99854E246D0E /* NotificationsView.swift in Sources */,
 				D54E2E36A819178621728593 /* NotificationsViewModel.swift in Sources */,
 				C55ECDB11898418FC61A3DBB /* OutingsAnalyticsView.swift in Sources */,
+				F1A57C0DE0000000003001 /* BoatGlanceView.swift in Sources */,
 				89A04B5E9B416B66376FBC9E /* PartsLookupView.swift in Sources */,
 				5CCB5B17B30F93AED9AA0484 /* QRBatchSheet.swift in Sources */,
 				FEF7F2DD496245122391D452 /* QRCode.swift in Sources */,

@@ -33,6 +33,7 @@ struct VehicleDetailView: View {
     @State private var detailEvent: VehicleEvent? = nil
     @State private var selectedSchedule: MaintenanceSchedule? = nil
     @State private var showOutings = false
+    @State private var showBoatGlance = false
     @State private var showTrash = false
     @State private var showPhotoActionSheet = false
     @State private var showCamera = false
@@ -232,6 +233,11 @@ struct VehicleDetailView: View {
                     Button("Outings Summary", systemImage: "map") {
                         showOutings = true
                     }
+                    if vehicle.isBoat {
+                        Button("Boat at a Glance", systemImage: "ferry") {
+                            showBoatGlance = true
+                        }
+                    }
                     Divider()
                     // Photo
                     Button("Change Photo", systemImage: "camera") {
@@ -328,6 +334,10 @@ struct VehicleDetailView: View {
         }
         .navigationDestination(isPresented: $showOutings) {
             OutingsAnalyticsView(vehicle: vehicle)
+                .environmentObject(auth)
+        }
+        .navigationDestination(isPresented: $showBoatGlance) {
+            BoatGlanceView(vehicle: vehicle)
                 .environmentObject(auth)
         }
         .task { await loadData() }
@@ -781,6 +791,14 @@ struct EventCard: View {
         }
     }
 
+    /// The odometer/hour-meter reading for this event — hours for boats, miles otherwise.
+    private var odometerText: String? {
+        if vehicle.isBoat {
+            return event.hours.map { String(format: "%.1f hrs", $0) }
+        }
+        return event.miles.map { "\($0.formatted()) mi" }
+    }
+
     var body: some View {
         ZStack(alignment: .trailing) {
             // Delete button revealed by swipe
@@ -869,8 +887,8 @@ struct EventCard: View {
                     if let cost = event.totalCost {
                         Text(String(format: "$%.2f", cost)).font(.caption).foregroundStyle(.secondary)
                     }
-                    if let miles = event.miles {
-                        Text("\(miles.formatted()) \(vehicle.unitAbbrev)").font(.caption).foregroundStyle(.tertiary)
+                    if let reading = odometerText {
+                        Text(reading).font(.caption).foregroundStyle(.tertiary)
                     }
                 }
                 if let items = event.maintenanceItems, !items.isEmpty {
@@ -923,8 +941,8 @@ struct EventCard: View {
                     if let cost = event.totalCost {
                         Text(String(format: "$%.2f", cost)).font(.caption).foregroundStyle(.secondary)
                     }
-                    if let miles = event.miles {
-                        Text("\(miles.formatted()) \(vehicle.unitAbbrev)").font(.caption).foregroundStyle(.tertiary)
+                    if let reading = odometerText {
+                        Text(reading).font(.caption).foregroundStyle(.tertiary)
                     }
                 }
                 if let items = event.maintenanceItems, !items.isEmpty {
