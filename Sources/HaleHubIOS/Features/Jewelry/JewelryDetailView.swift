@@ -63,6 +63,9 @@ struct JewelryDetailView: View {
     @State private var confirmDelete = false
     @State private var photoSlot: Int?
     @State private var pickerItem: PhotosPickerItem?
+    @State private var showPhotoActionSheet = false
+    @State private var photoActionSlot = 1
+    @State private var showCamera = false
 
     private var token: String { auth.accessToken ?? "" }
 
@@ -103,8 +106,20 @@ struct JewelryDetailView: View {
             Button("Delete", role: .destructive) { Task { await vm.delete() } }
         }
         .onChange(of: vm.didDelete) { if vm.didDelete { dismiss() } }
+        .confirmationDialog("Add Photo", isPresented: $showPhotoActionSheet, titleVisibility: .visible) {
+            Button("Take Photo") { showCamera = true }
+            Button("Choose from Library") { photoSlot = photoActionSlot }
+            Button("Cancel", role: .cancel) {}
+        }
         .photosPicker(isPresented: .init(get: { photoSlot != nil }, set: { if !$0 { photoSlot = nil } }),
                       selection: $pickerItem, matching: .images)
+        .sheet(isPresented: $showCamera) {
+            let slot = photoActionSlot
+            CameraPickerView { image in
+                Task { await vm.uploadPhoto(slot: slot, image: image) }
+            }
+            .ignoresSafeArea()
+        }
         .onChange(of: pickerItem) {
             guard let slot = photoSlot, let item = pickerItem else { return }
             Task {
@@ -124,7 +139,7 @@ struct JewelryDetailView: View {
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
                 ForEach(0..<3, id: \.self) { i in
-                    Button { photoSlot = i + 1 } label: {
+                    Button { photoActionSlot = i + 1; showPhotoActionSheet = true } label: {
                         ZStack {
                             RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground))
                             if let s = urls[i], let u = URL(string: s) {
@@ -136,7 +151,7 @@ struct JewelryDetailView: View {
                                     Text("Photo \(i + 1)").font(.caption2).foregroundStyle(.secondary)
                                 }
                             }
-                            if vm.isUploading && photoSlot == i + 1 { ProgressView() }
+                            if vm.isUploading && photoActionSlot == i + 1 { ProgressView() }
                         }
                         .frame(width: 150, height: 150).clipped()
                     }
