@@ -43,6 +43,8 @@
 		CC1A2B3D4E5F6A7B8C9D0E1F /* LocationPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F6A7B8C9D0E1F /* LocationPickerView.swift */; };
 		436A4F3CF403E3EDFC47B773 /* Tote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26CF0181480A7ED66F4D253B /* Tote.swift */; };
 		F1A57C0DE0000000002001 /* Jewelry.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000002002 /* Jewelry.swift */; };
+		F1A57C0DE0000000004001 /* Chores.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000004002 /* Chores.swift */; };
+		F1A57C0DE0000000004011 /* ChoresView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000004012 /* ChoresView.swift */; };
 		F1A57C0DE0000000002011 /* JewelryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000002012 /* JewelryListView.swift */; };
 		F1A57C0DE0000000002021 /* JewelryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000002022 /* JewelryDetailView.swift */; };
 		F1A57C0DE0000000002031 /* JewelryReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A57C0DE0000000002032 /* JewelryReportView.swift */; };
@@ -127,6 +129,8 @@
 		264657A8853B85BCCFCEA2EA /* CompoundInterestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompoundInterestView.swift; sourceTree = "<group>"; };
 		26CF0181480A7ED66F4D253B /* Tote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tote.swift; sourceTree = "<group>"; };
 		F1A57C0DE0000000002002 /* Jewelry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Jewelry.swift; sourceTree = "<group>"; };
+		F1A57C0DE0000000004002 /* Chores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chores.swift; sourceTree = "<group>"; };
+		F1A57C0DE0000000004012 /* ChoresView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoresView.swift; sourceTree = "<group>"; };
 		F1A57C0DE0000000002012 /* JewelryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JewelryListView.swift; sourceTree = "<group>"; };
 		F1A57C0DE0000000002022 /* JewelryDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JewelryDetailView.swift; sourceTree = "<group>"; };
 		F1A57C0DE0000000002032 /* JewelryReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JewelryReportView.swift; sourceTree = "<group>"; };
@@ -313,6 +317,14 @@
 			path = Jewelry;
 			sourceTree = "<group>";
 		};
+		F1A57C0DE0000000004099 /* Chores */ = {
+			isa = PBXGroup;
+			children = (
+				F1A57C0DE0000000004012 /* ChoresView.swift */,
+			);
+			path = Chores;
+			sourceTree = "<group>";
+		};
 		568EAE4E88608D1EA0331FA4 /* Vehicles */ = {
 			isa = PBXGroup;
 			children = (
@@ -418,6 +430,7 @@
 				4A984A79AB78489485356B9C /* Totes */,
 				568EAE4E88608D1EA0331FA4 /* Vehicles */,
 				F1A57C0DE0000000002099 /* Jewelry */,
+				F1A57C0DE0000000004099 /* Chores */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -454,6 +467,7 @@
 				26CF0181480A7ED66F4D253B /* Tote.swift */,
 				8F9E73A2B5915D0510398991 /* Vehicle.swift */,
 				F1A57C0DE0000000002002 /* Jewelry.swift */,
+				F1A57C0DE0000000004002 /* Chores.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -671,6 +685,8 @@
 				D4DAB7C569314B2B4EC325EF /* TimeCalculatorView.swift in Sources */,
 				436A4F3CF403E3EDFC47B773 /* Tote.swift in Sources */,
 				F1A57C0DE0000000002001 /* Jewelry.swift in Sources */,
+				F1A57C0DE0000000004001 /* Chores.swift in Sources */,
+				F1A57C0DE0000000004011 /* ChoresView.swift in Sources */,
 				F1A57C0DE0000000002011 /* JewelryListView.swift in Sources */,
 				F1A57C0DE0000000002021 /* JewelryDetailView.swift in Sources */,
 				F1A57C0DE0000000002031 /* JewelryReportView.swift in Sources */,

@@ -122,6 +122,15 @@ struct AccountView: View {
                     }
                 }
 
+                // Chores
+                if user?.can("lists") ?? false {
+                    Section {
+                        NavigationLink(destination: ChoresView()) {
+                            CalculatorRow(icon: "🧹", title: "Chores", subtitle: "Kids' chores & weekly all-done streaks")
+                        }
+                    }
+                }
+
                 // Calculators
                 if user?.can("calculators") ?? false {
                     Section("Calculators") {
