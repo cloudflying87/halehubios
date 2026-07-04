@@ -44,6 +44,12 @@ actor APIClient {
     private let session: URLSession
     private let decoder: JSONDecoder
 
+    // Token storage keys — shared with AuthManager (UserDefaults).
+    private static let accessKey = "halehub_access_token"
+    private static let refreshKey = "halehub_refresh_token"
+    // Single-flight refresh: concurrent 401s trigger only one /auth/refresh/ call.
+    private var refreshTask: Task<String?, Never>?
+
     init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
@@ -289,6 +295,13 @@ actor APIClient {
     }
 
     private func request(path: String, method: String, body: Data?, token: String?) async throws -> Data {
+        // Authenticated calls may silently refresh once on 401; a login (token nil) may not.
+        try await sendJSON(path: path, method: method, body: body, token: token, allowRefresh: token != nil)
+    }
+
+    private func sendJSON(
+        path: String, method: String, body: Data?, token: String?, allowRefresh: Bool
+    ) async throws -> Data {
         guard let url = URL(string: "\(baseURL)\(path)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = method
@@ -298,7 +311,15 @@ actor APIClient {
         do {
             let (data, response) = try await session.data(for: req)
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            if code == 401 { throw unauthorized(token: token) }
+            if code == 401 {
+                // Access token expired/revoked — try one silent refresh, then retry once.
+                if allowRefresh, let old = token, let fresh = await refreshAccessToken(oldToken: old) {
+                    return try await sendJSON(
+                        path: path, method: method, body: body, token: fresh, allowRefresh: false
+                    )
+                }
+                throw unauthorized(token: token)  // refresh unavailable/failed → force logout
+            }
             if code >= 400 {
                 let msg = String(data: data, encoding: .utf8) ?? ""
                 throw APIError.serverError(code, msg)
@@ -306,6 +327,46 @@ actor APIClient {
             return data
         } catch let e as APIError { throw e }
         catch { throw APIError.networkError(error) }
+    }
+
+    /// Exchanges the stored refresh token for a fresh access token (single-flight, so
+    /// concurrent 401s share one call). Returns the new access token, or nil if the
+    /// refresh token is missing/expired (→ caller forces logout). Persists the new
+    /// tokens to UserDefaults, which AuthManager reads on the next request.
+    private func refreshAccessToken(oldToken: String) async -> String? {
+        // A concurrent request may have already refreshed — use the newer stored token.
+        if let current = UserDefaults.standard.string(forKey: Self.accessKey), current != oldToken {
+            return current
+        }
+        if let inflight = refreshTask {
+            return await inflight.value
+        }
+        let task = Task<String?, Never> { await self.performRefresh() }
+        refreshTask = task
+        let result = await task.value
+        refreshTask = nil
+        return result
+    }
+
+    private func performRefresh() async -> String? {
+        guard let refresh = UserDefaults.standard.string(forKey: Self.refreshKey),
+              let url = URL(string: "\(baseURL)/auth/refresh/") else { return nil }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: ["refresh": refresh])
+        guard let (data, response) = try? await session.data(for: req),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let newAccess = json["access"] as? String else {
+            return nil
+        }
+        UserDefaults.standard.set(newAccess, forKey: Self.accessKey)
+        // Server rotates refresh tokens (ROTATE_REFRESH_TOKENS) — persist the new one.
+        if let newRefresh = json["refresh"] as? String {
+            UserDefaults.standard.set(newRefresh, forKey: Self.refreshKey)
+        }
+        return newAccess
     }
 
     private func decode<T: Decodable>(_ data: Data) throws -> T {
