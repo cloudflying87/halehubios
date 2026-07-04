@@ -41,3 +41,23 @@ struct ChoreCompleteRequest: Encodable, Sendable {
     let date: String
     let done: Bool
 }
+
+/// A chore as returned by GET /api/chores/ (for the parent's manage list).
+struct ChoreManage: Codable, Sendable, Identifiable {
+    let id: String
+    let childId: String
+    let childName: String
+    let name: String
+    let description: String
+    let daysOfWeek: [Int]
+    let daysLabel: String
+    let isActive: Bool
+    let order: Int
+}
+
+/// POST body for creating a chore. days_of_week: 0=Mon … 6=Sun; empty = every day.
+struct ChoreCreateRequest: Encodable, Sendable {
+    let childId: String
+    let name: String
+    let daysOfWeek: [Int]
+}

@@ -3,7 +3,9 @@ import SwiftUI
 @MainActor
 final class ChoresViewModel: ObservableObject {
     @Published var dashboard: ChoreDashboard?
+    @Published var manageChores: [ChoreManage] = []
     @Published var isLoading = false
+    @Published var isSaving = false
     @Published var error: String?
 
     private var token = ""
@@ -18,6 +20,43 @@ final class ChoresViewModel: ObservableObject {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+
+    /// Full chore list for the parent's manage sheet.
+    func loadManage() async {
+        do {
+            manageChores = try await APIClient.shared.get("/chores/", token: token)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func createChore(childId: String, name: String, days: [Int]) async -> Bool {
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            let _: ChoreManage = try await APIClient.shared.post(
+                "/chores/",
+                body: ChoreCreateRequest(childId: childId, name: name, daysOfWeek: days.sorted()),
+                token: token
+            )
+            await loadManage()
+            await load()  // refresh today's dashboard cards
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            return false
+        }
+    }
+
+    func deleteChore(id: String) async {
+        do {
+            try await APIClient.shared.delete("/chores/\(id)/", token: token)
+            await loadManage()
+            await load()
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 
     func toggle(choreId: String, date: String, done: Bool) async {
@@ -44,7 +83,9 @@ private struct ChoreCompleteResponse: Codable, Sendable {
 struct ChoresView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm = ChoresViewModel()
+    @State private var showManage = false
     private var token: String { auth.accessToken ?? "" }
+    private var isParent: Bool { auth.currentUser?.isAdult ?? false }
 
     var body: some View {
         ScrollView {
@@ -67,6 +108,21 @@ struct ChoresView: View {
         }
         .navigationTitle("Chores")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isParent {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showManage = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("Add or manage chores")
+                }
+            }
+        }
+        .sheet(isPresented: $showManage) {
+            ManageChoresSheet(vm: vm, children: vm.dashboard?.children ?? [])
+        }
         .task { vm.configure(token: token); await vm.load() }
         .refreshable { await vm.load() }
         .alert("Error", isPresented: .init(get: { vm.error != nil }, set: { if !$0 { vm.error = nil } })) {
@@ -117,5 +173,104 @@ struct ChoresView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+// MARK: - Add / manage chores (parents only)
+
+struct ManageChoresSheet: View {
+    @ObservedObject var vm: ChoresViewModel
+    let children: [ChoreChild]
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var childId = ""
+    @State private var name = ""
+    @State private var days: Set<Int> = []
+
+    // Backend days_of_week: 0=Mon … 6=Sun. Empty = every day.
+    private let weekdays: [(Int, String)] = [
+        (0, "Mon"), (1, "Tue"), (2, "Wed"), (3, "Thu"), (4, "Fri"), (5, "Sat"), (6, "Sun"),
+    ]
+
+    private var canAdd: Bool {
+        !childId.isEmpty && !name.trimmingCharacters(in: .whitespaces).isEmpty && !vm.isSaving
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("New chore") {
+                    Picker("Child", selection: $childId) {
+                        Text("Select…").tag("")
+                        ForEach(children) { Text($0.childName).tag($0.childId) }
+                    }
+                    TextField("Chore name", text: $name)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Days (none = every day)")
+                            .font(.caption).foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            ForEach(weekdays, id: \.0) { num, label in
+                                dayChip(num, label)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 2)
+
+                    Button {
+                        Task {
+                            let ok = await vm.createChore(
+                                childId: childId,
+                                name: name.trimmingCharacters(in: .whitespaces),
+                                days: Array(days)
+                            )
+                            if ok { name = ""; days = [] }
+                        }
+                    } label: {
+                        if vm.isSaving { ProgressView() } else { Text("Add chore") }
+                    }
+                    .disabled(!canAdd)
+                }
+
+                Section("Existing chores") {
+                    if vm.manageChores.isEmpty {
+                        Text("No chores yet.").foregroundStyle(.secondary)
+                    } else {
+                        ForEach(vm.manageChores) { c in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(c.name)
+                                Text("\(c.childName) · \(c.daysLabel)")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        .onDelete { offsets in
+                            let ids = offsets.map { vm.manageChores[$0].id }
+                            Task { for id in ids { await vm.deleteChore(id: id) } }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Manage Chores")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+            .task { await vm.loadManage() }
+        }
+    }
+
+    private func dayChip(_ num: Int, _ label: String) -> some View {
+        let on = days.contains(num)
+        return Text(label)
+            .font(.caption2)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .background(on ? Color.accentColor : Color(.tertiarySystemFill),
+                        in: RoundedRectangle(cornerRadius: 7))
+            .foregroundStyle(on ? .white : .primary)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if on { days.remove(num) } else { days.insert(num) }
+            }
     }
 }
