@@ -8,29 +8,35 @@ struct HaleHubIOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if auth.isAuthenticated {
-                if let user = auth.currentUser {
-                    if user.isBabysitterOnly {
-                        NavigationStack {
-                            BabysitterPortalView()
-                        }
-                        .environmentObject(auth)
-                    } else {
-                        MainTabView()
+            Group {
+                if auth.isAuthenticated {
+                    if let user = auth.currentUser {
+                        if user.isBabysitterOnly {
+                            NavigationStack {
+                                BabysitterPortalView()
+                            }
                             .environmentObject(auth)
-                            .environmentObject(network)
-                            .environmentObject(deepLink)
+                        } else {
+                            MainTabView()
+                                .environmentObject(auth)
+                                .environmentObject(network)
+                                .environmentObject(deepLink)
+                        }
+                    } else {
+                        // currentUser not yet loaded from the server — fetch and wait
+                        ProgressView("Loading…")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .environmentObject(auth)
+                            .task { await auth.fetchCurrentUser() }
                     }
                 } else {
-                    // currentUser not yet loaded from the server — fetch and wait
-                    ProgressView("Loading…")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    LoginView()
                         .environmentObject(auth)
-                        .task { await auth.fetchCurrentUser() }
                 }
-            } else {
-                LoginView()
-                    .environmentObject(auth)
+            }
+            // Any authenticated 401 → drop straight to the login screen (no error to read).
+            .onReceive(NotificationCenter.default.publisher(for: .sessionExpired).receive(on: RunLoop.main)) { _ in
+                if auth.isAuthenticated { auth.logout() }
             }
         }
         .handlesExternalEvents(matching: ["*"])

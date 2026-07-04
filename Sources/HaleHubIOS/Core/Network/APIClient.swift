@@ -1,5 +1,11 @@
 import Foundation
 
+extension Notification.Name {
+    /// Posted when an authenticated request is rejected with 401 (token expired
+    /// or revoked). The app root observes this and forces a logout.
+    static let sessionExpired = Notification.Name("halehub.sessionExpired")
+}
+
 enum APIError: Error, LocalizedError {
     case invalidURL
     case unauthorized
@@ -142,7 +148,7 @@ actor APIClient {
         do {
             let (data, response) = try await session.data(for: req)
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            if code == 401 { throw APIError.unauthorized }
+            if code == 401 { throw unauthorized(token: token) }
             if code >= 400 {
                 let msg = String(data: data, encoding: .utf8) ?? ""
                 throw APIError.serverError(code, msg)
@@ -189,7 +195,7 @@ actor APIClient {
         do {
             let (data, response) = try await session.data(for: req)
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            if code == 401 { throw APIError.unauthorized }
+            if code == 401 { throw unauthorized(token: token) }
             if code >= 400 {
                 throw APIError.serverError(code, String(data: data, encoding: .utf8) ?? "")
             }
@@ -224,7 +230,7 @@ actor APIClient {
         do {
             let (respData, response) = try await session.data(for: req)
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            if code == 401 { throw APIError.unauthorized }
+            if code == 401 { throw unauthorized(token: token) }
             if code >= 400 {
                 throw APIError.serverError(code, String(data: respData, encoding: .utf8) ?? "")
             }
@@ -260,7 +266,7 @@ actor APIClient {
         do {
             let (data, response) = try await session.data(for: req)
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            if code == 401 { throw APIError.unauthorized }
+            if code == 401 { throw unauthorized(token: token) }
             if code >= 400 {
                 let msg = String(data: data, encoding: .utf8) ?? ""
                 throw APIError.serverError(code, msg)
@@ -270,6 +276,16 @@ actor APIClient {
             return parsed.url
         } catch let e as APIError { throw e }
         catch { throw APIError.networkError(error) }
+    }
+
+    /// Signals a 401 on an *authenticated* request so the app can force logout,
+    /// then returns the error to throw. A 401 with no token is a failed login
+    /// (bad credentials), not an expired session, so it does not signal.
+    private func unauthorized(token: String?) -> APIError {
+        if token != nil {
+            NotificationCenter.default.post(name: .sessionExpired, object: nil)
+        }
+        return .unauthorized
     }
 
     private func request(path: String, method: String, body: Data?, token: String?) async throws -> Data {
@@ -282,7 +298,7 @@ actor APIClient {
         do {
             let (data, response) = try await session.data(for: req)
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            if code == 401 { throw APIError.unauthorized }
+            if code == 401 { throw unauthorized(token: token) }
             if code >= 400 {
                 let msg = String(data: data, encoding: .utf8) ?? ""
                 throw APIError.serverError(code, msg)
