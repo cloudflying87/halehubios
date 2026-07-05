@@ -362,6 +362,8 @@ actor APIClient {
             return nil
         }
         UserDefaults.standard.set(newAccess, forKey: Self.accessKey)
+        // Keep the Share Extension's App Group copy of the token fresh too.
+        UserDefaults(suiteName: "group.com.halefamily.halehubios")?.set(newAccess, forKey: Self.accessKey)
         // Server rotates refresh tokens (ROTATE_REFRESH_TOKENS) — persist the new one.
         if let newRefresh = json["refresh"] as? String {
             UserDefaults.standard.set(newRefresh, forKey: Self.refreshKey)

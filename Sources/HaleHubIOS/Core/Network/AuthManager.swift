@@ -13,6 +13,10 @@ class AuthManager: ObservableObject {
 
     private let userKey = "halehub_user"
 
+    // Shared with the Share Extension via an App Group so it can use this login.
+    // Falls back to nil (no sharing) until the App Group capability is enabled.
+    private let sharedDefaults = UserDefaults(suiteName: "group.com.halefamily.halehubios")
+
     var accessToken: String? {
         UserDefaults.standard.string(forKey: tokenKey)
     }
@@ -22,6 +26,17 @@ class AuthManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: userKey),
            let user = try? JSONDecoder().decode(HaleUser.self, from: data) {
             currentUser = user
+        }
+        syncSharedToken()
+    }
+
+    /// Mirror the current access token into the App Group so the Share Extension
+    /// can authenticate. Cleared on logout.
+    private func syncSharedToken() {
+        if let token = accessToken {
+            sharedDefaults?.set(token, forKey: tokenKey)
+        } else {
+            sharedDefaults?.removeObject(forKey: tokenKey)
         }
     }
 
@@ -37,6 +52,7 @@ class AuthManager: ObservableObject {
             UserDefaults.standard.set(response.access, forKey: tokenKey)
             UserDefaults.standard.set(response.refresh, forKey: refreshKey)
             isAuthenticated = true
+            syncSharedToken()
             await fetchCurrentUser()
         } catch let error as APIError {
             switch error {
@@ -67,6 +83,7 @@ class AuthManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: userKey)
         currentUser = nil
         isAuthenticated = false
+        syncSharedToken()
     }
 }
 
