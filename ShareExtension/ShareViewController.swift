@@ -98,7 +98,8 @@ class ShareViewController: UIViewController {
         // Non-Safari share: just a URL. Server will fetch it (no rendered DOM).
         if let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(urlType) }) {
             provider.loadItem(forTypeIdentifier: urlType, options: nil) { loaded, _ in
-                DispatchQueue.main.async { completion(nil, (loaded as? URL)?.absoluteString) }
+                let urlString = (loaded as? URL)?.absoluteString
+                DispatchQueue.main.async { completion(nil, urlString) }
             }
             return
         }
