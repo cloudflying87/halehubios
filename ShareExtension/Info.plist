@@ -32,6 +32,10 @@
 				<key>NSExtensionActivationSupportsWebPageWithMaxCount</key>
 				<integer>1</integer>
 			</dict>
+			<!-- Run GetPageContent.js in the live Safari tab → returns the
+			     fully-rendered DOM (post-JS) + URL, like the old Shortcut. -->
+			<key>NSExtensionJavaScriptPreprocessingFile</key>
+			<string>GetPageContent</string>
 		</dict>
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.share-services</string>

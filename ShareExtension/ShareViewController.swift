@@ -1,9 +1,12 @@
 import UIKit
 import UniformTypeIdentifiers
 
-/// Safari Share Extension: "Share → HaleHub" sends the current page URL straight
-/// to HaleHub's recipe importer using the logged-in app's token (shared via the
-/// App Group). No review step — it imports and reports success.
+/// Safari Share Extension: "Share → HaleHub" imports the current page into
+/// HaleHub's recipe importer using the logged-in app's token (shared via the App
+/// Group). When shared from Safari, a JavaScript preprocessing file (GetPageContent.js)
+/// runs in the live tab and returns the fully-rendered DOM (post-JS) plus the URL —
+/// matching the old Shortcut. That HTML is sent to the server so sites that block
+/// the server's IP, or render their recipe via JS, still import. No review step.
 class ShareViewController: UIViewController {
 
     // Must match the app's App Group id, token key, and API base.
@@ -18,10 +21,11 @@ class ShareViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         buildUI()
-        extractURL { [weak self] url in
+        extractPageContent { [weak self] html, url in
             guard let self else { return }
-            guard let url else {
-                self.finish(success: false, message: "No recipe link found on this page.")
+            let haveHTML = (html?.isEmpty == false)
+            guard haveHTML || url != nil else {
+                self.finish(success: false, message: "No recipe page found on this share.")
                 return
             }
             guard
@@ -31,7 +35,7 @@ class ShareViewController: UIViewController {
                 self.finish(success: false, message: "Open the HaleHub app and sign in first, then try again.")
                 return
             }
-            self.importRecipe(pageURL: url, token: token)
+            self.importRecipe(html: html, url: url, token: token)
         }
     }
 
@@ -69,48 +73,57 @@ class ShareViewController: UIViewController {
         ])
     }
 
-    // MARK: - Pull the URL out of the share payload
+    // MARK: - Pull page content out of the share payload
 
-    private func extractURL(completion: @escaping (URL?) -> Void) {
+    /// Prefers the JavaScript preprocessing result (rendered DOM + URL from the live
+    /// Safari tab). Falls back to a plain URL when shared from a non-Safari source.
+    private func extractPageContent(completion: @escaping (_ html: String?, _ url: String?) -> Void) {
         guard
             let item = extensionContext?.inputItems.first as? NSExtensionItem,
             let providers = item.attachments
-        else { completion(nil); return }
+        else { completion(nil, nil); return }
 
+        let plistType = UTType.propertyList.identifier
         let urlType = UTType.url.identifier
-        let textType = UTType.plainText.identifier
 
+        if let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(plistType) }) {
+            provider.loadItem(forTypeIdentifier: plistType, options: nil) { loaded, _ in
+                let results = (loaded as? NSDictionary)?[NSExtensionJavaScriptPreprocessingResultsKey] as? NSDictionary
+                let html = results?["html"] as? String
+                let url = results?["url"] as? String
+                DispatchQueue.main.async { completion(html, url) }
+            }
+            return
+        }
+        // Non-Safari share: just a URL. Server will fetch it (no rendered DOM).
         if let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(urlType) }) {
-            provider.loadItem(forTypeIdentifier: urlType, options: nil) { data, _ in
-                DispatchQueue.main.async { completion(data as? URL) }
+            provider.loadItem(forTypeIdentifier: urlType, options: nil) { loaded, _ in
+                DispatchQueue.main.async { completion(nil, (loaded as? URL)?.absoluteString) }
             }
             return
         }
-        // Some apps share the link as plain text instead of a URL attachment.
-        if let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(textType) }) {
-            provider.loadItem(forTypeIdentifier: textType, options: nil) { data, _ in
-                let url = (data as? String).flatMap {
-                    URL(string: $0.trimmingCharacters(in: .whitespacesAndNewlines))
-                }
-                DispatchQueue.main.async { completion(url) }
-            }
-            return
-        }
-        completion(nil)
+        completion(nil, nil)
     }
 
     // MARK: - Import
 
-    private func importRecipe(pageURL: URL, token: String) {
+    private func importRecipe(html: String?, url: String?, token: String) {
         guard let endpoint = URL(string: importEndpoint) else {
             finish(success: false, message: "Something went wrong."); return
         }
+        var payload: [String: Any] = [:]
+        if let url { payload["url"] = url }
+        if let html, !html.isEmpty { payload["html"] = html }
+        guard !payload.isEmpty else {
+            finish(success: false, message: "No recipe page found on this share."); return
+        }
+
         var req = URLRequest(url: endpoint)
         req.httpMethod = "POST"
         req.timeoutInterval = 60
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: ["url": pageURL.absoluteString])
+        req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
 
         URLSession.shared.dataTask(with: req) { [weak self] data, response, error in
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0

@@ -110,6 +110,7 @@
 		F87A49ECB07BF9E37E5D1260 /* QRCodesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B6C595536292C2EDCFD5728 /* QRCodesView.swift */; };
 		FEF7F2DD496245122391D452 /* QRCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F474D48454B3A561B5D58DA /* QRCode.swift */; };
 		5A4E000000000000000101 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A4E000000000000000001 /* ShareViewController.swift */; };
+		5A4E000000000000000103 /* GetPageContent.js in Resources */ = {isa = PBXBuildFile; fileRef = 5A4E000000000000000005 /* GetPageContent.js */; };
 		5A4E000000000000000102 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5A4E000000000000000010 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -219,6 +220,7 @@
 		F7FA5E2300153CB3E9C7B100 /* ReadingCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingCalendarView.swift; sourceTree = "<group>"; };
 		FE9989920930EEF68FF24A99 /* HaleHubIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaleHubIOSApp.swift; sourceTree = "<group>"; };
 		5A4E000000000000000001 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		5A4E000000000000000005 /* GetPageContent.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = GetPageContent.js; sourceTree = "<group>"; };
 		5A4E000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5A4E000000000000000003 /* ShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 		5A4E000000000000000010 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -575,6 +577,7 @@
 			isa = PBXGroup;
 			children = (
 				5A4E000000000000000001 /* ShareViewController.swift */,
+				5A4E000000000000000005 /* GetPageContent.js */,
 				5A4E000000000000000002 /* Info.plist */,
 				5A4E000000000000000003 /* ShareExtension.entitlements */,
 			);
@@ -672,6 +675,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5A4E000000000000000103 /* GetPageContent.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
