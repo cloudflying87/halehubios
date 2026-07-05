@@ -77,7 +77,7 @@ class ShareViewController: UIViewController {
 
     /// Prefers the JavaScript preprocessing result (rendered DOM + URL from the live
     /// Safari tab). Falls back to a plain URL when shared from a non-Safari source.
-    private func extractPageContent(completion: @escaping (_ html: String?, _ url: String?) -> Void) {
+    private func extractPageContent(completion: @escaping @Sendable (_ html: String?, _ url: String?) -> Void) {
         guard
             let item = extensionContext?.inputItems.first as? NSExtensionItem,
             let providers = item.attachments
