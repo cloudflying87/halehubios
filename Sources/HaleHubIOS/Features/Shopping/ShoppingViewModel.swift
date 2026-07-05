@@ -64,6 +64,10 @@ class ShoppingDetailViewModel: ObservableObject {
     @Published var listDeleted = false
     @Published var newItemQty = ""
 
+    // Move-to-another-list flow
+    @Published var movingItem: ShoppingItem?
+    @Published var otherLists: [ShoppingList] = []
+
     private let listId: UUID
 
     init(listId: UUID) { self.listId = listId }
@@ -162,6 +166,34 @@ class ShoppingDetailViewModel: ObservableObject {
     func deleteItem(_ item: ShoppingItem, token: String) async {
         try? await APIClient.shared.delete("/shopping/\(listId)/items/\(item.id)/", token: token)
         await load(token: token, isConnected: true)
+    }
+
+    /// Other shopping lists this item could move to (all lists except this one).
+    func loadOtherLists(token: String) async {
+        if let resp: PaginatedResponse<ShoppingList> = try? await APIClient.shared.get("/shopping/", token: token) {
+            otherLists = resp.results.filter { $0.id != listId }
+        }
+    }
+
+    func moveItem(_ item: ShoppingItem, toListId targetId: UUID, token: String) async {
+        await performMove(item, MoveItemRequest(targetListId: targetId.uuidString, newListName: nil), token: token)
+    }
+
+    func moveItem(_ item: ShoppingItem, toNewList name: String, token: String) async {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        await performMove(item, MoveItemRequest(targetListId: nil, newListName: trimmed), token: token)
+    }
+
+    private func performMove(_ item: ShoppingItem, _ body: MoveItemRequest, token: String) async {
+        do {
+            let _: MoveItemResponse = try await APIClient.shared.post(
+                "/shopping/\(listId)/items/\(item.id)/move/", body: body, token: token
+            )
+            await load(token: token, isConnected: true)  // item now gone from this list
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 
     func deleteList(id: UUID, token: String) async {

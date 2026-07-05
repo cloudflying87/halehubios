@@ -43,3 +43,14 @@ struct CreateShoppingListRequest: Encodable, Sendable {
     let name: String
     let store: String?
 }
+
+/// Move an item to an existing list (targetListId) OR a brand-new one (newListName).
+/// Exactly one is set; nil fields are omitted from the JSON.
+struct MoveItemRequest: Encodable, Sendable {
+    let targetListId: String?
+    let newListName: String?
+}
+
+struct MoveItemResponse: Decodable, Sendable {
+    let moved: Bool
+}

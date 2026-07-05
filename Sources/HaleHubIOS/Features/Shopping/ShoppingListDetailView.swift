@@ -16,6 +16,19 @@ struct ShoppingListDetailView: View {
     var unchecked: [ShoppingItem] { current.items?.filter { !$0.isChecked } ?? [] }
     var checked: [ShoppingItem] { current.items?.filter { $0.isChecked } ?? [] }
 
+    @ViewBuilder
+    private func itemSwipeActions(_ item: ShoppingItem) -> some View {
+        if network.isConnected {
+            Button(role: .destructive) {
+                Task { await vm.deleteItem(item, token: auth.accessToken ?? "") }
+            } label: { Label("Delete", systemImage: "trash") }
+            Button {
+                vm.movingItem = item
+            } label: { Label("Move", systemImage: "folder") }
+                .tint(.blue)
+        }
+    }
+
     var body: some View {
         List {
             // Add item row (online only)
@@ -55,13 +68,7 @@ struct ShoppingListDetailView: View {
                         ItemRow(item: item, isConnected: network.isConnected) {
                             Task { await vm.toggle(item: item, token: auth.accessToken ?? "") }
                         }
-                        .swipeActions(edge: .trailing) {
-                            if network.isConnected {
-                                Button(role: .destructive) {
-                                    Task { await vm.deleteItem(item, token: auth.accessToken ?? "") }
-                                } label: { Label("Delete", systemImage: "trash") }
-                            }
-                        }
+                        .swipeActions(edge: .trailing) { itemSwipeActions(item) }
                     }
                 }
             }
@@ -73,13 +80,7 @@ struct ShoppingListDetailView: View {
                         ItemRow(item: item, isConnected: network.isConnected) {
                             Task { await vm.toggle(item: item, token: auth.accessToken ?? "") }
                         }
-                        .swipeActions(edge: .trailing) {
-                            if network.isConnected {
-                                Button(role: .destructive) {
-                                    Task { await vm.deleteItem(item, token: auth.accessToken ?? "") }
-                                } label: { Label("Delete", systemImage: "trash") }
-                            }
-                        }
+                        .swipeActions(edge: .trailing) { itemSwipeActions(item) }
                     }
                 } header: {
                     Text("\(checked.count) checked off").foregroundStyle(.secondary)
@@ -128,6 +129,19 @@ struct ShoppingListDetailView: View {
             BulkAddSheet(text: $vm.bulkText) {
                 Task { await vm.addBulkItems(token: auth.accessToken ?? "") }
             }
+        }
+        .sheet(item: $vm.movingItem) { item in
+            MoveItemSheet(
+                item: item,
+                lists: vm.otherLists,
+                onPick: { targetId in
+                    Task { await vm.moveItem(item, toListId: targetId, token: auth.accessToken ?? "") }
+                },
+                onNewList: { name in
+                    Task { await vm.moveItem(item, toNewList: name, token: auth.accessToken ?? "") }
+                }
+            )
+            .task { await vm.loadOtherLists(token: auth.accessToken ?? "") }
         }
         .task { await vm.load(token: auth.accessToken ?? "", isConnected: network.isConnected) }
         .refreshable { await vm.load(token: auth.accessToken ?? "", isConnected: true) }
@@ -195,5 +209,68 @@ struct BulkAddSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Move Item Sheet
+
+struct MoveItemSheet: View {
+    let item: ShoppingItem
+    let lists: [ShoppingList]
+    let onPick: (UUID) -> Void
+    let onNewList: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var newListName = ""
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text("Move “\(item.name)”").font(.headline)
+                }
+
+                if !lists.isEmpty {
+                    Section("Move to list") {
+                        ForEach(lists) { list in
+                            Button {
+                                onPick(list.id)
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    Text(list.name).foregroundStyle(.primary)
+                                    Spacer()
+                                    Text("\(list.uncheckedCount)")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption).foregroundStyle(.tertiary)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Section("Start a new list") {
+                    HStack {
+                        TextField("New list name", text: $newListName)
+                            .submitLabel(.done)
+                            .onSubmit(create)
+                        Button("Create & Move", action: create)
+                            .disabled(newListName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+            }
+            .navigationTitle("Move Item")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            }
+        }
+    }
+
+    private func create() {
+        let name = newListName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return }
+        onNewList(name)
+        dismiss()
     }
 }
