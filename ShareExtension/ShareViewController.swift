@@ -77,11 +77,11 @@ class ShareViewController: UIViewController {
 
     /// Prefers the JavaScript preprocessing result (rendered DOM + URL from the live
     /// Safari tab). Falls back to a plain URL when shared from a non-Safari source.
-    private func extractPageContent(completion: @escaping @Sendable (_ html: String?, _ url: String?) -> Void) {
+    private func extractPageContent(completion: @escaping @MainActor (_ html: String?, _ url: String?) -> Void) {
         guard
             let item = extensionContext?.inputItems.first as? NSExtensionItem,
             let providers = item.attachments
-        else { completion(nil, nil); return }
+        else { Task { @MainActor in completion(nil, nil) }; return }
 
         let plistType = UTType.propertyList.identifier
         let urlType = UTType.url.identifier
@@ -91,7 +91,7 @@ class ShareViewController: UIViewController {
                 let results = (loaded as? NSDictionary)?[NSExtensionJavaScriptPreprocessingResultsKey] as? NSDictionary
                 let html = results?["html"] as? String
                 let url = results?["url"] as? String
-                DispatchQueue.main.async { completion(html, url) }
+                Task { @MainActor in completion(html, url) }
             }
             return
         }
@@ -99,11 +99,11 @@ class ShareViewController: UIViewController {
         if let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(urlType) }) {
             provider.loadItem(forTypeIdentifier: urlType, options: nil) { loaded, _ in
                 let urlString = (loaded as? URL)?.absoluteString
-                DispatchQueue.main.async { completion(nil, urlString) }
+                Task { @MainActor in completion(nil, urlString) }
             }
             return
         }
-        completion(nil, nil)
+        Task { @MainActor in completion(nil, nil) }
     }
 
     // MARK: - Import
