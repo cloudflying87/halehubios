@@ -6,7 +6,8 @@ import UniformTypeIdentifiers
 /// Group). When shared from Safari, a JavaScript preprocessing file (GetPageContent.js)
 /// runs in the live tab and returns the fully-rendered DOM (post-JS) plus the URL —
 /// matching the old Shortcut. That HTML is sent to the server so sites that block
-/// the server's IP, or render their recipe via JS, still import. No review step.
+/// the server's IP, or render their recipe via JS, still import. On success it
+/// offers to open the app right on the imported recipe (halehub://recipes/<id>).
 class ShareViewController: UIViewController {
 
     // Must match the app's App Group id, token key, and API base.
@@ -17,6 +18,10 @@ class ShareViewController: UIViewController {
     private let card = UIView()
     private let spinner = UIActivityIndicatorView(style: .large)
     private let statusLabel = UILabel()
+    private let buttonStack = UIStackView()
+    private let openButton = UIButton(type: .system)
+    private let doneButton = UIButton(type: .system)
+    private var importedRecipeId: String?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -25,14 +30,14 @@ class ShareViewController: UIViewController {
             guard let self else { return }
             let haveHTML = (html?.isEmpty == false)
             guard haveHTML || url != nil else {
-                self.finish(success: false, message: "No recipe page found on this share.")
+                self.showResult("No recipe page found on this share.", recipeId: nil)
                 return
             }
             guard
                 let token = UserDefaults(suiteName: self.appGroupId)?.string(forKey: self.tokenKey),
                 !token.isEmpty
             else {
-                self.finish(success: false, message: "Open the HaleHub app and sign in first, then try again.")
+                self.showResult("Open the HaleHub app and sign in first, then try again.", recipeId: nil)
                 return
             }
             self.importRecipe(html: html, url: url, token: token)
@@ -50,26 +55,40 @@ class ShareViewController: UIViewController {
         view.addSubview(card)
 
         spinner.startAnimating()
-        spinner.translatesAutoresizingMaskIntoConstraints = false
-        card.addSubview(spinner)
 
         statusLabel.text = "Importing recipe…"
         statusLabel.font = .preferredFont(forTextStyle: .headline)
         statusLabel.textAlignment = .center
         statusLabel.numberOfLines = 0
-        statusLabel.translatesAutoresizingMaskIntoConstraints = false
-        card.addSubview(statusLabel)
+
+        openButton.setTitle("Open in HaleHub", for: .normal)
+        openButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
+        openButton.addTarget(self, action: #selector(openTapped), for: .touchUpInside)
+
+        doneButton.setTitle("Done", for: .normal)
+        doneButton.addTarget(self, action: #selector(doneTapped), for: .touchUpInside)
+
+        buttonStack.axis = .vertical
+        buttonStack.spacing = 4
+        buttonStack.addArrangedSubview(openButton)
+        buttonStack.addArrangedSubview(doneButton)
+        buttonStack.isHidden = true
+
+        let stack = UIStackView(arrangedSubviews: [spinner, statusLabel, buttonStack])
+        stack.axis = .vertical
+        stack.spacing = 16
+        stack.alignment = .fill
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(stack)
 
         NSLayoutConstraint.activate([
             card.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             card.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             card.widthAnchor.constraint(equalToConstant: 300),
-            spinner.topAnchor.constraint(equalTo: card.topAnchor, constant: 30),
-            spinner.centerXAnchor.constraint(equalTo: card.centerXAnchor),
-            statusLabel.topAnchor.constraint(equalTo: spinner.bottomAnchor, constant: 18),
-            statusLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 22),
-            statusLabel.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -22),
-            statusLabel.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -30),
+            stack.topAnchor.constraint(equalTo: card.topAnchor, constant: 26),
+            stack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 22),
+            stack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -22),
+            stack.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -22),
         ])
     }
 
@@ -110,13 +129,13 @@ class ShareViewController: UIViewController {
 
     private func importRecipe(html: String?, url: String?, token: String) {
         guard let endpoint = URL(string: importEndpoint) else {
-            finish(success: false, message: "Something went wrong."); return
+            showResult("Something went wrong.", recipeId: nil); return
         }
         var payload: [String: Any] = [:]
         if let url { payload["url"] = url }
         if let html, !html.isEmpty { payload["html"] = html }
         guard !payload.isEmpty else {
-            finish(success: false, message: "No recipe page found on this share."); return
+            showResult("No recipe page found on this share.", recipeId: nil); return
         }
 
         var req = URLRequest(url: endpoint)
@@ -131,30 +150,61 @@ class ShareViewController: UIViewController {
             DispatchQueue.main.async {
                 guard let self else { return }
                 if error != nil {
-                    self.finish(success: false, message: "Network error — please try again.")
+                    self.showResult("Network error — please try again.", recipeId: nil)
                 } else if code == 200 || code == 201 {
                     var title = "Recipe"
+                    var id: String?
                     if
                         let data,
-                        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                        let t = json["title"] as? String, !t.isEmpty
-                    { title = t }
-                    self.finish(success: true, message: "Added “\(title)” to HaleHub ✅")
+                        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                    {
+                        if let t = json["title"] as? String, !t.isEmpty { title = t }
+                        id = json["id"] as? String
+                    }
+                    self.showResult("Added “\(title)” to HaleHub ✅", recipeId: id)
                 } else if code == 401 {
-                    self.finish(success: false, message: "Open the HaleHub app and sign in first, then try again.")
+                    self.showResult("Open the HaleHub app and sign in first, then try again.", recipeId: nil)
                 } else {
-                    self.finish(success: false, message: "Couldn’t import this page. Open it in the app to add it manually.")
+                    self.showResult("Couldn’t import this page. Open it in the app to add it manually.", recipeId: nil)
                 }
             }
         }.resume()
     }
 
-    private func finish(success: Bool, message: String) {
+    // MARK: - Result + actions
+
+    private func showResult(_ message: String, recipeId: String?) {
         spinner.stopAnimating()
         spinner.isHidden = true
         statusLabel.text = message
-        DispatchQueue.main.asyncAfter(deadline: .now() + (success ? 1.2 : 2.2)) { [weak self] in
-            self?.extensionContext?.completeRequest(returningItems: nil)
+        importedRecipeId = recipeId
+        openButton.isHidden = (recipeId == nil)   // only offer "Open" when we have the recipe
+        buttonStack.isHidden = false
+    }
+
+    @objc private func openTapped() {
+        if let id = importedRecipeId, let url = URL(string: "halehub://recipes/\(id)") {
+            openHostApp(url)
+        }
+        extensionContext?.completeRequest(returningItems: nil)
+    }
+
+    @objc private func doneTapped() {
+        extensionContext?.completeRequest(returningItems: nil)
+    }
+
+    /// Open the containing app from the extension by walking the responder chain to
+    /// UIApplication and invoking openURL: (the supported technique here — the direct
+    /// UIApplication.open API is unavailable in app extensions).
+    private func openHostApp(_ url: URL) {
+        let selector = NSSelectorFromString("openURL:")
+        var responder: UIResponder? = self
+        while let r = responder {
+            if r.responds(to: selector) {
+                r.perform(selector, with: url)
+                return
+            }
+            responder = r.next
         }
     }
 }
