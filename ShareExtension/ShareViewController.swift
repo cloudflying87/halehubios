@@ -154,14 +154,19 @@ class ShareViewController: UIViewController {
                 } else if code == 200 || code == 201 {
                     var title = "Recipe"
                     var id: String?
+                    var isDuplicate = false
                     if
                         let data,
                         let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
                     {
                         if let t = json["title"] as? String, !t.isEmpty { title = t }
                         id = json["id"] as? String
+                        isDuplicate = (json["duplicate"] as? Bool) ?? false
                     }
-                    self.showResult("Added “\(title)” to HaleHub ✅", recipeId: id)
+                    let message = isDuplicate
+                        ? "“\(title)” is already in HaleHub."
+                        : "Added “\(title)” to HaleHub ✅"
+                    self.showResult(message, recipeId: id)
                 } else if code == 401 {
                     self.showResult("Open the HaleHub app and sign in first, then try again.", recipeId: nil)
                 } else {
@@ -183,8 +188,13 @@ class ShareViewController: UIViewController {
     }
 
     @objc private func openTapped() {
-        if let id = importedRecipeId, let url = URL(string: "halehub://recipes/\(id)") {
-            openHostApp(url)
+        if let id = importedRecipeId {
+            // Handoff: the app reads this on next activation and navigates to the
+            // recipe — reliable even when the responder-chain openURL is a no-op
+            // (it is on iOS 18). The deep-link attempt below foregrounds the app
+            // immediately when it works.
+            UserDefaults(suiteName: appGroupId)?.set(id, forKey: "halehub_pending_recipe_id")
+            if let url = URL(string: "halehub://recipes/\(id)") { openHostApp(url) }
         }
         extensionContext?.completeRequest(returningItems: nil)
     }

@@ -10,6 +10,7 @@ struct RecipesListView: View {
 
     @Environment(\.horizontalSizeClass) private var hSize
     @State private var selectedRecipeID: Recipe.ID?
+    @State private var editingRecipe: Recipe?
 
     var body: some View {
         Group {
@@ -39,6 +40,15 @@ struct RecipesListView: View {
                 } else {
                     navigateToImported = true
                 }
+            }
+            .environmentObject(auth)
+        }
+        .sheet(item: $editingRecipe) { recipe in
+            RecipeEditView(recipe: recipe) { updated in
+                if let idx = vm.recipes.firstIndex(where: { $0.id == updated.id }) {
+                    vm.recipes[idx] = updated
+                }
+                editingRecipe = nil
             }
             .environmentObject(auth)
         }
@@ -140,6 +150,16 @@ struct RecipesListView: View {
                         vm.recipes.removeAll { $0.id.uuidString.lowercased() == id.lowercased() }
                     }).environmentObject(auth)) {
                         RecipeRow(recipe: recipe)
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            Task {
+                                try? await vm.deleteRecipe(id: recipe.id.uuidString, token: auth.accessToken ?? "")
+                                vm.recipes.removeAll { $0.id == recipe.id }
+                            }
+                        } label: { Label("Delete", systemImage: "trash") }
+                        Button { editingRecipe = recipe } label: { Label("Edit", systemImage: "pencil") }
+                            .tint(.blue)
                     }
                 }
             }

@@ -5,6 +5,7 @@ struct MainTabView: View {
     @EnvironmentObject var network: NetworkMonitor
     @EnvironmentObject var deepLink: DeepLinkHandler
     @StateObject private var notifVM = NotificationsViewModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var selectedTab = 0
     @State private var importedRecipeId: String? = nil
@@ -46,9 +47,13 @@ struct MainTabView: View {
         .task {
             await auth.fetchCurrentUser()    // refresh permissions on every cold-launch
             await notifVM.fetchUnreadCount(token: auth.accessToken ?? "")
+            checkPendingImport()             // recipe shared via the Share Extension
         }
         .onOpenURL { url in
             handleURL(url)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { checkPendingImport() }
         }
         .sheet(item: $importDraftRoute) { route in
             RecipeImportDraftSheet(importId: route.id) { recipe in
@@ -88,6 +93,17 @@ struct MainTabView: View {
     /// user doesn't have access (so we don't try to select an invisible tab).
     private func tabIndex(for tab: TabSpec) -> Int? {
         allowedTabs.firstIndex(of: tab)
+    }
+
+    /// The Share Extension writes the id of a recipe it just imported into the
+    /// App Group. When the app becomes active we navigate to it (and clear it),
+    /// so "Open in HaleHub" works even if the extension couldn't foreground the
+    /// app directly.
+    private func checkPendingImport() {
+        let defaults = UserDefaults(suiteName: "group.com.halefamily.halehubios")
+        guard let id = defaults?.string(forKey: "halehub_pending_recipe_id"), !id.isEmpty else { return }
+        defaults?.removeObject(forKey: "halehub_pending_recipe_id")
+        if let url = URL(string: "halehub://recipes/\(id)") { handleURL(url) }
     }
 
     private func handleURL(_ url: URL) {
