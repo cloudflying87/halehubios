@@ -16,6 +16,7 @@ struct RecipeDetailView: View {
     @State private var showEditRecipe = false
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
+    @State private var showCategoryPicker = false
 
     var displayed: Recipe { fullRecipe ?? recipe }
 
@@ -26,26 +27,59 @@ struct RecipeDetailView: View {
                 HeroImage(url: displayed.photoUrl)
 
                 VStack(alignment: .leading, spacing: 20) {
-                    // Title + rating
-                    VStack(alignment: .leading, spacing: 6) {
+                    // Title + favorite + tappable rating + quick actions
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .top) {
                             Text(displayed.title)
                                 .font(.title2.bold())
                             Spacer()
-                            if displayed.isFavorite {
-                                Image(systemName: "heart.fill")
-                                    .foregroundStyle(.red)
+                            Button {
+                                Task { await toggleFavorite() }
+                            } label: {
+                                Image(systemName: displayed.isFavorite ? "heart.fill" : "heart")
+                                    .foregroundStyle(displayed.isFavorite ? .red : .secondary)
                                     .font(.title3)
                             }
+                            .buttonStyle(.plain)
                         }
-                        if let rating = displayed.rating {
-                            StarRating(rating: rating)
+
+                        // Tappable rating — tap a star to set, tap the same star to clear.
+                        HStack(spacing: 4) {
+                            ForEach(1...5, id: \.self) { star in
+                                Image(systemName: star <= (displayed.rating ?? 0) ? "star.fill" : "star")
+                                    .foregroundStyle(star <= (displayed.rating ?? 0) ? .yellow : .secondary)
+                                    .onTapGesture {
+                                        Task { await setRating(star == displayed.rating ? 0 : star) }
+                                    }
+                            }
+                            if (displayed.rating ?? 0) == 0 {
+                                Text("Tap to rate")
+                                    .font(.caption).foregroundStyle(.secondary).padding(.leading, 4)
+                            }
                         }
+
                         if let desc = displayed.description, !desc.isEmpty {
                             Text(desc)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
+
+                        // Cooked-it + times cooked
+                        HStack(spacing: 12) {
+                            Button {
+                                Task { await markCooked() }
+                            } label: {
+                                Label("Cooked It", systemImage: "checkmark.circle")
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            if displayed.timesCooked > 0 {
+                                Text("Made \(displayed.timesCooked)×")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+
+                        categoriesRow
                     }
 
                     // Stat pills
@@ -228,7 +262,61 @@ struct RecipeDetailView: View {
             }
             .environmentObject(auth)
         }
+        .sheet(isPresented: $showCategoryPicker) {
+            CategoryPickerSheet(selected: Set((displayed.categories ?? []).map { $0.id })) { ids in
+                Task { await patchRecipe(RecipeQuickUpdate(isFavorite: nil, rating: nil, categoryIds: ids)) }
+            }
+            .environmentObject(auth)
+        }
         .task { await loadFull() }
+    }
+
+    // MARK: - Categories row
+
+    @ViewBuilder
+    private var categoriesRow: some View {
+        let cats = displayed.categories ?? []
+        if cats.isEmpty {
+            Button { showCategoryPicker = true } label: {
+                Label("Add category", systemImage: "tag")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(cats) { c in
+                        Text(c.displayName)
+                            .font(.caption)
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(Color.accentColor.opacity(0.12), in: Capsule())
+                    }
+                    Button { showCategoryPicker = true } label: {
+                        Image(systemName: "plus.circle")
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Quick updates (favorite / rating / categories)
+
+    private func patchRecipe(_ body: RecipeQuickUpdate) async {
+        guard let token = auth.accessToken else { return }
+        do {
+            let updated: Recipe = try await APIClient.shared.patch(
+                "/recipes/\(recipe.id)/update/", body: body, token: token
+            )
+            fullRecipe = updated
+        } catch {}
+    }
+
+    private func toggleFavorite() async {
+        await patchRecipe(RecipeQuickUpdate(isFavorite: !displayed.isFavorite, rating: nil, categoryIds: nil))
+    }
+
+    private func setRating(_ value: Int) async {
+        await patchRecipe(RecipeQuickUpdate(isFavorite: nil, rating: value, categoryIds: nil))
     }
 
     private func loadFull() async {
@@ -248,6 +336,8 @@ struct RecipeDetailView: View {
             let _: MarkCookedResponse = try await APIClient.shared.postEmpty(
                 "/recipes/\(recipe.id)/mark-cooked/", token: token
             )
+            // Refresh so "Made N×" / last-cooked update immediately.
+            fullRecipe = try? await APIClient.shared.get("/recipes/\(recipe.id)/", token: token)
             showCookedToast = true
             try? await Task.sleep(for: .seconds(2))
             showCookedToast = false
@@ -518,5 +608,108 @@ struct StatPill: View {
         .padding(.vertical, 8)
         .padding(.horizontal, 10)
         .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+// MARK: - Quick-update payload + category picker
+
+private struct RecipeQuickUpdate: Encodable, Sendable {
+    let isFavorite: Bool?
+    let rating: Int?
+    let categoryIds: [String]?   // replaces category assignments; nil = leave unchanged
+}
+
+private struct CategoryCreateRequest: Encodable, Sendable {
+    let name: String
+}
+
+/// Pick which categories a recipe belongs to, and create new ones inline.
+struct CategoryPickerSheet: View {
+    @EnvironmentObject var auth: AuthManager
+    @Environment(\.dismiss) private var dismiss
+    let onSave: ([String]) -> Void
+
+    @State private var all: [RecipeCategory] = []
+    @State private var selected: Set<UUID>
+    @State private var newName = ""
+    @State private var loading = false
+    @State private var creating = false
+
+    init(selected: Set<UUID>, onSave: @escaping ([String]) -> Void) {
+        _selected = State(initialValue: selected)
+        self.onSave = onSave
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("New category") {
+                    HStack {
+                        TextField("e.g. Dinner, Desserts", text: $newName)
+                            .submitLabel(.done)
+                            .onSubmit(createCategory)
+                        Button("Add", action: createCategory)
+                            .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty || creating)
+                    }
+                }
+                Section("Assign") {
+                    if loading {
+                        HStack { ProgressView(); Text("Loading…").foregroundStyle(.secondary) }
+                    } else if all.isEmpty {
+                        Text("No categories yet — add one above.").foregroundStyle(.secondary)
+                    } else {
+                        ForEach(all) { c in
+                            Button {
+                                if selected.contains(c.id) { selected.remove(c.id) } else { selected.insert(c.id) }
+                            } label: {
+                                HStack {
+                                    Text(c.displayName).foregroundStyle(.primary)
+                                    Spacer()
+                                    if selected.contains(c.id) {
+                                        Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Categories")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        onSave(selected.map { $0.uuidString })
+                        dismiss()
+                    }
+                }
+            }
+            .task { await load() }
+        }
+    }
+
+    private func load() async {
+        loading = true
+        if let cats: [RecipeCategory] = try? await APIClient.shared.get(
+            "/recipes/categories/", token: auth.accessToken ?? ""
+        ) { all = cats }
+        loading = false
+    }
+
+    private func createCategory() {
+        let name = newName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return }
+        creating = true
+        Task {
+            if let cat: RecipeCategory = try? await APIClient.shared.post(
+                "/recipes/categories/", body: CategoryCreateRequest(name: name), token: auth.accessToken ?? ""
+            ) {
+                if !all.contains(where: { $0.id == cat.id }) { all.insert(cat, at: 0) }
+                selected.insert(cat.id)
+                newName = ""
+            }
+            creating = false
+        }
     }
 }
