@@ -23,11 +23,9 @@ struct HaleHubIOSApp: App {
                                 .environmentObject(deepLink)
                         }
                     } else {
-                        // currentUser not yet loaded from the server — fetch and wait
-                        ProgressView("Loading…")
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        // currentUser not yet loaded — fetch, but never dead-end here.
+                        AccountLoadingGate()
                             .environmentObject(auth)
-                            .task { await auth.fetchCurrentUser() }
                     }
                 } else {
                     LoginView()
@@ -44,6 +42,46 @@ struct HaleHubIOSApp: App {
             guard url != nil else { return }
             // Handled by MainTabView once authenticated
         }
+    }
+}
+
+// MARK: - Account loading gate
+
+/// Shown when the app has a token but hasn't loaded the user yet. Fetches
+/// /auth/me/ and, crucially, offers Retry + Sign Out on failure so a bad
+/// connection (or a stale token) can never trap the user on a spinner forever.
+struct AccountLoadingGate: View {
+    @EnvironmentObject var auth: AuthManager
+    @State private var loading = true
+
+    var body: some View {
+        VStack(spacing: 18) {
+            if loading {
+                ProgressView("Loading…")
+            } else {
+                Image(systemName: "wifi.exclamationmark")
+                    .font(.largeTitle).foregroundStyle(.secondary)
+                Text("Couldn't load your account").font(.headline)
+                Text("Check your connection and try again.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button("Retry") { Task { await attempt() } }
+                    .buttonStyle(.borderedProminent)
+                Button("Sign Out", role: .destructive) { auth.logout() }
+            }
+        }
+        .padding(32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task { await attempt() }
+    }
+
+    private func attempt() async {
+        loading = true
+        // One retry with a short backoff smooths over launch-time network flakiness.
+        if await auth.fetchCurrentUser() { return }
+        try? await Task.sleep(for: .seconds(1))
+        _ = await auth.fetchCurrentUser()
+        loading = false     // if currentUser loaded, this view is replaced anyway
     }
 }
 

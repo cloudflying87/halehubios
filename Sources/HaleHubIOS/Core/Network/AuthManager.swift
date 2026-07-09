@@ -67,14 +67,19 @@ class AuthManager: ObservableObject {
         isLoading = false
     }
 
-    func fetchCurrentUser() async {
-        guard let token = accessToken else { return }
+    /// Returns true if the current user was loaded. Callers use this to avoid a
+    /// dead-end "Loading…" state when /auth/me/ can't be reached.
+    @discardableResult
+    func fetchCurrentUser() async -> Bool {
+        guard let token = accessToken else { return false }
         if let user: HaleUser = try? await APIClient.shared.get("/auth/me/", token: token) {
             currentUser = user
             if let data = try? JSONEncoder().encode(user) {
                 UserDefaults.standard.set(data, forKey: userKey)
             }
+            return true
         }
+        return false
     }
 
     func logout() {
