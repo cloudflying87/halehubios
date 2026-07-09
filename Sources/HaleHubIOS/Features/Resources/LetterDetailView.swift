@@ -135,6 +135,13 @@ struct LetterDetailView: View {
         .navigationTitle(letter.title)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
+            if let shareURL = URL(string: "https://flyhomemn.com/letters/\(letter.slug)/") {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ShareLink(item: shareURL, subject: Text(letter.title)) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 if vm.isDownloading {
                     ProgressView()

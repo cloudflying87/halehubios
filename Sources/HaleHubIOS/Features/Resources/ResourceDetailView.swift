@@ -71,25 +71,32 @@ struct ResourceDetailView: View {
         .navigationTitle(resource.title)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            if let detail = vm.detail, detail.canEdit {
+            if let detail = vm.detail, let shareURL = URL(string: "https://flyhomemn.com/blog/\(detail.slug)/") {
                 ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        Button("Edit", systemImage: "pencil") { showEditor = true }
-                        Divider()
-                        Button(
-                            detail.isActive ? "Archive" : "Restore",
-                            systemImage: detail.isActive ? "archivebox" : "arrow.uturn.backward"
-                        ) {
-                            Task {
-                                await vm.archive(
-                                    slug: detail.slug,
-                                    archived: detail.isActive,
-                                    token: auth.accessToken ?? ""
-                                )
+                    ShareLink(item: shareURL, subject: Text(detail.title)) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                }
+                if detail.canEdit {
+                    ToolbarItem(placement: .primaryAction) {
+                        Menu {
+                            Button("Edit", systemImage: "pencil") { showEditor = true }
+                            Divider()
+                            Button(
+                                detail.isActive ? "Archive" : "Restore",
+                                systemImage: detail.isActive ? "archivebox" : "arrow.uturn.backward"
+                            ) {
+                                Task {
+                                    await vm.archive(
+                                        slug: detail.slug,
+                                        archived: detail.isActive,
+                                        token: auth.accessToken ?? ""
+                                    )
+                                }
                             }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
                         }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
                     }
                 }
             }
