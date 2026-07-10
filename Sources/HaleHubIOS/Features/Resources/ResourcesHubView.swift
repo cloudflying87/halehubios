@@ -109,6 +109,7 @@ struct ResourcesHubView: View {
     @State private var showCreateResource = false
     @State private var showCreateLetter = false
     @State private var showArchive = false
+    @State private var shareItem: ShareItem?
 
     private var canCreate: Bool {
         vm.resources.first?.canEdit ?? vm.letters.first?.canEdit ?? false
@@ -196,6 +197,12 @@ struct ResourcesHubView: View {
                             }
                         }
                         .swipeActions(edge: .trailing) {
+                            if let url = URL(string: "https://flyhomemn.com/letters/\(letter.slug)/") {
+                                Button("Share", systemImage: "square.and.arrow.up") {
+                                    shareItem = ShareItem(url: url)
+                                }
+                                .tint(.green)
+                            }
                             if letter.canEdit {
                                 Button("Archive") {
                                     Task { await vm.archiveLetter(slug: letter.slug, token: auth.accessToken ?? "") }
@@ -219,6 +226,12 @@ struct ResourcesHubView: View {
                             ResourceRow(resource: resource)
                         }
                         .swipeActions(edge: .trailing) {
+                            if let url = URL(string: "https://flyhomemn.com/blog/\(resource.slug)/") {
+                                Button("Share", systemImage: "square.and.arrow.up") {
+                                    shareItem = ShareItem(url: url)
+                                }
+                                .tint(.green)
+                            }
                             if resource.canEdit {
                                 Button(resource.isActive ? "Archive" : "Restore") {
                                     Task {
@@ -250,7 +263,16 @@ struct ResourcesHubView: View {
         }
         .listStyle(.insetGrouped)
         .refreshable { await vm.load(token: auth.accessToken ?? "") }
+        .sheet(item: $shareItem) { item in
+            ActivityViewController(items: [item.url])
+        }
     }
+}
+
+/// Identifiable wrapper so a swiped row can drive `.sheet(item:)` for sharing.
+private struct ShareItem: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
 }
 
 // MARK: - Letter Row
