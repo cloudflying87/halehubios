@@ -17,6 +17,8 @@ struct ResourceEditorSheet: View {
     @State private var content = ""
     @State private var contentType = "markdown"
     @State private var isPublic = true
+    @State private var isActive = true
+    @State private var order = 0
     @State private var showPreview = false
     @State private var isSaving = false
     @State private var error: String?
@@ -33,7 +35,16 @@ struct ResourceEditorSheet: View {
                     TextField("Title", text: $title)
                     TextField("Short description (optional)", text: $description, axis: .vertical)
                         .lineLimit(2...3)
+                }
+
+                Section {
                     Toggle("Visible to everyone", isOn: $isPublic)
+                    Toggle("Published", isOn: $isActive)
+                    Stepper("Display order: \(order)", value: $order, in: 0...999)
+                } header: {
+                    Text("Publishing")
+                } footer: {
+                    Text("Unpublished resources are hidden from everyone but editors. Lower display order shows first in the list.")
                 }
 
                 if isCreate {
@@ -117,6 +128,8 @@ struct ResourceEditorSheet: View {
         content = r.content
         contentType = r.contentType
         isPublic = r.isPublic
+        isActive = r.isActive
+        order = r.order
     }
 
     private func save() async {
@@ -132,7 +145,9 @@ struct ResourceEditorSheet: View {
                     description: description.trimmingCharacters(in: .whitespaces),
                     content: content,
                     contentType: contentType,
-                    isPublic: isPublic
+                    isPublic: isPublic,
+                    isActive: isActive,
+                    order: order
                 )
                 saved = try await APIClient.shared.post("/resources/", body: draft, token: token)
             case .edit(let original):
@@ -140,7 +155,9 @@ struct ResourceEditorSheet: View {
                     title: title.trimmingCharacters(in: .whitespaces),
                     description: description.trimmingCharacters(in: .whitespaces),
                     content: content,
-                    isPublic: isPublic
+                    isPublic: isPublic,
+                    isActive: isActive,
+                    order: order
                 )
                 saved = try await APIClient.shared.patch("/resources/\(original.slug)/", body: patch, token: token)
             }

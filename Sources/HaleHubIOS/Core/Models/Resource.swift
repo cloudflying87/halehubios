@@ -47,6 +47,7 @@ struct ResourceDetail: Codable, Sendable {
     let contentHtml: String?  // server-rendered HTML (markdown only)
     let isPublic: Bool
     let isActive: Bool
+    let order: Int
     let canEdit: Bool
     let createdAt: Date
     let updatedAt: Date?
@@ -54,7 +55,7 @@ struct ResourceDetail: Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case id, title, slug, description
         case contentType, content, contentHtml
-        case isPublic, isActive, canEdit
+        case isPublic, isActive, order, canEdit
         case createdAt, updatedAt
     }
 
@@ -73,6 +74,7 @@ struct ResourceDetail: Codable, Sendable {
         contentHtml = try? c.decode(String.self, forKey: .contentHtml)
         isPublic = (try? c.decode(Bool.self, forKey: .isPublic)) ?? true
         isActive = (try? c.decode(Bool.self, forKey: .isActive)) ?? true
+        order = (try? c.decode(Int.self, forKey: .order)) ?? 0
         canEdit = (try? c.decode(Bool.self, forKey: .canEdit)) ?? false
         createdAt = (try? c.decode(Date.self, forKey: .createdAt)) ?? Date()
         updatedAt = try? c.decode(Date.self, forKey: .updatedAt)
@@ -87,6 +89,8 @@ struct ResourceDraft: Encodable, Sendable {
     let content: String
     let contentType: String
     let isPublic: Bool
+    let isActive: Bool
+    let order: Int
 }
 
 struct ResourcePatch: Encodable, Sendable {
@@ -94,6 +98,8 @@ struct ResourcePatch: Encodable, Sendable {
     let description: String
     let content: String
     let isPublic: Bool
+    let isActive: Bool
+    let order: Int
 }
 
 struct ResourceArchiveRequest: Encodable, Sendable {
