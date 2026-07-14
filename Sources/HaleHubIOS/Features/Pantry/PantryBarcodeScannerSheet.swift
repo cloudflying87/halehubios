@@ -8,7 +8,7 @@ struct PantryBarcodeScannerSheet: View {
     @EnvironmentObject var auth: AuthManager
     @Environment(\.dismiss) private var dismiss
 
-    let locations: [PantryLocation]
+    @ObservedObject var vm: PantryViewModel
     let onSaved: (PantryItem) -> Void
 
     @State private var isScanning = true
@@ -84,7 +84,7 @@ struct PantryBarcodeScannerSheet: View {
             )) { box in
                 PantryItemEditSheet(
                     item: nil,
-                    locations: locations,
+                    vm: vm,
                     prefill: box.value
                 ) { saved in
                     onSaved(saved)

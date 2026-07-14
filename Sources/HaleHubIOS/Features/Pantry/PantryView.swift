@@ -6,6 +6,7 @@ import SwiftUI
 class PantryViewModel: ObservableObject {
     @Published var items: [PantryItem] = []
     @Published var locations: [PantryLocation] = []
+    @Published var categories: [PantryCategory] = []
     @Published var isLoading = false
     @Published var error: String?
 
@@ -32,15 +33,87 @@ class PantryViewModel: ObservableObject {
                 APIClient.shared.get("/pantry/items/", token: token)
             async let locTask: PaginatedResponse<PantryLocation> =
                 APIClient.shared.get("/pantry/locations/", token: token)
-            let (itemsResp, locResp) = try await (itemsTask, locTask)
+            async let catTask: PaginatedResponse<PantryCategory> =
+                APIClient.shared.get("/pantry/categories/", token: token)
+            let (itemsResp, locResp, catResp) = try await (itemsTask, locTask, catTask)
             items = itemsResp.results
             locations = locResp.results
+            categories = catResp.results
         } catch is CancellationError {
             // View disappeared — keep existing data, no error
         } catch {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+
+    // MARK: Managed taxonomies (categories + locations)
+
+    /// Refresh just the category/location lists (e.g. after managing them).
+    func loadTaxa(token: String) async {
+        do {
+            async let locTask: PaginatedResponse<PantryLocation> =
+                APIClient.shared.get("/pantry/locations/", token: token)
+            async let catTask: PaginatedResponse<PantryCategory> =
+                APIClient.shared.get("/pantry/categories/", token: token)
+            let (locResp, catResp) = try await (locTask, catTask)
+            locations = locResp.results
+            categories = catResp.results
+        } catch is CancellationError {
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    private func store(_ kind: PantryTaxonKind, _ taxa: [PantryTaxon]) {
+        let sorted = taxa.sorted {
+            $0.order != $1.order ? $0.order < $1.order
+                : $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+        if kind == .category { categories = sorted } else { locations = sorted }
+    }
+
+    private func current(_ kind: PantryTaxonKind) -> [PantryTaxon] {
+        kind == .category ? categories : locations
+    }
+
+    @discardableResult
+    func createTaxon(kind: PantryTaxonKind, name: String, icon: String, token: String) async -> PantryTaxon? {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return nil }
+        do {
+            let body = PantryTaxonRequest(name: trimmed, icon: icon.isEmpty ? nil : icon)
+            let saved: PantryTaxon = try await APIClient.shared.post(kind.path, body: body, token: token)
+            // POST is idempotent per-family name, so replace-or-insert by id.
+            var list = current(kind).filter { $0.id != saved.id }
+            list.append(saved)
+            store(kind, list)
+            return saved
+        } catch {
+            self.error = error.localizedDescription
+            return nil
+        }
+    }
+
+    func renameTaxon(kind: PantryTaxonKind, id: String, name: String, icon: String, token: String) async {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        do {
+            let body = PantryTaxonRequest(name: trimmed, icon: icon)
+            let saved: PantryTaxon = try await APIClient.shared.patch("\(kind.path)\(id)/", body: body, token: token)
+            store(kind, current(kind).map { $0.id == id ? saved : $0 })
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func deleteTaxon(kind: PantryTaxonKind, id: String, token: String) async {
+        do {
+            try await APIClient.shared.delete("\(kind.path)\(id)/", token: token)
+            store(kind, current(kind).filter { $0.id != id })
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 
     /// Insert a newly created item, or replace an existing one by id (the create
@@ -106,6 +179,7 @@ struct PantryView: View {
     @State private var showCreate = false
     @State private var showScanner = false
     @State private var showAddLow = false
+    @State private var managingKind: PantryTaxonKind?
 
     private var visibleGroups: [(location: String, items: [PantryItem])] {
         vm.grouped.compactMap { group in
@@ -131,19 +205,19 @@ struct PantryView: View {
                 Button("OK") { vm.error = nil }
             } message: { Text(vm.error ?? "") }
             .sheet(isPresented: $showCreate) {
-                PantryItemEditSheet(item: nil, locations: vm.locations) { saved in
+                PantryItemEditSheet(item: nil, vm: vm) { saved in
                     vm.upsert(saved)
                 }
                 .environmentObject(auth)
             }
             .sheet(isPresented: $showScanner) {
-                PantryBarcodeScannerSheet(locations: vm.locations) { saved in
+                PantryBarcodeScannerSheet(vm: vm) { saved in
                     vm.upsert(saved)
                 }
                 .environmentObject(auth)
             }
             .sheet(item: $editingItem) { item in
-                PantryItemEditSheet(item: item, locations: vm.locations) { saved in
+                PantryItemEditSheet(item: item, vm: vm) { saved in
                     vm.upsert(saved)
                 }
                 .environmentObject(auth)
@@ -152,6 +226,17 @@ struct PantryView: View {
                 AddLowAlertButtons(vm: vm, token: auth.accessToken ?? "")
             } message: {
                 Text("Create a new shopping list with the \(vm.lowCount) item\(vm.lowCount == 1 ? "" : "s") marked as running low.")
+            }
+            .sheet(item: $managingKind) { kind in
+                NavigationStack {
+                    PantryTaxonManagerView(kind: kind, vm: vm)
+                        .environmentObject(auth)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { managingKind = nil }
+                            }
+                        }
+                }
             }
     }
 
@@ -256,6 +341,9 @@ struct PantryView: View {
             Menu {
                 Button("Add Item", systemImage: "plus") { showCreate = true }
                 Button("Scan Barcode", systemImage: "barcode.viewfinder") { showScanner = true }
+                Divider()
+                Button("Manage Categories", systemImage: "square.grid.2x2") { managingKind = .category }
+                Button("Manage Locations", systemImage: "mappin.and.ellipse") { managingKind = .location }
             } label: {
                 Image(systemName: "plus")
             }
@@ -276,7 +364,18 @@ struct PantryItemRow: View {
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.name).font(.headline)
+                HStack(spacing: 6) {
+                    Text(item.name).font(.headline)
+                    if !item.categoryName.isEmpty {
+                        Text(item.categoryIcon.isEmpty ? item.categoryName
+                                : "\(item.categoryIcon) \(item.categoryName)")
+                            .font(.caption2.weight(.medium))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color(.systemGray5), in: Capsule())
+                            .foregroundStyle(.secondary)
+                    }
+                }
 
                 HStack(spacing: 6) {
                     if !item.brand.isEmpty {

@@ -11,6 +11,9 @@ struct PantryItem: Identifiable, Codable, Sendable, Hashable {
     let id: String
     let name: String
     let brand: String
+    let category: String?           // PantryCategory UUID, or nil
+    let categoryName: String        // read-only display name, or ""
+    let categoryIcon: String        // read-only emoji, or ""
     let quantity: Double?
     let quantityText: String
     let unit: String
@@ -45,9 +48,13 @@ struct PantryItem: Identifiable, Codable, Sendable, Hashable {
     }
 }
 
-// MARK: - Pantry storage location (GET /api/pantry/locations/, paginated)
+// MARK: - Managed taxonomy (categories + locations share one shape)
+//
+// PantryCategory and PantryLocation are identical on the wire — id/name/icon/
+// order/item_count — and support the same create/rename/delete lifecycle, so
+// one Swift type backs both. See `PantryTaxonKind` for which endpoint each uses.
 
-struct PantryLocation: Identifiable, Codable, Sendable, Hashable {
+struct PantryTaxon: Identifiable, Codable, Sendable, Hashable {
     let id: String
     let name: String
     let icon: String
@@ -55,6 +62,22 @@ struct PantryLocation: Identifiable, Codable, Sendable, Hashable {
     let itemCount: Int?
 
     var displayName: String { icon.isEmpty ? name : "\(icon) \(name)" }
+}
+
+typealias PantryLocation = PantryTaxon
+typealias PantryCategory = PantryTaxon
+
+/// Body for POST/PATCH on /pantry/categories/ and /pantry/locations/.
+struct PantryTaxonRequest: Encodable, Sendable {
+    var name: String?
+    var icon: String?
+    var order: Int?
+
+    init(name: String? = nil, icon: String? = nil, order: Int? = nil) {
+        self.name = name
+        self.icon = icon
+        self.order = order
+    }
 }
 
 // MARK: - Request body for POST /api/pantry/items/ and PATCH …/<id>/
@@ -65,6 +88,7 @@ struct PantryLocation: Identifiable, Codable, Sendable, Hashable {
 struct PantryItemRequest: Encodable, Sendable {
     var name: String?
     var brand: String?
+    var category: String?           // PantryCategory UUID
     var quantity: Double?
     var quantityText: String?
     var unit: String?
@@ -80,6 +104,7 @@ struct PantryItemRequest: Encodable, Sendable {
     init(
         name: String? = nil,
         brand: String? = nil,
+        category: String? = nil,
         quantity: Double? = nil,
         quantityText: String? = nil,
         unit: String? = nil,
@@ -94,6 +119,7 @@ struct PantryItemRequest: Encodable, Sendable {
     ) {
         self.name = name
         self.brand = brand
+        self.category = category
         self.quantity = quantity
         self.quantityText = quantityText
         self.unit = unit

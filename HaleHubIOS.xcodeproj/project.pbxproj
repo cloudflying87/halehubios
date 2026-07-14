@@ -85,6 +85,7 @@
 		C55ECDB11898418FC61A3DBB /* OutingsAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D53C322D778E608338D5CB7D /* OutingsAnalyticsView.swift */; };
 		C63804DAD0AB824113030EAB /* LocationPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6E7237077FF66FAD52EE231 /* LocationPickerView.swift */; };
 		C8C430DB474965796CDFEFA9 /* HSAView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C19DEF0700C4F8DBA984FD9 /* HSAView.swift */; };
+		C9EE29CEACB336C22AD6F5CF /* PantryTaxonomy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F57EAA2CD909BFB00D29FAC /* PantryTaxonomy.swift */; };
 		CC498B37E53DB67811F88BAD /* LetterDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAAD29803F12391B72A484FC /* LetterDetailView.swift */; };
 		D00DF8718C2DD45538075682 /* ReadingCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7FA5E2300153CB3E9C7B100 /* ReadingCalendarView.swift */; };
 		D134B3EE71C1CE50594C9311 /* QRCodeCreateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C6603A1B4CEB94E3C970DF7 /* QRCodeCreateSheet.swift */; };
@@ -133,6 +134,7 @@
 		1DA68F684F0A477BD7D1FEB9 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		1EE48589C34175A306051197 /* LetterEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LetterEditorSheet.swift; sourceTree = "<group>"; };
 		1F4F9E24179FC7C33C97D8A4 /* VehiclesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesListView.swift; sourceTree = "<group>"; };
+		1F57EAA2CD909BFB00D29FAC /* PantryTaxonomy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PantryTaxonomy.swift; sourceTree = "<group>"; };
 		1FCDF504AF0FF0F7B2F22CC9 /* RecipeEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeEditView.swift; sourceTree = "<group>"; };
 		20602D8E8932915AA3418949 /* PantryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PantryView.swift; sourceTree = "<group>"; };
 		21F007CF9D818D8CA07D7381 /* JewelryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JewelryListView.swift; sourceTree = "<group>"; };
@@ -514,6 +516,7 @@
 			children = (
 				171CF869DD6355FFB954B3C2 /* PantryBarcodeScannerSheet.swift */,
 				2C0BDCC39EA7A484AD3C2BB4 /* PantryItemEditSheet.swift */,
+				1F57EAA2CD909BFB00D29FAC /* PantryTaxonomy.swift */,
 				20602D8E8932915AA3418949 /* PantryView.swift */,
 			);
 			path = Pantry;
@@ -697,6 +700,7 @@
 				6B5D5B1B101EC31CCFEB50F7 /* Pantry.swift in Sources */,
 				44008CD68DC1E08227B88ED4 /* PantryBarcodeScannerSheet.swift in Sources */,
 				65049E11E461CA3E2B66E766 /* PantryItemEditSheet.swift in Sources */,
+				C9EE29CEACB336C22AD6F5CF /* PantryTaxonomy.swift in Sources */,
 				82FE535DFC74C6423BF4D681 /* PantryView.swift in Sources */,
 				89A04B5E9B416B66376FBC9E /* PartsLookupView.swift in Sources */,
 				F214BB93900F9435AFB1FABD /* PayHoursView.swift in Sources */,
