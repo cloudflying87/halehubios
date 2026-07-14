@@ -1,9 +1,11 @@
 import SwiftUI
 @preconcurrency import AVFoundation
 
-/// Scans a product barcode, looks it up via the backend (Open Food Facts), and
-/// hands the result to the pantry edit sheet prefilled. Reuses the shared
-/// `CameraPreviewWrapper` from the tote scanner, but with barcode symbologies.
+/// Scans a product barcode and opens the right editor:
+///   1. a barcode already on a pantry item → that existing item (to restock/edit)
+///   2. otherwise → a new-item form, prefilled from Open Food Facts if the
+///      product is known, or blank-with-the-barcode if it isn't.
+/// Reuses the shared `CameraPreviewWrapper` from the tote scanner.
 struct PantryBarcodeScannerSheet: View {
     @EnvironmentObject var auth: AuthManager
     @Environment(\.dismiss) private var dismiss
@@ -15,7 +17,20 @@ struct PantryBarcodeScannerSheet: View {
     @State private var isLooking = false
     @State private var errorMessage: String?
     @State private var torchOn = false
-    @State private var prefill: PantryItemPrefill?
+    @State private var result: ScanResult?
+
+    /// What a scan resolved to — an item we already own, or a new one to add.
+    private enum ScanResult: Identifiable {
+        case existing(PantryItem)
+        case new(PantryItemPrefill)
+
+        var id: String {
+            switch self {
+            case .existing(let item): return "existing-\(item.id)"
+            case .new: return "new"
+            }
+        }
+    }
 
     /// Common grocery symbologies. UPC-A is reported as EAN-13 by AVFoundation.
     private let barcodeTypes: [AVMetadataObject.ObjectType] =
@@ -76,33 +91,48 @@ struct PantryBarcodeScannerSheet: View {
             }
             .toolbarBackground(.clear, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
-            // Present the edit sheet once we have a prefill; dismiss the scanner
-            // when the user finishes adding the item.
-            .sheet(item: Binding(
-                get: { prefill.map { PrefillBox(value: $0) } },
-                set: { if $0 == nil { prefill = nil; isScanning = true } }
-            )) { box in
-                PantryItemEditSheet(
-                    item: nil,
-                    vm: vm,
-                    prefill: box.value
-                ) { saved in
-                    onSaved(saved)
-                    dismiss()
-                }
-                .environmentObject(auth)
+            // Present the editor for whatever the scan resolved to. Resuming
+            // scanning on dismiss lets the user cancel and scan another item.
+            .sheet(item: $result, onDismiss: { isScanning = true }) { res in
+                editor(for: res).environmentObject(auth)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func editor(for res: ScanResult) -> some View {
+        switch res {
+        case .existing(let item):
+            // Already in the pantry — open it to restock / edit.
+            PantryItemEditSheet(item: item, vm: vm) { saved in
+                onSaved(saved)
+                dismiss()
+            }
+        case .new(let prefill):
+            PantryItemEditSheet(item: nil, vm: vm, prefill: prefill) { saved in
+                onSaved(saved)
+                dismiss()
             }
         }
     }
 
     private func handleScanned(barcode: String) async {
-        guard let token = auth.accessToken else { return }
         let code = barcode.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !code.isEmpty else { return }
         isScanning = false
-        isLooking = true
         errorMessage = nil
 
+        // 1. Do we already have an item with this barcode? Open it directly —
+        //    no network needed, and it works even for products Open Food Facts
+        //    doesn't know (their barcode was saved when first added).
+        if let existing = vm.items.first(where: { $0.barcode == code }) {
+            result = .existing(existing)
+            return
+        }
+
+        // 2. Otherwise look the product up in Open Food Facts.
+        guard let token = auth.accessToken else { isScanning = true; return }
+        isLooking = true
         do {
             let resp: PantryBarcodeLookupResponse = try await APIClient.shared.post(
                 "/pantry/barcode-lookup/",
@@ -111,22 +141,16 @@ struct PantryBarcodeScannerSheet: View {
             )
             isLooking = false
             if resp.found, let product = resp.product {
-                prefill = PantryItemPrefill(from: product)
+                result = .new(PantryItemPrefill(from: product))
             } else {
                 // Unknown product — still let them add it with the code attached.
-                prefill = PantryItemPrefill(barcode: resp.barcode ?? code)
+                result = .new(PantryItemPrefill(barcode: resp.barcode ?? code))
             }
         } catch {
             errorMessage = "Couldn't look up that barcode. Try again."
             isLooking = false
             try? await Task.sleep(for: .seconds(2))
-            if prefill == nil { isScanning = true }
+            if result == nil { isScanning = true }
         }
     }
-}
-
-/// `sheet(item:)` needs an Identifiable; wrap the non-Identifiable prefill.
-private struct PrefillBox: Identifiable {
-    let id = UUID()
-    let value: PantryItemPrefill
 }
