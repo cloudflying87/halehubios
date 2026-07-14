@@ -42,10 +42,13 @@ func parseHoursExpression(_ raw: String) -> Double? {
         let tok = part.trimmingCharacters(in: .whitespaces)
         if tok.isEmpty { continue }
         if tok.contains(":") {
-            let hm = tok.split(separator: ":", maxSplits: 1)
-            guard let h = Double(hm[0]) else { return nil }
-            let m = hm.count > 1 ? Double(hm[1]) : 0
-            guard let mins = m else { return nil }
+            // Keep empty sides so a lone/partial colon (":", ":30", "26:") never
+            // index-crashes; treat a blank hour or minute as 0.
+            let hm = tok.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+            let hPart = hm[0].trimmingCharacters(in: .whitespaces)
+            let mPart = hm.count > 1 ? hm[1].trimmingCharacters(in: .whitespaces) : ""
+            guard let h = hPart.isEmpty ? 0 : Double(hPart),
+                  let mins = mPart.isEmpty ? 0 : Double(mPart) else { return nil }
             total += h + mins / 60.0
         } else {
             guard let d = Double(tok) else { return nil }
