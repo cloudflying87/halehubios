@@ -16,6 +16,7 @@ struct PantryItemEditSheet: View {
     @State private var brand = ""
     @State private var quantityText = ""
     @State private var unit = ""
+    @State private var packageCount = 1
     @State private var barcode = ""
     @State private var selectedCategoryId: String = ""   // "" == uncategorized
     @State private var selectedLocationId: String = ""   // "" == no PantryLocation
@@ -51,9 +52,27 @@ struct PantryItemEditSheet: View {
                     TextField("Brand (optional)", text: $brand)
                 }
 
-                Section("Quantity") {
+                Section {
                     TextField("Amount, e.g. \"16 oz\" or \"2\"", text: $quantityText)
                     TextField("Unit (optional)", text: $unit)
+                } header: {
+                    Text("Amount per package")
+                } footer: {
+                    Text("How much is inside one package or bag.")
+                }
+
+                Section {
+                    Stepper(value: $packageCount, in: 0...999) {
+                        HStack {
+                            Text("How many")
+                            Spacer()
+                            Text("\(packageCount)").foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Packages on hand")
+                } footer: {
+                    Text("How many bags/packages of this item you have.")
                 }
 
                 Section("Category") {
@@ -147,6 +166,7 @@ struct PantryItemEditSheet: View {
             ? (item.quantity.map { $0.truncatingRemainder(dividingBy: 1) == 0 ? String(Int($0)) : String($0) } ?? "")
             : item.quantityText
         unit = item.unit
+        packageCount = item.packageCount ?? 1
         barcode = item.barcode
         selectedCategoryId = item.category ?? ""
         selectedLocationId = item.location ?? ""
@@ -191,6 +211,7 @@ struct PantryItemEditSheet: View {
             category: selectedCategoryId.isEmpty ? nil : selectedCategoryId,
             quantityText: quantityText.trimmingCharacters(in: .whitespaces),
             unit: unit.trimmingCharacters(in: .whitespaces),
+            packageCount: packageCount,
             barcode: barcode.trimmingCharacters(in: .whitespaces),
             location: selectedLocationId.isEmpty ? nil : selectedLocationId,
             expirationDate: hasExpiration ? Self.dateFmt.string(from: expirationDate) : nil,

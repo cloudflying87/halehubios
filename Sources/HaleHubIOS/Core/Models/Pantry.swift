@@ -17,6 +17,7 @@ struct PantryItem: Identifiable, Codable, Sendable, Hashable {
     let quantity: Double?
     let quantityText: String
     let unit: String
+    let packageCount: Int?          // how many packages/bags on hand
     let barcode: String
     let imageUrl: String
     let location: String?           // PantryLocation UUID, or nil
@@ -33,9 +34,13 @@ struct PantryItem: Identifiable, Codable, Sendable, Hashable {
     let createdAt: Date?
     let updatedAt: Date?
 
-    /// A compact "3 · 16 oz" style detail line, omitting empty parts.
+    /// A compact "3 × · 16 oz" style detail line, omitting empty parts. The
+    /// leading "N ×" is the number of packages/bags on hand (shown when > 1).
     var quantitySummary: String {
         var parts: [String] = []
+        if let count = packageCount, count > 1 {
+            parts.append("\(count) ×")
+        }
         if !quantityText.isEmpty {
             parts.append(quantityText)
         } else if let quantity {
@@ -92,6 +97,7 @@ struct PantryItemRequest: Encodable, Sendable {
     var quantity: Double?
     var quantityText: String?
     var unit: String?
+    var packageCount: Int?          // how many packages/bags on hand
     var barcode: String?
     var location: String?           // PantryLocation UUID
     var locationName: String?
@@ -108,6 +114,7 @@ struct PantryItemRequest: Encodable, Sendable {
         quantity: Double? = nil,
         quantityText: String? = nil,
         unit: String? = nil,
+        packageCount: Int? = nil,
         barcode: String? = nil,
         location: String? = nil,
         locationName: String? = nil,
@@ -123,6 +130,7 @@ struct PantryItemRequest: Encodable, Sendable {
         self.quantity = quantity
         self.quantityText = quantityText
         self.unit = unit
+        self.packageCount = packageCount
         self.barcode = barcode
         self.location = location
         self.locationName = locationName
