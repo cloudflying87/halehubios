@@ -203,7 +203,10 @@ struct PantryView: View {
     @State private var searchText = ""
     @State private var showExpiringOnly = false
     @State private var groupMode: PantryGroupMode = .location
-    @State private var categoryFilter: String?   // nil = all, "" = uncategorized, else category UUID
+    // Filter pills track the grouping dimension: category UUIDs in .category mode,
+    // location UUIDs in .location mode. nil = all, "" = unassigned/uncategorized.
+    @State private var categoryFilter: String?
+    @State private var locationFilter: String?
     @State private var editingItem: PantryItem?
     @State private var showCreate = false
     @State private var showScanner = false
@@ -229,11 +232,18 @@ struct PantryView: View {
                 || item.name.localizedCaseInsensitiveContains(searchText)
                 || item.brand.localizedCaseInsensitiveContains(searchText)
             let matchesExpiring = !showExpiringOnly || item.isExpired || item.expiresSoon
-            let matchesCategory: Bool = {
-                guard let f = categoryFilter else { return true }
-                return f.isEmpty ? (item.category ?? "").isEmpty : item.category == f
+            // Apply the pill filter for whichever dimension is being grouped.
+            let matchesFilter: Bool = {
+                switch groupMode {
+                case .category:
+                    guard let f = categoryFilter else { return true }
+                    return f.isEmpty ? (item.category ?? "").isEmpty : item.category == f
+                case .location:
+                    guard let f = locationFilter else { return true }
+                    return f.isEmpty ? (item.location ?? "").isEmpty : item.location == f
+                }
             }()
-            return matchesSearch && matchesExpiring && matchesCategory
+            return matchesSearch && matchesExpiring && matchesFilter
         }
         var order: [String] = []
         var seen = Set<String>()
@@ -381,31 +391,48 @@ struct PantryView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
 
-            // Category filter — only useful when there are categories in play.
-            if !vm.categories.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        PantryFilterChip(label: "All", systemImage: "line.3.horizontal.decrease",
-                                         tint: .accentColor, isSelected: categoryFilter == nil) {
-                            categoryFilter = nil
-                        }
-                        ForEach(vm.categories) { cat in
-                            PantryFilterChip(label: cat.name, systemImage: nil,
-                                             tint: .accentColor, isSelected: categoryFilter == cat.id) {
-                                categoryFilter = (categoryFilter == cat.id) ? nil : cat.id
-                            }
-                        }
-                        PantryFilterChip(label: "Uncategorized", systemImage: nil,
-                                         tint: .secondary, isSelected: categoryFilter == "") {
-                            categoryFilter = (categoryFilter == "") ? nil : ""
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                }
-            }
+            // Filter pills matching the current grouping dimension.
+            filterChips
         }
         .padding(.top, 8)
         Divider().padding(.top, 8)
+    }
+
+    /// Pills for the active grouping dimension — categories in .category mode,
+    /// locations in .location mode — plus "All" and an unassigned bucket.
+    @ViewBuilder
+    private var filterChips: some View {
+        let taxa = groupMode == .category ? vm.categories : vm.locations
+        if !taxa.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    PantryFilterChip(label: "All", systemImage: "line.3.horizontal.decrease",
+                                     tint: .accentColor, isSelected: currentFilter == nil) {
+                        setFilter(nil)
+                    }
+                    ForEach(taxa) { taxon in
+                        PantryFilterChip(label: taxon.name, systemImage: nil,
+                                         tint: .accentColor, isSelected: currentFilter == taxon.id) {
+                            setFilter(currentFilter == taxon.id ? nil : taxon.id)
+                        }
+                    }
+                    PantryFilterChip(label: groupMode == .category ? "Uncategorized" : "Unassigned",
+                                     systemImage: nil, tint: .secondary, isSelected: currentFilter == "") {
+                        setFilter(currentFilter == "" ? nil : "")
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+        }
+    }
+
+    /// The pill selection for the active grouping dimension.
+    private var currentFilter: String? {
+        groupMode == .category ? categoryFilter : locationFilter
+    }
+
+    private func setFilter(_ value: String?) {
+        if groupMode == .category { categoryFilter = value } else { locationFilter = value }
     }
 
     @ViewBuilder
