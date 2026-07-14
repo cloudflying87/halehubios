@@ -18,8 +18,9 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_YML="$REPO_ROOT/project.yml"
 PBXPROJ="$REPO_ROOT/HaleHubIOS.xcodeproj/project.pbxproj"
 
-# Read current build number from project.yml
-CURRENT=$(grep 'CURRENT_PROJECT_VERSION' "$PROJECT_YML" | sed 's/.*"\([0-9]*\)".*/\1/')
+# Read current build number from project.yml — match only the versioned setting
+# line (key: "digits"), so comments mentioning CURRENT_PROJECT_VERSION don't break it.
+CURRENT=$(grep -E 'CURRENT_PROJECT_VERSION: *"[0-9]+"' "$PROJECT_YML" | head -1 | sed 's/.*"\([0-9]*\)".*/\1/')
 
 if [[ -z "$CURRENT" ]]; then
     echo "error: could not read CURRENT_PROJECT_VERSION from project.yml" >&2
