@@ -52,7 +52,10 @@ func parseHoursExpression(_ raw: String) -> Double? {
             total += d
         }
     }
-    return total
+    // Round to 2 decimals — H:MM math yields repeating decimals (26:53 → 26.8833…),
+    // and the backend hours field only stores 2 places (max_digits 7), so send the
+    // rounded value rather than full precision.
+    return (total * 100).rounded() / 100
 }
 
 private func formatHours(_ value: Double) -> String {
