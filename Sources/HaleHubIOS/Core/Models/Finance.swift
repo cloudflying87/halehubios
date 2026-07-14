@@ -327,16 +327,22 @@ struct FinancePaycheck: Identifiable, Codable, Sendable {
 struct PaySummaryTotals: Codable, Sendable {
     let creditHours: Double
     let estimatedPay: Double
+    // Component breakdown (present on year summary totals/averages).
+    let credit: Double?
+    let additional: Double?
+    let green: Double?
+    let reroute: Double?
 }
 
 struct PayMonthRow: Codable, Sendable, Identifiable {
     var id: Int { monthNum }
     let month: String
     let monthNum: Int
-    let regular: Double
-    let green: Double
-    let sick: Double
-    let `override`: Double
+    let credit: Double        // base credit hours
+    let additional: Double    // additional pay hours
+    let green: Double         // green slip pay hours
+    let reroute: Double       // reroute pay hours
+    let sickCredit: Double    // informational: credit from sick-tagged trips
     let totalCredit: Double
     let rate: Double?
     let estimatedPay: Double?
@@ -353,10 +359,13 @@ struct PayTrip: Codable, Sendable, Identifiable {
     let id: Int
     let month: String
     let tripDate: String?
-    let hours: Double
+    let hours: Double            // base credit
+    let additionalHours: Double  // additional pay
+    let greenHours: Double       // green slip pay
+    let rerouteHours: Double     // reroute pay
     let tripType: String
     let multiplier: Double
-    let creditHours: Double
+    let creditHours: Double       // sum of all components
     let label: String
     let source: String
 }
@@ -364,6 +373,9 @@ struct PayTrip: Codable, Sendable, Identifiable {
 struct PayTripRequest: Codable, Sendable {
     let month: String
     let hours: Double
+    let additionalHours: Double
+    let greenHours: Double
+    let rerouteHours: Double
     let tripType: String
     let label: String?
 }
@@ -374,6 +386,9 @@ struct PayTripPatch: Codable, Sendable {
 
 struct PayTripEditRequest: Codable, Sendable {
     let hours: Double
+    let additionalHours: Double
+    let greenHours: Double
+    let rerouteHours: Double
     let tripType: String
     let label: String
 }

@@ -29,6 +29,121 @@ private func monthName(_ n: Int) -> String {
     return (1...12).contains(n) ? symbols[n - 1] : "\(n)"
 }
 
+// MARK: - Hours / minutes entry
+
+/// Parse a time expression into decimal hours. Accepts a decimal ("26.92"),
+/// H:MM ("26:53" → 26.88), or several of either summed with "+"
+/// ("2:15 + 1:30" → 3.75). Returns nil if any token is unparseable.
+func parseHoursExpression(_ raw: String) -> Double? {
+    let trimmed = raw.trimmingCharacters(in: .whitespaces)
+    if trimmed.isEmpty { return 0 }
+    var total = 0.0
+    for part in trimmed.split(separator: "+") {
+        let tok = part.trimmingCharacters(in: .whitespaces)
+        if tok.isEmpty { continue }
+        if tok.contains(":") {
+            let hm = tok.split(separator: ":", maxSplits: 1)
+            guard let h = Double(hm[0]) else { return nil }
+            let m = hm.count > 1 ? Double(hm[1]) : 0
+            guard let mins = m else { return nil }
+            total += h + mins / 60.0
+        } else {
+            guard let d = Double(tok) else { return nil }
+            total += d
+        }
+    }
+    return total
+}
+
+private func formatHours(_ value: Double) -> String {
+    value == 0 ? "" : String(format: "%g", (value * 100).rounded() / 100)
+}
+
+/// A labelled field that accepts decimal or H:MM (and sums with "+"), showing
+/// the converted decimal live beneath it.
+struct HoursMinutesField: View {
+    let title: String
+    @Binding var value: Double
+    @State private var text: String
+
+    init(title: String, value: Binding<Double>) {
+        self.title = title
+        _value = value
+        _text = State(initialValue: formatHours(value.wrappedValue))
+    }
+
+    private var parsed: Double? { parseHoursExpression(text) }
+    private var showsConversion: Bool { text.contains(":") || text.contains("+") }
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            HStack {
+                Text(title)
+                Spacer()
+                TextField("0:00", text: $text)
+                    .keyboardType(.numbersAndPunctuation)
+                    .multilineTextAlignment(.trailing)
+                    .autocorrectionDisabled()
+                    .onChange(of: text) { if let v = parsed { value = v } }
+            }
+            if showsConversion, let v = parsed {
+                Text(String(format: "= %.2f hrs", v))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+/// The four pay components of a trip, all credited toward pay.
+struct TripPayInput: Sendable {
+    var credit: Double
+    var additional: Double
+    var green: Double
+    var reroute: Double
+
+    var totalCredit: Double { credit + additional + green + reroute }
+}
+
+/// Shared Credit / Additional / Green / Reroute inputs for Add & Edit sheets.
+struct TripFormFields: View {
+    @Binding var credit: Double
+    @Binding var additional: Double
+    @Binding var green: Double
+    @Binding var reroute: Double
+    @Binding var type: PayTripType
+    @Binding var label: String
+
+    private var total: Double {
+        credit + additional + reroute + (type == .green ? green : 0)
+    }
+
+    var body: some View {
+        Section("Trip") {
+            HoursMinutesField(title: "Credit", value: $credit)
+            Picker("Type", selection: $type) {
+                ForEach(PayTripType.allCases) { Text($0.label).tag($0) }
+            }
+            TextField("Trip # / label (optional)", text: $label)
+        }
+        Section("Additional Pay") {
+            HoursMinutesField(title: "Additional pay", value: $additional)
+            HoursMinutesField(title: "Reroute pay", value: $reroute)
+            if type == .green {
+                HoursMinutesField(title: "Green slip pay", value: $green)
+            }
+        }
+        Section {
+            HStack {
+                Text("Total credit").fontWeight(.semibold)
+                Spacer()
+                Text(String(format: "%.2f hrs", total)).fontWeight(.semibold)
+            }
+            Text("Enter times as a decimal (26.92) or H:MM (26:53). Add several with “+”, e.g. 2:15 + 1:30.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+}
+
 // MARK: - View Model
 
 @MainActor
@@ -88,6 +203,7 @@ struct PayHoursView: View {
                 if let s = vm.summary {
                     monthsCard(s)
                     totalsCard(s)
+                    breakdownCard(s)
                 } else if vm.isLoading {
                     ProgressView("Loading…").frame(maxWidth: .infinity, minHeight: 160)
                 }
@@ -195,6 +311,41 @@ struct PayHoursView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
+    /// Year totals split by pay component (credit / additional / green / reroute).
+    @ViewBuilder private func breakdownCard(_ s: PaySummary) -> some View {
+        let t = s.totals
+        let credit: Double = t.credit ?? 0
+        let additional: Double = t.additional ?? 0
+        let green: Double = t.green ?? 0
+        let reroute: Double = t.reroute ?? 0
+        let sum: Double = credit + additional + green + reroute
+        if sum > 0 {
+            VStack(spacing: 10) {
+                HStack {
+                    Text("Pay Breakdown (\(String(s.year)))").font(.subheadline).fontWeight(.semibold)
+                    Spacer()
+                }
+                componentRow("Credit", credit, .primary)
+                componentRow("Additional pay", additional, .blue)
+                componentRow("Green slip pay", green, .green)
+                componentRow("Reroute pay", reroute, .orange)
+            }
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+    }
+
+    private func componentRow(_ label: String, _ hours: Double, _ color: Color) -> some View {
+        HStack {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(label).font(.subheadline).foregroundStyle(.secondary)
+            Spacer()
+            Text(String(format: "%.2f hrs", hours)).font(.subheadline)
+                .foregroundStyle(hours > 0 ? .primary : .tertiary)
+        }
+    }
+
     private func handleImport(_ result: Result<URL, Error>) {
         guard case .success(let url) = result else {
             if case .failure(let e) = result { vm.error = e.localizedDescription }
@@ -233,9 +384,11 @@ final class PayMonthViewModel: ObservableObject {
         isLoading = false
     }
 
-    func add(month: String, hours: Double, type: PayTripType, label: String, token: String) async -> Bool {
+    func add(month: String, pay: TripPayInput, type: PayTripType, label: String, token: String) async -> Bool {
         do {
-            let req = PayTripRequest(month: month, hours: hours, tripType: type.rawValue, label: label.isEmpty ? nil : label)
+            let req = PayTripRequest(month: month, hours: pay.credit, additionalHours: pay.additional,
+                                     greenHours: pay.green, rerouteHours: pay.reroute,
+                                     tripType: type.rawValue, label: label.isEmpty ? nil : label)
             let _: PayTrip = try await APIClient.shared.post("/finance/pay/trips/", body: req, token: token)
             return true
         } catch { self.error = error.localizedDescription; return false }
@@ -247,9 +400,11 @@ final class PayMonthViewModel: ObservableObject {
         } catch { self.error = error.localizedDescription }
     }
 
-    func update(_ trip: PayTrip, hours: Double, type: PayTripType, label: String, token: String) async -> Bool {
+    func update(_ trip: PayTrip, pay: TripPayInput, type: PayTripType, label: String, token: String) async -> Bool {
         do {
-            let req = PayTripEditRequest(hours: hours, tripType: type.rawValue, label: label)
+            let req = PayTripEditRequest(hours: pay.credit, additionalHours: pay.additional,
+                                         greenHours: pay.green, rerouteHours: pay.reroute,
+                                         tripType: type.rawValue, label: label)
             let _: PayTrip = try await APIClient.shared.patch("/finance/pay/trips/\(trip.id)/", body: req, token: token)
             return true
         } catch { self.error = error.localizedDescription; return false }
@@ -272,6 +427,12 @@ struct PayMonthDetailView: View {
     private var token: String { auth.accessToken ?? "" }
     private var monthString: String { String(format: "%04d-%02d", year, monthNum) }
     private var totalCredit: Double { vm.trips.reduce(0) { $0 + $1.creditHours } }
+    private var creditTotal: Double { vm.trips.reduce(0) { $0 + $1.hours } }
+    private var additionalTotal: Double { vm.trips.reduce(0) { $0 + $1.additionalHours } }
+    private var greenTotal: Double { vm.trips.reduce(0) { $0 + $1.greenHours } }
+    private var rerouteTotal: Double { vm.trips.reduce(0) { $0 + $1.rerouteHours } }
+    /// Estimated Delta pay for the month (credit × rate), when a rate is known.
+    private var estimatedPay: Double? { vm.detail?.paycheck.fullPay }
 
     var body: some View {
         List {
@@ -280,6 +441,19 @@ struct PayMonthDetailView: View {
                     Text("Total credit").fontWeight(.semibold)
                     Spacer()
                     Text(String(format: "%.2f hrs", totalCredit)).fontWeight(.semibold)
+                    if let pay = estimatedPay {
+                        Text(LoanFormatters.money(pay, fractionDigits: 0))
+                            .fontWeight(.semibold).foregroundStyle(.green)
+                            .frame(minWidth: 80, alignment: .trailing)
+                    }
+                }
+            }
+            if totalCredit > 0 {
+                Section("Pay Breakdown") {
+                    breakdownRow("Credit", creditTotal, .primary)
+                    if additionalTotal > 0 { breakdownRow("Additional pay", additionalTotal, .blue) }
+                    if greenTotal > 0 { breakdownRow("Green slip pay", greenTotal, .green) }
+                    if rerouteTotal > 0 { breakdownRow("Reroute pay", rerouteTotal, .orange) }
                 }
             }
             payAndAlvSection
@@ -306,15 +480,15 @@ struct PayMonthDetailView: View {
             }
         }
         .sheet(isPresented: $showAdd) {
-            AddTripSheet(month: monthString) { hours, type, label in
-                let ok = await vm.add(month: monthString, hours: hours, type: type, label: label, token: token)
+            AddTripSheet(month: monthString) { pay, type, label in
+                let ok = await vm.add(month: monthString, pay: pay, type: type, label: label, token: token)
                 if ok { await vm.load(year: year, monthNum: monthNum, token: token) }
                 return ok
             }
         }
         .sheet(item: $editingTrip) { trip in
-            EditTripSheet(trip: trip) { hours, type, label in
-                let ok = await vm.update(trip, hours: hours, type: type, label: label, token: token)
+            EditTripSheet(trip: trip) { pay, type, label in
+                let ok = await vm.update(trip, pay: pay, type: type, label: label, token: token)
                 if ok { await vm.load(year: year, monthNum: monthNum, token: token) }
                 return ok
             }
@@ -326,14 +500,32 @@ struct PayMonthDetailView: View {
         } message: { Text(vm.error ?? "") }
     }
 
+    private func breakdownRow(_ label: String, _ hours: Double, _ color: Color) -> some View {
+        HStack {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(label).foregroundStyle(.secondary)
+            Spacer()
+            Text(String(format: "%.2f hrs", hours)).fontWeight(.medium)
+        }
+    }
+
     private func tripRow(_ trip: PayTrip) -> some View {
         let type = PayTripType(rawValue: trip.tripType) ?? .regular
+        // Components beyond base credit, shown as small tags on the row.
+        let extras: [(String, Double)] = [
+            ("+add", trip.additionalHours),
+            ("+green", trip.greenHours),
+            ("+rrt", trip.rerouteHours),
+        ].filter { $0.1 > 0 }
         return HStack {
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    Text(String(format: "%.2f hrs", trip.hours)).font(.subheadline)
-                    if trip.multiplier != 1 {
-                        Text("×\(String(format: "%.0f", trip.multiplier))").font(.caption).foregroundStyle(.green)
+                Text(String(format: "%.2f hrs credit", trip.hours)).font(.subheadline)
+                if !extras.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(extras, id: \.0) { name, val in
+                            Text("\(name) \(String(format: "%.2f", val))")
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
                     }
                 }
                 if !trip.label.isEmpty {
@@ -414,40 +606,38 @@ struct PayMonthDetailView: View {
 
 struct EditTripSheet: View {
     let trip: PayTrip
-    let onSave: (Double, PayTripType, String) async -> Bool
+    let onSave: (TripPayInput, PayTripType, String) async -> Bool
 
     @Environment(\.dismiss) private var dismiss
-    @State private var hours: Double
+    @State private var credit: Double
+    @State private var additional: Double
+    @State private var green: Double
+    @State private var reroute: Double
     @State private var type: PayTripType
     @State private var label: String
     @State private var saving = false
 
-    init(trip: PayTrip, onSave: @escaping (Double, PayTripType, String) async -> Bool) {
+    init(trip: PayTrip, onSave: @escaping (TripPayInput, PayTripType, String) async -> Bool) {
         self.trip = trip
         self.onSave = onSave
-        _hours = State(initialValue: trip.hours)
+        _credit = State(initialValue: trip.hours)
+        _additional = State(initialValue: trip.additionalHours)
+        _green = State(initialValue: trip.greenHours)
+        _reroute = State(initialValue: trip.rerouteHours)
         _type = State(initialValue: PayTripType(rawValue: trip.tripType) ?? .regular)
         _label = State(initialValue: trip.label)
+    }
+
+    private var payload: TripPayInput {
+        TripPayInput(credit: credit, additional: additional,
+                     green: type == .green ? green : 0, reroute: reroute)
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Trip") {
-                    HStack {
-                        Text("Hours"); Spacer()
-                        TextField("Hours", value: $hours, format: .number)
-                            .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
-                    }
-                    Picker("Type", selection: $type) {
-                        ForEach(PayTripType.allCases) { Text($0.label).tag($0) }
-                    }
-                    TextField("Label (optional)", text: $label)
-                }
-                if type == .green {
-                    Text("Green slips pay 2× — credited as \(String(format: "%.2f", hours * 2)) hours.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+                TripFormFields(credit: $credit, additional: $additional, green: $green,
+                               reroute: $reroute, type: $type, label: $label)
             }
             .navigationTitle("Edit Trip")
             .navigationBarTitleDisplayMode(.inline)
@@ -455,9 +645,9 @@ struct EditTripSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        Task { saving = true; let ok = await onSave(hours, type, label); saving = false; if ok { dismiss() } }
+                        Task { saving = true; let ok = await onSave(payload, type, label); saving = false; if ok { dismiss() } }
                     }
-                    .disabled(saving || hours <= 0)
+                    .disabled(saving || payload.totalCredit <= 0)
                 }
             }
         }
@@ -466,32 +656,27 @@ struct EditTripSheet: View {
 
 struct AddTripSheet: View {
     let month: String
-    let onSave: (Double, PayTripType, String) async -> Bool
+    let onSave: (TripPayInput, PayTripType, String) async -> Bool
 
     @Environment(\.dismiss) private var dismiss
-    @State private var hours: Double = 0
+    @State private var credit: Double = 0
+    @State private var additional: Double = 0
+    @State private var green: Double = 0
+    @State private var reroute: Double = 0
     @State private var type: PayTripType = .regular
     @State private var label = ""
     @State private var saving = false
 
+    private var payload: TripPayInput {
+        TripPayInput(credit: credit, additional: additional,
+                     green: type == .green ? green : 0, reroute: reroute)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
-                Section("Trip") {
-                    HStack {
-                        Text("Hours"); Spacer()
-                        TextField("Hours", value: $hours, format: .number)
-                            .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
-                    }
-                    Picker("Type", selection: $type) {
-                        ForEach(PayTripType.allCases) { Text($0.label).tag($0) }
-                    }
-                    TextField("Label (optional)", text: $label)
-                }
-                if type == .green {
-                    Text("Green slips pay 2× — credited as \(String(format: "%.2f", hours * 2)) hours.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+                TripFormFields(credit: $credit, additional: $additional, green: $green,
+                               reroute: $reroute, type: $type, label: $label)
             }
             .navigationTitle("Add Trip")
             .navigationBarTitleDisplayMode(.inline)
@@ -499,9 +684,9 @@ struct AddTripSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        Task { saving = true; let ok = await onSave(hours, type, label); saving = false; if ok { dismiss() } }
+                        Task { saving = true; let ok = await onSave(payload, type, label); saving = false; if ok { dismiss() } }
                     }
-                    .disabled(saving || hours <= 0)
+                    .disabled(saving || payload.totalCredit <= 0)
                 }
             }
         }
