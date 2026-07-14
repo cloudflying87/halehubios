@@ -9,9 +9,11 @@
 /* Begin PBXBuildFile section */
 		02C04EC24E37CB558298C065 /* FinanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3E0F5A841DEE102A2A748E9 /* FinanceView.swift */; };
 		066CE346DCBF8CDCB490F43F /* BabysittersListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4650938A2EFD112FBDE9BB8 /* BabysittersListView.swift */; };
+		074889CE92E9D21F32802925 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2EE3AADB14C5BB8A7FD7CED /* ShareViewController.swift */; };
 		07CB90C741FF3A903195E23B /* OtherAccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8C4C54ACA3115E23CD18BA8 /* OtherAccountsView.swift */; };
 		08532DE32F95713C7860B14D /* Babysitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DE5BEDFD67C5B613831DA5A /* Babysitter.swift */; };
 		0B277FF382202D8663836D1A /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5659E674164A8619F674A025 /* TrashView.swift */; };
+		0F04F4C564316872823D538E /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7AAC6C3663381E3F968F4EF3 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0F180BBF626B49F398B73B58 /* VisionKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DC8034D7B0300121850BDBF /* VisionKit.framework */; };
 		10AA929077617858F9C0033D /* ShoppingListsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 082F8360E610399CB9791E01 /* ShoppingListsView.swift */; };
 		150DF4647E3F54110B019C19 /* VehiclesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */; };
@@ -22,6 +24,7 @@
 		28BB62C71B132B865695D054 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 10D050A0AA135EA42867348B /* Assets.xcassets */; };
 		309D4E2822316C8A2AA73276 /* AddToteItemSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E42C92988E41BEC50BEFC7 /* AddToteItemSheet.swift */; };
 		30E85499D89A95BA3F2C7181 /* InvestmentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B98F3C7823C6BE6B6EA59F6E /* InvestmentsView.swift */; };
+		347123154D1CEE54F7B39557 /* GetPageContent.js in Resources */ = {isa = PBXBuildFile; fileRef = F97CF817022C9CA05252E839 /* GetPageContent.js */; };
 		348B353619531848D975D852 /* TodosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F970A2EEDACCE75FCA8ECF3 /* TodosView.swift */; };
 		355D2C2EF25FC21016FC94B2 /* SessionFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46696FD761C2764EE5DCED0B /* SessionFormSheet.swift */; };
 		3D9A70283B1418D66C2EB770 /* Vehicle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9E73A2B5915D0510398991 /* Vehicle.swift */; };
@@ -117,6 +120,30 @@
 		FEF7F2DD496245122391D452 /* QRCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F474D48454B3A561B5D58DA /* QRCode.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		434E06907C01A2974D674E9E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 559617F0D81DA1AB14EBCCA4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A518373F91ED62C41B937F6B;
+			remoteInfo = ShareExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		524B164965EEA7932A3D1136 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				0F04F4C564316872823D538E /* ShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		026B9CBC27B5BDAB71949F45 /* LogEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogEventSheet.swift; sourceTree = "<group>"; };
 		040BCD9171AD5B0D521CFD48 /* ReadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingView.swift; sourceTree = "<group>"; };
@@ -175,6 +202,7 @@
 		74B687332A40D9FD2B517A53 /* Resource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Resource.swift; sourceTree = "<group>"; };
 		78FB1010716375E4D43CFAC4 /* NotificationsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsViewModel.swift; sourceTree = "<group>"; };
 		790B4914B50AD5BD65119C9B /* BookDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDetailView.swift; sourceTree = "<group>"; };
+		7AAC6C3663381E3F968F4EF3 /* ShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B0FD1B8EDC734D961CD30DE /* ChapterDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterDetailView.swift; sourceTree = "<group>"; };
 		7B850A78801A49015E962D7B /* ResourceEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceEditorSheet.swift; sourceTree = "<group>"; };
 		7D90AD79C3F6F7C3CC8B97F8 /* QRCodeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeDetailView.swift; sourceTree = "<group>"; };
@@ -193,6 +221,7 @@
 		9CD4130D14F56C5404DD4F9D /* MaintenanceHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaintenanceHistoryView.swift; sourceTree = "<group>"; };
 		9FBA0CC3BA5FFC5DB4221961 /* ReadingPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingPlan.swift; sourceTree = "<group>"; };
 		A12C5A8D410A7C7F5827EFDD /* ToteScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToteScannerView.swift; sourceTree = "<group>"; };
+		A2EE3AADB14C5BB8A7FD7CED /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		A57F526FD0101A9167FD1673 /* CreateToteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateToteSheet.swift; sourceTree = "<group>"; };
 		A61E087314245BBDAE4FAAFF /* FamilyIncomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyIncomeView.swift; sourceTree = "<group>"; };
 		A9562ADACDD9013D314DD553 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -225,6 +254,7 @@
 		F697A53718B2B7DEBA2B583D /* JewelryReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JewelryReportView.swift; sourceTree = "<group>"; };
 		F7FA5E2300153CB3E9C7B100 /* ReadingCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingCalendarView.swift; sourceTree = "<group>"; };
 		F8C4C54ACA3115E23CD18BA8 /* OtherAccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherAccountsView.swift; sourceTree = "<group>"; };
+		F97CF817022C9CA05252E839 /* GetPageContent.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = GetPageContent.js; sourceTree = "<group>"; };
 		FB4B5CF8600011259A00F045 /* PaychecksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaychecksView.swift; sourceTree = "<group>"; };
 		FE31BE0E85DE259F0A660148 /* BudgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetView.swift; sourceTree = "<group>"; };
 		FE9989920930EEF68FF24A99 /* HaleHubIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaleHubIOSApp.swift; sourceTree = "<group>"; };
@@ -265,6 +295,15 @@
 				0C93425E6A35DBEE8FE9ACBA /* ResourcesHubView.swift */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		2564B6732F1B5C2426EEE465 /* ShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				F97CF817022C9CA05252E839 /* GetPageContent.js */,
+				A2EE3AADB14C5BB8A7FD7CED /* ShareViewController.swift */,
+			);
+			path = ShareExtension;
 			sourceTree = "<group>";
 		};
 		2779E23076A0489295A19FEC /* Auth */ = {
@@ -372,6 +411,7 @@
 			isa = PBXGroup;
 			children = (
 				D77C2BBF0F9F154CA449BA91 /* HaleHubIOS.app */,
+				7AAC6C3663381E3F968F4EF3 /* ShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -410,6 +450,7 @@
 			isa = PBXGroup;
 			children = (
 				E38C78865F9A8B9BA98DDF8B /* HaleHubIOS */,
+				2564B6732F1B5C2426EEE465 /* ShareExtension */,
 				D683228B37CA6C0555D7EDD3 /* Frameworks */,
 				97EEECC98A68AA188994A413 /* Products */,
 			);
@@ -588,10 +629,12 @@
 				FE2FFF9148B97F3E891C7646 /* Sources */,
 				8C9EC32351570C793B3192D8 /* Resources */,
 				118F711278F6A1BC376E142E /* Frameworks */,
+				524B164965EEA7932A3D1136 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				7E4DCC2716D5A8FD9DCE569A /* PBXTargetDependency */,
 			);
 			name = HaleHubIOS;
 			packageProductDependencies = (
@@ -599,6 +642,24 @@
 			productName = HaleHubIOS;
 			productReference = D77C2BBF0F9F154CA449BA91 /* HaleHubIOS.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A518373F91ED62C41B937F6B /* ShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9B538A7096E47182C6B30827 /* Build configuration list for PBXNativeTarget "ShareExtension" */;
+			buildPhases = (
+				10DB401A43509358CB1F3FF5 /* Sources */,
+				A9A53560A77C805243C4DABC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShareExtension;
+			packageProductDependencies = (
+			);
+			productName = ShareExtension;
+			productReference = 7AAC6C3663381E3F968F4EF3 /* ShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -610,6 +671,10 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					11DA12F89A26FC90FF2634A3 = {
+						DevelopmentTeam = 473M622LJJ;
+						ProvisioningStyle = Automatic;
+					};
+					A518373F91ED62C41B937F6B = {
 						DevelopmentTeam = 473M622LJJ;
 						ProvisioningStyle = Automatic;
 					};
@@ -630,6 +695,7 @@
 			projectRoot = "";
 			targets = (
 				11DA12F89A26FC90FF2634A3 /* HaleHubIOS */,
+				A518373F91ED62C41B937F6B /* ShareExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -643,9 +709,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A9A53560A77C805243C4DABC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				347123154D1CEE54F7B39557 /* GetPageContent.js in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		10DB401A43509358CB1F3FF5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				074889CE92E9D21F32802925 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FE2FFF9148B97F3E891C7646 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -760,6 +842,14 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		7E4DCC2716D5A8FD9DCE569A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A518373F91ED62C41B937F6B /* ShareExtension */;
+			targetProxy = 434E06907C01A2974D674E9E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
 		2B459BAD778F390A789B3B5D /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -825,6 +915,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/HaleHubIOS/HaleHubIOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = Sources/HaleHubIOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -909,6 +1000,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/HaleHubIOS/HaleHubIOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = Sources/HaleHubIOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -917,6 +1009,40 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.halefamily.halehubios;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		91E9A39DF8ECD9326AD4A409 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.halefamily.halehubios.ShareExtension;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		C697C96CCB80FFC77E677F45 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.halefamily.halehubios.ShareExtension;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -939,6 +1065,15 @@
 			buildConfigurations = (
 				817035A6F7E5200D63331FA1 /* Debug */,
 				3E3B05FB88EC022D86597A1D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9B538A7096E47182C6B30827 /* Build configuration list for PBXNativeTarget "ShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C697C96CCB80FFC77E677F45 /* Debug */,
+				91E9A39DF8ECD9326AD4A409 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

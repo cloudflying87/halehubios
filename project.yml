@@ -26,10 +26,17 @@ targets:
     dependencies:
       - sdk: LocalAuthentication.framework
       - sdk: VisionKit.framework
+      # Safari "Share → HaleHub" recipe import. Embedding it here is what keeps
+      # the extension in every `xcodegen generate` — see docs/SHARE_EXTENSION.md.
+      - target: ShareExtension
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.halefamily.halehubios
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # App Group (shared login token) — file exists on disk but must be
+        # referenced here or `xcodegen generate` drops the entitlement.
+        CODE_SIGN_ENTITLEMENTS: Sources/HaleHubIOS/HaleHubIOS.entitlements
     info:
       path: Sources/HaleHubIOS/Info.plist
       properties:
@@ -50,3 +57,26 @@ targets:
         NSPhotoLibraryUsageDescription: "Used to attach photos to totes from your photo library."
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
+
+  # Safari Share Extension — "Share → HaleHub" imports a recipe from the live
+  # Safari tab (GetPageContent.js captures the rendered DOM). Defined here so it
+  # is part of every generated project and never dropped again.
+  # See docs/SHARE_EXTENSION.md.
+  ShareExtension:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ShareExtension
+        excludes:
+          - "SETUP.md"
+          - "Info.plist"
+          - "ShareExtension.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.halefamily.halehubios.ShareExtension
+        INFOPLIST_FILE: ShareExtension/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ShareExtension/ShareExtension.entitlements
+        # MARKETING_VERSION / CURRENT_PROJECT_VERSION are inherited from the
+        # project-level settings.base, so the extension version always matches
+        # the app (its Info.plist reads $(MARKETING_VERSION)/$(CURRENT_PROJECT_VERSION)).
