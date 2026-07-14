@@ -25,6 +25,7 @@ targets:
       - path: Sources/HaleHubIOS
     dependencies:
       - sdk: LocalAuthentication.framework
+      - sdk: VisionKit.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.halefamily.halehubios
@@ -44,7 +45,7 @@ targets:
           - CFBundleURLSchemes:
               - halehub
             CFBundleURLName: com.halefamily.halehubios
-        NSCameraUsageDescription: "Used to take photos of tote contents and scan product barcodes into your pantry."
+        NSCameraUsageDescription: "Used to take photos of tote contents and to scan product barcodes and labels into your pantry."
         NSFaceIDUsageDescription: "Used to unlock and protect your financial data."
         NSPhotoLibraryUsageDescription: "Used to attach photos to totes from your photo library."
         NSAppTransportSecurity:

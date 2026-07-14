@@ -216,4 +216,10 @@ struct PantryItemPrefill: Sendable {
     init(barcode: String) {
         self.barcode = barcode
     }
+
+    /// Start from an OCR-scanned (or empty) name — used by the text scanner and
+    /// the "add manually" fallback.
+    init(name: String = "") {
+        self.name = name
+    }
 }

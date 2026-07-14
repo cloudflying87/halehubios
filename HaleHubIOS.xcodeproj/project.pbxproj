@@ -12,6 +12,7 @@
 		07CB90C741FF3A903195E23B /* OtherAccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8C4C54ACA3115E23CD18BA8 /* OtherAccountsView.swift */; };
 		08532DE32F95713C7860B14D /* Babysitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DE5BEDFD67C5B613831DA5A /* Babysitter.swift */; };
 		0B277FF382202D8663836D1A /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5659E674164A8619F674A025 /* TrashView.swift */; };
+		0F180BBF626B49F398B73B58 /* VisionKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DC8034D7B0300121850BDBF /* VisionKit.framework */; };
 		10AA929077617858F9C0033D /* ShoppingListsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 082F8360E610399CB9791E01 /* ShoppingListsView.swift */; };
 		150DF4647E3F54110B019C19 /* VehiclesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */; };
 		197269BDB738EF7DC058D031 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8846379DD0DC0029F8B00B6 /* APIClient.swift */; };
@@ -177,6 +178,7 @@
 		7B0FD1B8EDC734D961CD30DE /* ChapterDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterDetailView.swift; sourceTree = "<group>"; };
 		7B850A78801A49015E962D7B /* ResourceEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceEditorSheet.swift; sourceTree = "<group>"; };
 		7D90AD79C3F6F7C3CC8B97F8 /* QRCodeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeDetailView.swift; sourceTree = "<group>"; };
+		7DC8034D7B0300121850BDBF /* VisionKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VisionKit.framework; path = System/Library/Frameworks/VisionKit.framework; sourceTree = SDKROOT; };
 		815C624F55265C97B1C42422 /* BibleProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BibleProgressView.swift; sourceTree = "<group>"; };
 		82E07456A55F649FBB9C8448 /* ShoppingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingViewModel.swift; sourceTree = "<group>"; };
 		875BB4EAC2FB2A89E50D3CE3 /* VehiclesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclesViewModel.swift; sourceTree = "<group>"; };
@@ -235,6 +237,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				574B0D1BD4CBC4B98428F106 /* LocalAuthentication.framework in Frameworks */,
+				0F180BBF626B49F398B73B58 /* VisionKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -486,6 +489,7 @@
 			isa = PBXGroup;
 			children = (
 				0C309AC162DA76ACDF7A95C8 /* LocalAuthentication.framework */,
+				7DC8034D7B0300121850BDBF /* VisionKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";

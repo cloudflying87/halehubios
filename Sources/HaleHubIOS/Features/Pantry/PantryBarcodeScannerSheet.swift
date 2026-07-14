@@ -1,22 +1,23 @@
 import SwiftUI
-@preconcurrency import AVFoundation
+import VisionKit
+import AVFoundation
 
-/// Scans a product barcode and opens the right editor:
-///   1. a barcode already on a pantry item → that existing item (to restock/edit)
-///   2. otherwise → a new-item form, prefilled from Open Food Facts if the
-///      product is known, or blank-with-the-barcode if it isn't.
-/// Reuses the shared `CameraPreviewWrapper` from the tote scanner.
-struct PantryBarcodeScannerSheet: View {
+/// Unified pantry scanner. A single live camera recognizes both barcodes and
+/// text (VisionKit `DataScannerViewController`, on-device — no network, no key):
+///   • tap a barcode → recognize an existing item, else Open Food Facts lookup,
+///     else a new-item form with the code attached
+///   • tap a product name → a new-item form prefilled with that text
+/// Everything resolves through the same `PantryItemEditSheet`.
+struct PantryScannerSheet: View {
     @EnvironmentObject var auth: AuthManager
     @Environment(\.dismiss) private var dismiss
 
     @ObservedObject var vm: PantryViewModel
     let onSaved: (PantryItem) -> Void
 
-    @State private var isScanning = true
     @State private var isLooking = false
     @State private var errorMessage: String?
-    @State private var torchOn = false
+    @State private var cameraDenied = false
     @State private var result: ScanResult?
 
     /// What a scan resolved to — an item we already own, or a new one to add.
@@ -32,70 +33,92 @@ struct PantryBarcodeScannerSheet: View {
         }
     }
 
-    /// Common grocery symbologies. UPC-A is reported as EAN-13 by AVFoundation.
-    private let barcodeTypes: [AVMetadataObject.ObjectType] =
-        [.ean13, .ean8, .upce, .code128, .code39]
+    private var scannerAvailable: Bool {
+        DataScannerViewController.isSupported && !cameraDenied
+    }
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                CameraPreviewWrapper(
-                    isScanning: $isScanning,
-                    torchOn: $torchOn,
-                    onCode: { code in
-                        guard isScanning, !isLooking else { return }
-                        Task { await handleScanned(barcode: code) }
-                    },
-                    codeTypes: barcodeTypes
-                )
-                .ignoresSafeArea()
-
-                VStack {
-                    Spacer()
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(Color.white, lineWidth: 3)
-                        .frame(width: 260, height: 150)
-                    Spacer()
-                    if isLooking {
-                        HStack(spacing: 8) {
-                            ProgressView().tint(.white)
-                            Text("Looking up product…").foregroundStyle(.white)
-                        }
-                        .padding(.bottom, 40)
-                    } else if let err = errorMessage {
-                        Text(err)
-                            .foregroundStyle(.white)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 40)
-                    } else {
-                        Text("Point at a product barcode")
-                            .foregroundStyle(.white.opacity(0.8))
-                            .padding(.bottom, 40)
-                    }
+            Group {
+                if scannerAvailable {
+                    scannerBody
+                } else {
+                    unavailableView
                 }
             }
-            .navigationTitle("Scan Barcode")
+            .navigationTitle("Scan Item")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(.white)
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button { torchOn.toggle() } label: {
-                        Image(systemName: torchOn ? "flashlight.on.fill" : "flashlight.off.fill")
-                            .foregroundStyle(.white)
-                    }
+                        .foregroundStyle(scannerAvailable ? Color.white : Color.accentColor)
                 }
             }
-            .toolbarBackground(.clear, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            // Present the editor for whatever the scan resolved to. Resuming
-            // scanning on dismiss lets the user cancel and scan another item.
-            .sheet(item: $result, onDismiss: { isScanning = true }) { res in
+            .task { await requestCamera() }
+            // Resume tapping after the editor is dismissed without saving.
+            .sheet(item: $result) { res in
                 editor(for: res).environmentObject(auth)
             }
+        }
+    }
+
+    // MARK: Overlays
+
+    private var scannerBody: some View {
+        ZStack {
+            PantryDataScannerView(
+                onBarcode: { code in Task { await handleBarcode(code) } },
+                onText: { text in handleText(text) }
+            )
+            .ignoresSafeArea()
+
+            overlay
+        }
+        .toolbarBackground(.clear, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+    }
+
+    private var overlay: some View {
+        VStack {
+            Spacer()
+            if isLooking {
+                HStack(spacing: 8) {
+                    ProgressView().tint(.white)
+                    Text("Looking up product…").foregroundStyle(.white)
+                }
+                .padding(.bottom, 40)
+            } else if let err = errorMessage {
+                Text(err)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
+            } else {
+                Text("Tap a barcode, or tap the product’s name")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.black.opacity(0.5), in: Capsule())
+                    .padding(.bottom, 40)
+            }
+        }
+    }
+
+    private var unavailableView: some View {
+        ContentUnavailableView {
+            Label("Scanning Unavailable", systemImage: "camera.fill")
+        } description: {
+            Text(cameraDenied
+                 ? "Camera access is off. Enable it in Settings, or add the item manually."
+                 : "This device can’t scan. You can still add the item manually.")
+        } actions: {
+            Button {
+                result = .new(PantryItemPrefill())
+            } label: {
+                Label("Add Manually", systemImage: "plus")
+            }
+            .buttonStyle(.borderedProminent)
         }
     }
 
@@ -103,35 +126,39 @@ struct PantryBarcodeScannerSheet: View {
     private func editor(for res: ScanResult) -> some View {
         switch res {
         case .existing(let item):
-            // Already in the pantry — open it to restock / edit.
-            PantryItemEditSheet(item: item, vm: vm) { saved in
-                onSaved(saved)
-                dismiss()
-            }
+            PantryItemEditSheet(item: item, vm: vm) { saved in onSaved(saved); dismiss() }
         case .new(let prefill):
-            PantryItemEditSheet(item: nil, vm: vm, prefill: prefill) { saved in
-                onSaved(saved)
-                dismiss()
-            }
+            PantryItemEditSheet(item: nil, vm: vm, prefill: prefill) { saved in onSaved(saved); dismiss() }
         }
     }
 
-    private func handleScanned(barcode: String) async {
-        let code = barcode.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !code.isEmpty else { return }
-        isScanning = false
+    // MARK: Handling
+
+    private func requestCamera() async {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            cameraDenied = false
+        case .notDetermined:
+            cameraDenied = !(await AVCaptureDevice.requestAccess(for: .video))
+        default:
+            cameraDenied = true
+        }
+    }
+
+    private func handleBarcode(_ raw: String) async {
+        let code = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard result == nil, !isLooking, !code.isEmpty else { return }
         errorMessage = nil
 
-        // 1. Do we already have an item with this barcode? Open it directly —
-        //    no network needed, and it works even for products Open Food Facts
-        //    doesn't know (their barcode was saved when first added).
+        // 1. Already in the pantry? Open it directly — works even for products
+        //    Open Food Facts doesn't know (their code was saved when first added).
         if let existing = vm.items.first(where: { $0.barcode == code }) {
             result = .existing(existing)
             return
         }
 
         // 2. Otherwise look the product up in Open Food Facts.
-        guard let token = auth.accessToken else { isScanning = true; return }
+        guard let token = auth.accessToken else { return }
         isLooking = true
         do {
             let resp: PantryBarcodeLookupResponse = try await APIClient.shared.post(
@@ -143,14 +170,70 @@ struct PantryBarcodeScannerSheet: View {
             if resp.found, let product = resp.product {
                 result = .new(PantryItemPrefill(from: product))
             } else {
-                // Unknown product — still let them add it with the code attached.
                 result = .new(PantryItemPrefill(barcode: resp.barcode ?? code))
             }
         } catch {
-            errorMessage = "Couldn't look up that barcode. Try again."
             isLooking = false
-            try? await Task.sleep(for: .seconds(2))
-            if result == nil { isScanning = true }
+            errorMessage = "Couldn't look up that barcode. Try again."
+        }
+    }
+
+    private func handleText(_ raw: String) {
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard result == nil, !isLooking, name.count >= 2 else { return }
+        errorMessage = nil
+        result = .new(PantryItemPrefill(name: name))
+    }
+}
+
+// MARK: - VisionKit data scanner (barcodes + text)
+
+/// Live scanner recognizing barcodes and text; taps are routed back to SwiftUI.
+/// Tap-based (not auto-fire) so the user picks which barcode / which words —
+/// packaging is covered in text, so guessing "the name" is unreliable.
+struct PantryDataScannerView: UIViewControllerRepresentable {
+    let onBarcode: (String) -> Void
+    let onText: (String) -> Void
+
+    func makeUIViewController(context: Context) -> DataScannerViewController {
+        let scanner = DataScannerViewController(
+            recognizedDataTypes: [
+                .barcode(symbologies: [.ean13, .ean8, .upce, .code128, .code39]),
+                .text(),
+            ],
+            qualityLevel: .balanced,
+            recognizesMultipleItems: true,
+            isHighFrameRateTrackingEnabled: false,
+            isHighlightingEnabled: true
+        )
+        scanner.delegate = context.coordinator
+        return scanner
+    }
+
+    func updateUIViewController(_ scanner: DataScannerViewController, context: Context) {
+        // startScanning() is safe to call while already running.
+        try? scanner.startScanning()
+    }
+
+    static func dismantleUIViewController(_ scanner: DataScannerViewController, coordinator: Coordinator) {
+        scanner.stopScanning()
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, DataScannerViewControllerDelegate {
+        let parent: PantryDataScannerView
+        init(_ parent: PantryDataScannerView) { self.parent = parent }
+
+        func dataScanner(_ dataScanner: DataScannerViewController, didTapOn item: RecognizedItem) {
+            switch item {
+            case .barcode(let barcode):
+                if let value = barcode.payloadStringValue { parent.onBarcode(value) }
+            case .text(let text):
+                parent.onText(text.transcript)
+            @unknown default:
+                break
+            }
         }
     }
 }

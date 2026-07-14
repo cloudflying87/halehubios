@@ -260,7 +260,7 @@ struct PantryView: View {
                 .environmentObject(auth)
             }
             .sheet(isPresented: $showScanner) {
-                PantryBarcodeScannerSheet(vm: vm) { saved in
+                PantryScannerSheet(vm: vm) { saved in
                     vm.upsert(saved)
                 }
                 .environmentObject(auth)
@@ -440,14 +440,14 @@ struct PantryView: View {
     private var toolbar: some ToolbarContent {
         ToolbarItem(placement: .navigationBarTrailing) {
             Button { showScanner = true } label: {
-                Image(systemName: "barcode.viewfinder")
+                Image(systemName: "text.viewfinder")
             }
-            .accessibilityLabel("Scan barcode")
+            .accessibilityLabel("Scan item")
         }
         ToolbarItem(placement: .navigationBarTrailing) {
             Menu {
                 Button("Add Item", systemImage: "plus") { showCreate = true }
-                Button("Scan Barcode", systemImage: "barcode.viewfinder") { showScanner = true }
+                Button("Scan Item", systemImage: "text.viewfinder") { showScanner = true }
                 Divider()
                 Button("Manage Categories", systemImage: "square.grid.2x2") { managingKind = .category }
                 Button("Manage Locations", systemImage: "mappin.and.ellipse") { managingKind = .location }
