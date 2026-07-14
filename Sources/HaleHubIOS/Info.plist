@@ -37,7 +37,7 @@
 		<false/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Used to take photos of tote contents for easy identification.</string>
+	<string>Used to take photos of tote contents and scan product barcodes into your pantry.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Used to unlock and protect your financial data.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

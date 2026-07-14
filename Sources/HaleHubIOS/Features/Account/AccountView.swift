@@ -122,11 +122,14 @@ struct AccountView: View {
                     }
                 }
 
-                // Chores
+                // Chores + To-Do lists
                 if user?.can("lists") ?? false {
                     Section {
                         NavigationLink(destination: ChoresView()) {
                             CalculatorRow(icon: "🧹", title: "Chores", subtitle: "Kids' chores & weekly all-done streaks")
+                        }
+                        NavigationLink(destination: TodosListView()) {
+                            CalculatorRow(icon: "✅", title: "To-Do Lists", subtitle: "Shared family to-dos & checklists")
                         }
                     }
                 }

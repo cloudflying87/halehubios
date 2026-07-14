@@ -297,10 +297,14 @@ struct CameraPreviewWrapper: UIViewRepresentable {
     @Binding var isScanning: Bool
     @Binding var torchOn: Bool
     var onCode: (String) -> Void
+    /// Machine-readable code types to detect. Defaults to QR (tote scanning);
+    /// the pantry scanner passes barcode types (EAN/UPC).
+    var codeTypes: [AVMetadataObject.ObjectType] = [.qr]
 
     func makeUIView(context: Context) -> CameraPreviewView {
         let view = CameraPreviewView()
         view.onCode = onCode
+        view.codeTypes = codeTypes
         return view
     }
 
@@ -312,6 +316,7 @@ struct CameraPreviewWrapper: UIViewRepresentable {
 
 final class CameraPreviewView: UIView {
     var onCode: ((String) -> Void)?
+    var codeTypes: [AVMetadataObject.ObjectType] = [.qr]
     private var captureSession: AVCaptureSession?
     private var previewLayer: AVCaptureVideoPreviewLayer?
 
@@ -333,7 +338,11 @@ final class CameraPreviewView: UIView {
         guard session.canAddOutput(output) else { return }
         session.addOutput(output)
         output.setMetadataObjectsDelegate(self, queue: .main)
-        output.metadataObjectTypes = [.qr]
+        // Intersect with what the hardware actually supports — setting an
+        // unsupported type raises an exception.
+        output.metadataObjectTypes = codeTypes.filter {
+            output.availableMetadataObjectTypes.contains($0)
+        }
 
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.videoGravity = .resizeAspectFill

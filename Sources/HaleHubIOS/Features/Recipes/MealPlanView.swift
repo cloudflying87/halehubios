@@ -620,6 +620,19 @@ struct MealsHubView: View {
                             .foregroundStyle(Color.accentColor)
                     }
                 }
+
+                NavigationLink(destination: PantryView().environmentObject(auth)) {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Pantry").font(.headline)
+                            Text("Track what's in stock and what's running low")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "cabinet.fill")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
             }
         }
         .navigationTitle("Meals")
