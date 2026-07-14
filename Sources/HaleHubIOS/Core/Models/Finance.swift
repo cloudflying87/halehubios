@@ -346,6 +346,27 @@ struct PayMonthRow: Codable, Sendable, Identifiable {
     let totalCredit: Double
     let rate: Double?
     let estimatedPay: Double?
+
+    private enum CodingKeys: String, CodingKey {
+        case month, monthNum, credit, additional, green, reroute, sickCredit, totalCredit, rate, estimatedPay
+    }
+
+    // Lenient decode: tolerate an older backend that hasn't shipped the pay-component
+    // fields yet (credit/additional/reroute/sick_credit) so the screen degrades to
+    // showing totals rather than failing to load entirely.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        month = try c.decodeIfPresent(String.self, forKey: .month) ?? ""
+        monthNum = try c.decode(Int.self, forKey: .monthNum)
+        credit = try c.decodeIfPresent(Double.self, forKey: .credit) ?? 0
+        additional = try c.decodeIfPresent(Double.self, forKey: .additional) ?? 0
+        green = try c.decodeIfPresent(Double.self, forKey: .green) ?? 0
+        reroute = try c.decodeIfPresent(Double.self, forKey: .reroute) ?? 0
+        sickCredit = try c.decodeIfPresent(Double.self, forKey: .sickCredit) ?? 0
+        totalCredit = try c.decodeIfPresent(Double.self, forKey: .totalCredit) ?? 0
+        rate = try c.decodeIfPresent(Double.self, forKey: .rate)
+        estimatedPay = try c.decodeIfPresent(Double.self, forKey: .estimatedPay)
+    }
 }
 
 struct PaySummary: Codable, Sendable {
@@ -368,6 +389,30 @@ struct PayTrip: Codable, Sendable, Identifiable {
     let creditHours: Double       // sum of all components
     let label: String
     let source: String
+
+    private enum CodingKeys: String, CodingKey {
+        case id, month, tripDate, hours, additionalHours, greenHours, rerouteHours
+        case tripType, multiplier, creditHours, label, source
+    }
+
+    // Lenient decode: an older backend won't return the new pay-component fields
+    // (additional_hours/green_hours/reroute_hours) — default them to 0 rather than
+    // failing the whole trip list.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        month = try c.decodeIfPresent(String.self, forKey: .month) ?? ""
+        tripDate = try c.decodeIfPresent(String.self, forKey: .tripDate)
+        hours = try c.decodeIfPresent(Double.self, forKey: .hours) ?? 0
+        additionalHours = try c.decodeIfPresent(Double.self, forKey: .additionalHours) ?? 0
+        greenHours = try c.decodeIfPresent(Double.self, forKey: .greenHours) ?? 0
+        rerouteHours = try c.decodeIfPresent(Double.self, forKey: .rerouteHours) ?? 0
+        tripType = try c.decodeIfPresent(String.self, forKey: .tripType) ?? "regular"
+        multiplier = try c.decodeIfPresent(Double.self, forKey: .multiplier) ?? 1
+        creditHours = try c.decodeIfPresent(Double.self, forKey: .creditHours) ?? 0
+        label = try c.decodeIfPresent(String.self, forKey: .label) ?? ""
+        source = try c.decodeIfPresent(String.self, forKey: .source) ?? "manual"
+    }
 }
 
 struct PayTripRequest: Codable, Sendable {
