@@ -21,11 +21,15 @@ struct PantryItemEditSheet: View {
     @State private var selectedLocationId: String = ""   // "" == no PantryLocation
     @State private var hasExpiration = false
     @State private var expirationDate = Date()
+    @State private var hasPurchaseDate = false
+    @State private var purchaseDate = Date()
     @State private var isLow = false
     @State private var autoAddToList = false
+    @State private var minQuantityText = ""
 
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var duplicateNotice = false
 
     private var isEditing: Bool { item != nil }
     private var canSave: Bool {
@@ -79,9 +83,21 @@ struct PantryItemEditSheet: View {
                 Section("Tracking") {
                     Toggle("Running low", isOn: $isLow)
                     Toggle("Auto-add to list when low", isOn: $autoAddToList)
+                    HStack {
+                        Text("Min quantity")
+                        Spacer()
+                        TextField("Optional", text: $minQuantityText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 120)
+                    }
                     Toggle("Has expiration date", isOn: $hasExpiration.animation())
                     if hasExpiration {
                         DatePicker("Expires", selection: $expirationDate, displayedComponents: .date)
+                    }
+                    Toggle("Set purchase date", isOn: $hasPurchaseDate.animation())
+                    if hasPurchaseDate {
+                        DatePicker("Purchased", selection: $purchaseDate, displayedComponents: .date)
                     }
                 }
 
@@ -112,6 +128,11 @@ struct PantryItemEditSheet: View {
                 }
             }
             .onAppear(perform: populate)
+            .alert("Already in Pantry", isPresented: $duplicateNotice) {
+                Button("OK") { dismiss() }
+            } message: {
+                Text("“\(name.trimmingCharacters(in: .whitespaces))” was already in your pantry, so we updated that entry instead of adding a duplicate.")
+            }
         }
     }
 
@@ -131,9 +152,16 @@ struct PantryItemEditSheet: View {
         selectedLocationId = item.location ?? ""
         isLow = item.isLow
         autoAddToList = item.autoAddToList
+        if let min = item.minQuantity {
+            minQuantityText = min.truncatingRemainder(dividingBy: 1) == 0 ? String(Int(min)) : String(min)
+        }
         if let raw = item.expirationDate, let d = Self.dateFmt.date(from: raw) {
             hasExpiration = true
             expirationDate = d
+        }
+        if let raw = item.purchaseDate, let d = Self.dateFmt.date(from: raw) {
+            hasPurchaseDate = true
+            purchaseDate = d
         }
     }
 
@@ -166,21 +194,35 @@ struct PantryItemEditSheet: View {
             barcode: barcode.trimmingCharacters(in: .whitespaces),
             location: selectedLocationId.isEmpty ? nil : selectedLocationId,
             expirationDate: hasExpiration ? Self.dateFmt.string(from: expirationDate) : nil,
+            purchaseDate: hasPurchaseDate ? Self.dateFmt.string(from: purchaseDate) : nil,
             isLow: isLow,
-            autoAddToList: autoAddToList
+            autoAddToList: autoAddToList,
+            minQuantity: Double(minQuantityText.trimmingCharacters(in: .whitespaces))
         )
 
         do {
-            let saved: PantryItem
             if let item {
-                saved = try await APIClient.shared.patch(
+                let saved: PantryItem = try await APIClient.shared.patch(
                     "/pantry/items/\(item.id)/", body: body, token: token)
+                onSave(saved)
+                dismiss()
             } else {
-                saved = try await APIClient.shared.post(
+                // Create. The server dedupes on name: a duplicate comes back as the
+                // existing row (unchanged) with duplicate=true. Rather than silently
+                // dropping what the user typed, PATCH the existing item with the new
+                // values so the add still "takes".
+                let resp: PantryItemCreateResponse = try await APIClient.shared.post(
                     "/pantry/items/", body: body, token: token)
+                if resp.duplicate {
+                    let merged: PantryItem = try await APIClient.shared.patch(
+                        "/pantry/items/\(resp.item.id)/", body: body, token: token)
+                    onSave(merged)
+                    duplicateNotice = true   // dismisses after the user acknowledges
+                } else {
+                    onSave(resp.item)
+                    dismiss()
+                }
             }
-            onSave(saved)
-            dismiss()
         } catch {
             errorMessage = error.localizedDescription
         }

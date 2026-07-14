@@ -134,6 +134,27 @@ struct PantryItemRequest: Encodable, Sendable {
     }
 }
 
+// MARK: - Response from POST /api/pantry/items/
+//
+// The create endpoint returns the item fields flat, plus a `duplicate` flag:
+// true (HTTP 200) means an item with that name already existed and the server
+// returned it unchanged; false (201) means a fresh create. We decode both out
+// of the same object so the UI can react to a duplicate instead of silently
+// dropping the user's input.
+
+struct PantryItemCreateResponse: Decodable, Sendable {
+    let item: PantryItem
+    let duplicate: Bool
+
+    private enum Key: String, CodingKey { case duplicate }
+
+    init(from decoder: Decoder) throws {
+        item = try PantryItem(from: decoder)
+        let container = try decoder.container(keyedBy: Key.self)
+        duplicate = (try? container.decode(Bool.self, forKey: .duplicate)) ?? false
+    }
+}
+
 // MARK: - Request body for POST /api/pantry/add-low-to-list/
 //         and …/items/<id>/add-to-list/
 

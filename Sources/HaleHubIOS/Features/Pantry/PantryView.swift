@@ -26,16 +26,14 @@ class PantryViewModel: ObservableObject {
         isLoading = true
         error = nil
         do {
-            async let itemsTask: PaginatedResponse<PantryItem> =
-                APIClient.shared.get("/pantry/items/", token: token)
-            async let locTask: PaginatedResponse<PantryLocation> =
-                APIClient.shared.get("/pantry/locations/", token: token)
-            async let catTask: PaginatedResponse<PantryCategory> =
-                APIClient.shared.get("/pantry/categories/", token: token)
-            let (itemsResp, locResp, catResp) = try await (itemsTask, locTask, catTask)
-            items = itemsResp.results
-            locations = locResp.results
-            categories = catResp.results
+            // Follow pagination — a real pantry can exceed one 100-item page.
+            async let itemsTask: [PantryItem] = Self.fetchAll("/pantry/items/", token: token)
+            async let locTask: [PantryLocation] = Self.fetchAll("/pantry/locations/", token: token)
+            async let catTask: [PantryCategory] = Self.fetchAll("/pantry/categories/", token: token)
+            let (allItems, allLoc, allCat) = try await (itemsTask, locTask, catTask)
+            items = allItems
+            locations = allLoc
+            categories = allCat
         } catch is CancellationError {
             // View disappeared — keep existing data, no error
         } catch {
@@ -44,18 +42,31 @@ class PantryViewModel: ObservableObject {
         isLoading = false
     }
 
+    /// Fetch every page of a paginated list endpoint.
+    static func fetchAll<T: Decodable & Sendable>(_ path: String, token: String) async throws -> [T] {
+        var all: [T] = []
+        var page = 1
+        while true {
+            let sep = path.contains("?") ? "&" : "?"
+            let resp: PaginatedResponse<T> =
+                try await APIClient.shared.get("\(path)\(sep)page=\(page)", token: token)
+            all.append(contentsOf: resp.results)
+            if resp.next == nil { break }
+            page += 1
+        }
+        return all
+    }
+
     // MARK: Managed taxonomies (categories + locations)
 
     /// Refresh just the category/location lists (e.g. after managing them).
     func loadTaxa(token: String) async {
         do {
-            async let locTask: PaginatedResponse<PantryLocation> =
-                APIClient.shared.get("/pantry/locations/", token: token)
-            async let catTask: PaginatedResponse<PantryCategory> =
-                APIClient.shared.get("/pantry/categories/", token: token)
-            let (locResp, catResp) = try await (locTask, catTask)
-            locations = locResp.results
-            categories = catResp.results
+            async let locTask: [PantryLocation] = Self.fetchAll("/pantry/locations/", token: token)
+            async let catTask: [PantryCategory] = Self.fetchAll("/pantry/categories/", token: token)
+            let (allLoc, allCat) = try await (locTask, catTask)
+            locations = allLoc
+            categories = allCat
         } catch is CancellationError {
         } catch {
             self.error = error.localizedDescription
@@ -147,20 +158,39 @@ class PantryViewModel: ObservableObject {
         }
     }
 
-    /// Add every running-low item to a shopping list. Returns the number added.
+    /// Add every running-low item to a shopping list (existing or new).
     @discardableResult
-    func addLowToList(newListName: String, token: String) async -> Int? {
+    func addLowToList(targetListId: String?, newListName: String?, token: String) async -> Int? {
+        await post(
+            "/pantry/add-low-to-list/",
+            PantryAddToListRequest(targetListId: targetListId, newListName: newListName),
+            token: token
+        )
+    }
+
+    /// Add a single pantry item to a shopping list (existing or new).
+    @discardableResult
+    func addItemToList(_ item: PantryItem, targetListId: String?, newListName: String?, token: String) async -> Int? {
+        await post(
+            "/pantry/items/\(item.id)/add-to-list/",
+            PantryAddToListRequest(targetListId: targetListId, newListName: newListName),
+            token: token
+        )
+    }
+
+    private func post(_ path: String, _ body: PantryAddToListRequest, token: String) async -> Int? {
         do {
-            let resp: PantryAddToListResponse = try await APIClient.shared.post(
-                "/pantry/add-low-to-list/",
-                body: PantryAddToListRequest(newListName: newListName),
-                token: token
-            )
+            let resp: PantryAddToListResponse = try await APIClient.shared.post(path, body: body, token: token)
             return resp.added
         } catch {
             self.error = error.localizedDescription
             return nil
         }
+    }
+
+    /// Shopping lists the user can add pantry items into.
+    func loadShoppingLists(token: String) async -> [ShoppingList] {
+        (try? await Self.fetchAll("/shopping/", token: token)) ?? []
     }
 }
 
@@ -178,6 +208,7 @@ struct PantryView: View {
     @State private var showCreate = false
     @State private var showScanner = false
     @State private var showAddLow = false
+    @State private var addToListItem: PantryItem?
     @State private var managingKind: PantryTaxonKind?
 
     /// Section key for an item under the current grouping mode.
@@ -240,10 +271,25 @@ struct PantryView: View {
                 }
                 .environmentObject(auth)
             }
-            .alert("Add Low Items to a List", isPresented: $showAddLow) {
-                AddLowAlertButtons(vm: vm, token: auth.accessToken ?? "")
-            } message: {
-                Text("Create a new shopping list with the \(vm.lowCount) item\(vm.lowCount == 1 ? "" : "s") marked as running low.")
+            .sheet(isPresented: $showAddLow) {
+                PantryAddToListSheet(
+                    title: "Add Low Items",
+                    subtitle: "Add the \(vm.lowCount) item\(vm.lowCount == 1 ? "" : "s") marked running low to a shopping list.",
+                    loadLists: { await vm.loadShoppingLists(token: auth.accessToken ?? "") },
+                    onSubmit: { target, newName in
+                        await vm.addLowToList(targetListId: target, newListName: newName, token: auth.accessToken ?? "")
+                    }
+                )
+            }
+            .sheet(item: $addToListItem) { item in
+                PantryAddToListSheet(
+                    title: "Add to List",
+                    subtitle: "Add “\(item.name)” to a shopping list.",
+                    loadLists: { await vm.loadShoppingLists(token: auth.accessToken ?? "") },
+                    onSubmit: { target, newName in
+                        await vm.addItemToList(item, targetListId: target, newListName: newName, token: auth.accessToken ?? "")
+                    }
+                )
             }
             .sheet(item: $managingKind) { kind in
                 NavigationStack {
@@ -299,6 +345,10 @@ struct PantryView: View {
                                     Button(role: .destructive) {
                                         Task { await vm.delete(item, token: auth.accessToken ?? "") }
                                     } label: { Label("Delete", systemImage: "trash") }
+                                    Button {
+                                        addToListItem = item
+                                    } label: { Label("Add to List", systemImage: "cart.badge.plus") }
+                                        .tint(.blue)
                                 }
                                 .swipeActions(edge: .leading) {
                                     Button {
@@ -506,19 +556,83 @@ struct PantryFilterChip: View {
     }
 }
 
-// MARK: - "Add low to list" alert buttons
+// MARK: - Add-to-list sheet (single item or all low items)
 
-private struct AddLowAlertButtons: View {
-    @ObservedObject var vm: PantryViewModel
-    let token: String
-    @State private var listName = ""
+/// Pick an existing shopping list or create a new one, then run `onSubmit`.
+/// Shared by the single-item swipe and the "add low items" flow.
+struct PantryAddToListSheet: View {
+    let title: String
+    let subtitle: String
+    let loadLists: () async -> [ShoppingList]
+    let onSubmit: (_ targetListId: String?, _ newListName: String?) async -> Int?
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var lists: [ShoppingList] = []
+    @State private var newListName = ""
+    @State private var isWorking = false
+    @State private var loaded = false
 
     var body: some View {
-        TextField("List name", text: $listName)
-        Button("Create List") {
-            let name = listName.trimmingCharacters(in: .whitespaces)
-            Task { await vm.addLowToList(newListName: name.isEmpty ? "Pantry Restock" : name, token: token) }
+        NavigationStack {
+            List {
+                Section { Text(subtitle).font(.callout).foregroundStyle(.secondary) }
+
+                if !lists.isEmpty {
+                    Section("Add to existing list") {
+                        ForEach(lists) { list in
+                            Button {
+                                Task { await submit(targetListId: list.id.uuidString, newListName: nil) }
+                            } label: {
+                                HStack {
+                                    Text(list.name).foregroundStyle(.primary)
+                                    Spacer()
+                                    Text("\(list.uncheckedCount)").font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                            .disabled(isWorking)
+                        }
+                    }
+                }
+
+                Section("Or start a new list") {
+                    HStack {
+                        TextField("New list name", text: $newListName)
+                            .submitLabel(.done)
+                            .onSubmit { Task { await submitNew() } }
+                        Button("Create") { Task { await submitNew() } }
+                            .disabled(newListName.trimmingCharacters(in: .whitespaces).isEmpty || isWorking)
+                    }
+                }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }.disabled(isWorking)
+                }
+            }
+            .overlay {
+                if isWorking {
+                    ProgressView().padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .task {
+                if !loaded { lists = await loadLists(); loaded = true }
+            }
         }
-        Button("Cancel", role: .cancel) {}
+    }
+
+    private func submitNew() async {
+        let name = newListName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return }
+        await submit(targetListId: nil, newListName: name)
+    }
+
+    private func submit(targetListId: String?, newListName: String?) async {
+        guard !isWorking else { return }
+        isWorking = true
+        _ = await onSubmit(targetListId, newListName)
+        isWorking = false
+        dismiss()
     }
 }
