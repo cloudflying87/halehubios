@@ -1,5 +1,14 @@
 import SwiftUI
 
+/// How the pantry list is sectioned.
+enum PantryGroupMode: String, CaseIterable, Identifiable, Sendable {
+    case location
+    case category
+
+    var id: String { rawValue }
+    var label: String { self == .location ? "By Location" : "By Category" }
+}
+
 // MARK: - ViewModel
 
 @MainActor
@@ -9,18 +18,6 @@ class PantryViewModel: ObservableObject {
     @Published var categories: [PantryCategory] = []
     @Published var isLoading = false
     @Published var error: String?
-
-    /// Items grouped by their display location, preserving first-seen order.
-    var grouped: [(location: String, items: [PantryItem])] {
-        var order: [String] = []
-        var seen = Set<String>()
-        for item in items where seen.insert(item.locationDisplay).inserted {
-            order.append(item.locationDisplay)
-        }
-        return order.map { loc in
-            (loc, items.filter { $0.locationDisplay == loc })
-        }
-    }
 
     var lowCount: Int { items.filter(\.isLow).count }
     var expiringCount: Int { items.filter { $0.isExpired || $0.expiresSoon }.count }
@@ -175,23 +172,44 @@ struct PantryView: View {
 
     @State private var searchText = ""
     @State private var showExpiringOnly = false
+    @State private var groupMode: PantryGroupMode = .location
+    @State private var categoryFilter: String?   // nil = all, "" = uncategorized, else category UUID
     @State private var editingItem: PantryItem?
     @State private var showCreate = false
     @State private var showScanner = false
     @State private var showAddLow = false
     @State private var managingKind: PantryTaxonKind?
 
-    private var visibleGroups: [(location: String, items: [PantryItem])] {
-        vm.grouped.compactMap { group in
-            let filtered = group.items.filter { item in
-                let matchesSearch = searchText.isEmpty
-                    || item.name.localizedCaseInsensitiveContains(searchText)
-                    || item.brand.localizedCaseInsensitiveContains(searchText)
-                let matchesExpiring = !showExpiringOnly || item.isExpired || item.expiresSoon
-                return matchesSearch && matchesExpiring
-            }
-            return filtered.isEmpty ? nil : (group.location, filtered)
+    /// Section key for an item under the current grouping mode.
+    private func groupKey(_ item: PantryItem) -> String {
+        switch groupMode {
+        case .location:
+            return item.locationDisplay.isEmpty ? "Pantry" : item.locationDisplay
+        case .category:
+            if item.categoryName.isEmpty { return "Uncategorized" }
+            return item.categoryIcon.isEmpty ? item.categoryName
+                : "\(item.categoryIcon) \(item.categoryName)"
         }
+    }
+
+    private var visibleGroups: [(key: String, items: [PantryItem])] {
+        let filtered = vm.items.filter { item in
+            let matchesSearch = searchText.isEmpty
+                || item.name.localizedCaseInsensitiveContains(searchText)
+                || item.brand.localizedCaseInsensitiveContains(searchText)
+            let matchesExpiring = !showExpiringOnly || item.isExpired || item.expiresSoon
+            let matchesCategory: Bool = {
+                guard let f = categoryFilter else { return true }
+                return f.isEmpty ? (item.category ?? "").isEmpty : item.category == f
+            }()
+            return matchesSearch && matchesExpiring && matchesCategory
+        }
+        var order: [String] = []
+        var seen = Set<String>()
+        for item in filtered where seen.insert(groupKey(item)).inserted {
+            order.append(groupKey(item))
+        }
+        return order.map { key in (key, filtered.filter { groupKey($0) == key }) }
     }
 
     var body: some View {
@@ -267,9 +285,10 @@ struct PantryView: View {
             }
         } else {
             VStack(spacing: 0) {
+                controlsBar
                 statusBar
                 List {
-                    ForEach(visibleGroups, id: \.location) { group in
+                    ForEach(visibleGroups, id: \.key) { group in
                         Section {
                             ForEach(group.items) { item in
                                 Button { editingItem = item } label: {
@@ -292,13 +311,51 @@ struct PantryView: View {
                                 }
                             }
                         } header: {
-                            Text(group.location).textCase(nil)
+                            Text(group.key).textCase(nil)
                         }
                     }
                 }
                 .listStyle(.insetGrouped)
             }
         }
+    }
+
+    @ViewBuilder
+    private var controlsBar: some View {
+        VStack(spacing: 8) {
+            Picker("Group by", selection: $groupMode) {
+                ForEach(PantryGroupMode.allCases) { mode in
+                    Text(mode.label).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+
+            // Category filter — only useful when there are categories in play.
+            if !vm.categories.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        PantryFilterChip(label: "All", systemImage: "line.3.horizontal.decrease",
+                                         tint: .accentColor, isSelected: categoryFilter == nil) {
+                            categoryFilter = nil
+                        }
+                        ForEach(vm.categories) { cat in
+                            PantryFilterChip(label: cat.name, systemImage: nil,
+                                             tint: .accentColor, isSelected: categoryFilter == cat.id) {
+                                categoryFilter = (categoryFilter == cat.id) ? nil : cat.id
+                            }
+                        }
+                        PantryFilterChip(label: "Uncategorized", systemImage: nil,
+                                         tint: .secondary, isSelected: categoryFilter == "") {
+                            categoryFilter = (categoryFilter == "") ? nil : ""
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+            }
+        }
+        .padding(.top, 8)
+        Divider().padding(.top, 8)
     }
 
     @ViewBuilder
@@ -425,19 +482,25 @@ struct PantryBadge: View {
 
 struct PantryFilterChip: View {
     let label: String
-    let systemImage: String
+    var systemImage: String? = nil
     let tint: Color
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Label(label, systemImage: systemImage)
-                .font(.caption.weight(.semibold))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(isSelected ? tint : tint.opacity(0.15), in: Capsule())
-                .foregroundStyle(isSelected ? .white : tint)
+            Group {
+                if let systemImage {
+                    Label(label, systemImage: systemImage)
+                } else {
+                    Text(label)
+                }
+            }
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(isSelected ? tint : tint.opacity(0.15), in: Capsule())
+            .foregroundStyle(isSelected ? .white : tint)
         }
         .buttonStyle(.plain)
     }
