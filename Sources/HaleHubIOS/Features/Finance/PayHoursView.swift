@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -420,6 +421,35 @@ final class PayMonthViewModel: ObservableObject {
         do { try await APIClient.shared.delete("/finance/pay/trips/\(trip.id)/", token: token) }
         catch { self.error = error.localizedDescription }
     }
+
+    /// Send a pay-register screenshot to the server; Claude vision returns the
+    /// parsed trips for review (nothing saved yet).
+    func parseScreenshot(_ imageData: Data, year: Int, token: String) async -> PayScreenshotResult? {
+        do {
+            return try await APIClient.shared.uploadData(
+                "/finance/pay/parse-screenshot/?year=\(year)",
+                data: imageData, filename: "card.jpg", fieldName: "image",
+                mimeType: "image/jpeg", token: token
+            )
+        } catch { self.error = error.localizedDescription; return nil }
+    }
+
+    /// Save reviewed screenshot trips into the month in one request.
+    func bulkSave(month: String, trips: [PayParsedTrip], token: String) async -> Bool {
+        let rows = trips.map {
+            PayBulkTripRequest(
+                tripDate: $0.date, hours: $0.credit, additionalHours: $0.additional,
+                greenHours: $0.green, rerouteHours: $0.reroute,
+                tripType: $0.tripType, label: $0.label
+            )
+        }
+        do {
+            let req = PayBulkTripsRequest(month: month, replace: false, trips: rows)
+            let _: PayBulkTripsResponse = try await APIClient.shared.post(
+                "/finance/pay/bulk-trips/", body: req, token: token)
+            return true
+        } catch { self.error = error.localizedDescription; return false }
+    }
 }
 
 struct PayMonthDetailView: View {
@@ -429,6 +459,9 @@ struct PayMonthDetailView: View {
     @StateObject private var vm = PayMonthViewModel()
     @State private var showAdd = false
     @State private var editingTrip: PayTrip?
+    @State private var pickedPhoto: PhotosPickerItem?
+    @State private var parsing = false
+    @State private var reviewResult: PayScreenshotResult?
 
     private var token: String { auth.accessToken ?? "" }
     private var monthString: String { String(format: "%04d-%02d", year, monthNum) }
@@ -482,7 +515,23 @@ struct PayMonthDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { showAdd = true } label: { Image(systemName: "plus") }
+                Menu {
+                    Button { showAdd = true } label: { Label("Add Trip", systemImage: "plus") }
+                    PhotosPicker(selection: $pickedPhoto, matching: .images) {
+                        Label("Import from Screenshot", systemImage: "camera.viewfinder")
+                    }
+                } label: {
+                    if parsing { ProgressView() } else { Image(systemName: "plus") }
+                }
+                .disabled(parsing)
+            }
+        }
+        .onChange(of: pickedPhoto) { Task { await handlePickedPhoto() } }
+        .sheet(item: $reviewResult) { result in
+            ScreenshotReviewSheet(result: result, monthString: monthString) { trips in
+                let ok = await vm.bulkSave(month: monthString, trips: trips, token: token)
+                if ok { await vm.load(year: year, monthNum: monthNum, token: token) }
+                return ok
             }
         }
         .sheet(isPresented: $showAdd) {
@@ -504,6 +553,20 @@ struct PayMonthDetailView: View {
         .alert("Error", isPresented: .init(get: { vm.error != nil }, set: { if !$0 { vm.error = nil } })) {
             Button("OK") {}
         } message: { Text(vm.error ?? "") }
+    }
+
+    private func handlePickedPhoto() async {
+        guard let item = pickedPhoto else { return }
+        pickedPhoto = nil
+        parsing = true
+        defer { parsing = false }
+        guard let data = try? await item.loadTransferable(type: Data.self) else {
+            vm.error = "Couldn't read that image."
+            return
+        }
+        if let result = await vm.parseScreenshot(data, year: year, token: token) {
+            reviewResult = result
+        }
     }
 
     private func breakdownRow(_ label: String, _ hours: Double, _ color: Color) -> some View {
@@ -695,6 +758,97 @@ struct AddTripSheet: View {
                     .disabled(saving || payload.totalCredit <= 0)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Screenshot import review
+
+/// Review the trips Claude extracted from a pay-register screenshot before
+/// saving them. Trip # and type are editable; rows can be deleted.
+struct ScreenshotReviewSheet: View {
+    let result: PayScreenshotResult
+    let monthString: String
+    let onSave: ([PayParsedTrip]) async -> Bool
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var trips: [PayParsedTrip]
+    @State private var saving = false
+
+    init(result: PayScreenshotResult, monthString: String,
+         onSave: @escaping ([PayParsedTrip]) async -> Bool) {
+        self.result = result
+        self.monthString = monthString
+        self.onSave = onSave
+        _trips = State(initialValue: result.trips)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    if result.totalsMatch {
+                        Label("Credit total matches the card — \(String(format: "%.2f", result.computedTotalCredit)) hrs",
+                              systemImage: "checkmark.seal.fill")
+                            .foregroundStyle(.green).font(.caption)
+                    } else {
+                        Label("Check the numbers — parsed \(String(format: "%.2f", result.computedTotalCredit)) hrs vs card \(result.printedTotalCredit.map { String(format: "%.2f", $0) } ?? "—")",
+                              systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange).font(.caption)
+                    }
+                    ForEach(result.warnings, id: \.self) { w in
+                        Text(w).font(.caption).foregroundStyle(.orange)
+                    }
+                }
+                Section("Trips (\(trips.count))") {
+                    if trips.isEmpty {
+                        Text("No trips to save.").foregroundStyle(.secondary)
+                    }
+                    ForEach($trips) { $t in
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                TextField("Trip #", text: $t.label)
+                                    .font(.subheadline.weight(.semibold))
+                                Spacer()
+                                Picker("", selection: $t.tripType) {
+                                    ForEach(PayTripType.allCases) { Text($0.label).tag($0.rawValue) }
+                                }
+                                .labelsHidden()
+                            }
+                            HStack(spacing: 12) {
+                                metric("credit", t.creditHmm)
+                                if t.additional > 0 { metric("add", t.additionalHmm) }
+                                if t.reroute > 0 { metric("rrt", t.rerouteHmm) }
+                                if t.green > 0 { metric("green", t.greenHmm) }
+                                Spacer()
+                                if let d = t.date {
+                                    Text(d).font(.caption2).foregroundStyle(.tertiary)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                    .onDelete { trips.remove(atOffsets: $0) }
+                }
+            }
+            .navigationTitle("Review Import")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save \(trips.count)") {
+                        Task { saving = true; let ok = await onSave(trips); saving = false; if ok { dismiss() } }
+                    }
+                    .disabled(saving || trips.isEmpty)
+                }
+            }
+        }
+    }
+
+    private func metric(_ label: String, _ value: String) -> some View {
+        HStack(spacing: 2) {
+            Text(label).font(.caption2).foregroundStyle(.secondary)
+            Text(value.isEmpty ? "0:00" : value).font(.caption2.weight(.medium))
         }
     }
 }

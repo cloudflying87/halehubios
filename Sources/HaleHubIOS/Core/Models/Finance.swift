@@ -458,6 +458,65 @@ struct PayImportSummary: Codable, Sendable {
     let years: [Int]
 }
 
+// MARK: - Screenshot import (Claude vision → review → bulk save)
+
+/// One trip extracted from a pay-register screenshot, shown for review/edit.
+struct PayParsedTrip: Codable, Sendable, Identifiable {
+    var id = UUID()
+    let date: String?          // "YYYY-MM-DD"
+    var label: String
+    var tripType: String
+    var credit: Double
+    var additional: Double
+    var green: Double
+    var reroute: Double
+    let creditHours: Double
+    // Raw H:MM as printed on the card (for display only).
+    let creditHmm: String
+    let additionalHmm: String
+    let greenHmm: String
+    let rerouteHmm: String
+
+    private enum CodingKeys: String, CodingKey {
+        case date, label, tripType, credit, additional, green, reroute, creditHours
+        case creditHmm, additionalHmm, greenHmm, rerouteHmm
+    }
+}
+
+struct PayScreenshotResult: Codable, Sendable, Identifiable {
+    var id = UUID()
+    let trips: [PayParsedTrip]
+    let printedTotalCredit: Double?
+    let computedTotalCredit: Double
+    let totalsMatch: Bool
+    let warnings: [String]
+
+    private enum CodingKeys: String, CodingKey {
+        case trips, printedTotalCredit, computedTotalCredit, totalsMatch, warnings
+    }
+}
+
+struct PayBulkTripRequest: Codable, Sendable {
+    let tripDate: String?
+    let hours: Double
+    let additionalHours: Double
+    let greenHours: Double
+    let rerouteHours: Double
+    let tripType: String
+    let label: String
+}
+
+struct PayBulkTripsRequest: Codable, Sendable {
+    let month: String
+    let replace: Bool
+    let trips: [PayBulkTripRequest]
+}
+
+struct PayBulkTripsResponse: Codable, Sendable {
+    let month: String
+    let created: [PayTrip]
+}
+
 // MARK: - keep-logging (ALV / pay rate / paycheck split)
 
 struct KeepLoggingStatus: Codable, Sendable {
