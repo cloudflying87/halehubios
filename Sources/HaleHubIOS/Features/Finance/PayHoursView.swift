@@ -6,13 +6,14 @@ import UniformTypeIdentifiers
 // MARK: - Helpers
 
 enum PayTripType: String, CaseIterable, Identifiable {
-    case regular, green, sick, override
+    case regular, green, sick, vacation, override
     var id: String { rawValue }
     var label: String {
         switch self {
         case .regular: return "Regular"
         case .green: return "Green Slip"
         case .sick: return "Sick"
+        case .vacation: return "Vacation"
         case .override: return "Override / Extra"
         }
     }
@@ -21,6 +22,7 @@ enum PayTripType: String, CaseIterable, Identifiable {
         case .regular: return .primary
         case .green: return .green
         case .sick: return .orange
+        case .vacation: return .purple
         case .override: return .blue
         }
     }
