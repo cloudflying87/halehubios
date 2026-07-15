@@ -226,6 +226,9 @@ struct PayHoursView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    NavigationLink(destination: PayActualView()) {
+                        Label("Hours vs Actual Pay", systemImage: "dollarsign.arrow.circlepath")
+                    }
                     NavigationLink(destination: PayCompareView()) {
                         Label("Compare to ALV", systemImage: "chart.bar.xaxis")
                     }
@@ -928,6 +931,125 @@ struct ScreenshotReviewSheet: View {
             Text(label).font(.caption2).foregroundStyle(.secondary)
             Text(value.isEmpty ? "0:00" : value).font(.caption2.weight(.medium))
         }
+    }
+}
+
+// MARK: - Hours vs Actual Pay
+
+/// Credit hours next to what actually landed in paychecks that year — no
+/// estimated rate. The effective rate is derived from real pay ÷ hours.
+struct PayActualView: View {
+    @EnvironmentObject var auth: AuthManager
+    @State private var year = Calendar.current.component(.year, from: Date())
+    @State private var data: PayActualComparison?
+    @State private var loading = false
+    @State private var error: String?
+
+    private var token: String { auth.accessToken ?? "" }
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                yearSelector
+                if let d = data {
+                    totalsCard(d.totals)
+                    monthsCard(d)
+                    Text("Pilot pay for a month's credit lands across that month's last check and mid the next month, so months won't line up exactly — the year totals are the real comparison.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                } else if loading {
+                    ProgressView("Loading…").frame(maxWidth: .infinity, minHeight: 160)
+                }
+            }
+            .padding(16)
+        }
+        .navigationTitle("Hours vs Pay")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await load() }
+        .onChange(of: year) { Task { await load() } }
+        .refreshable { await load() }
+        .alert("Error", isPresented: .init(get: { error != nil }, set: { if !$0 { error = nil } })) {
+            Button("OK") {}
+        } message: { Text(error ?? "") }
+    }
+
+    private var yearSelector: some View {
+        HStack {
+            Button { year -= 1 } label: { Image(systemName: "chevron.left") }
+            Spacer()
+            Text(String(year)).font(.headline)
+            Spacer()
+            Button { year += 1 } label: { Image(systemName: "chevron.right") }
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private func totalsCard(_ t: PayActualTotals) -> some View {
+        VStack(spacing: 10) {
+            row("Credit hours", String(format: "%.2f hrs", t.creditHours))
+            row("Actual pay (gross)", LoanFormatters.money(t.actualGross, fractionDigits: 0))
+            row("Take-home (net)", LoanFormatters.money(t.actualNet, fractionDigits: 0))
+            if let r = t.effectiveRate {
+                Divider()
+                HStack {
+                    Text("Effective rate").fontWeight(.semibold)
+                    Spacer()
+                    Text(LoanFormatters.money(r) + "/hr")
+                        .fontWeight(.semibold).foregroundStyle(.green)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func monthsCard(_ d: PayActualComparison) -> some View {
+        VStack(spacing: 0) {
+            let rows = d.months.filter { $0.creditHours > 0 || ($0.actualGross ?? 0) > 0 }
+            if rows.isEmpty {
+                Text("No hours or paychecks for \(String(year)).")
+                    .foregroundStyle(.secondary).padding(.vertical, 20)
+            }
+            ForEach(rows) { m in
+                HStack {
+                    Text(monthName(m.monthNum)).font(.subheadline)
+                        .frame(width: 90, alignment: .leading)
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text(String(format: "%.2f hrs", m.creditHours)).font(.subheadline)
+                        if let g = m.actualGross {
+                            Text(LoanFormatters.money(g, fractionDigits: 0))
+                                .font(.caption).foregroundStyle(.green)
+                        } else {
+                            Text("no paycheck yet").font(.caption2).foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+                .padding(.vertical, 10)
+                Divider()
+            }
+        }
+        .padding(.horizontal, 16)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func row(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label).foregroundStyle(.secondary)
+            Spacer()
+            Text(value).fontWeight(.medium)
+        }
+    }
+
+    private func load() async {
+        loading = true
+        defer { loading = false }
+        do {
+            data = try await APIClient.shared.get(
+                "/finance/pay/actual-comparison/?year=\(year)", token: token)
+        } catch { self.error = error.localizedDescription }
     }
 }
 

@@ -532,6 +532,31 @@ struct PayBulkTripsResponse: Codable, Sendable {
     let created: [PayTrip]
 }
 
+// MARK: - Hours vs actual pay (from real paychecks, no estimated rate)
+
+struct PayActualMonth: Codable, Sendable, Identifiable {
+    var id: Int { monthNum }
+    let monthNum: Int
+    let month: String
+    let creditHours: Double
+    let actualGross: Double?
+    let actualNet: Double?
+    let paychecks: Int
+}
+
+struct PayActualTotals: Codable, Sendable {
+    let creditHours: Double
+    let actualGross: Double
+    let actualNet: Double
+    let effectiveRate: Double?     // actual gross ÷ credit hours (derived, not estimated)
+}
+
+struct PayActualComparison: Codable, Sendable {
+    let year: Int
+    let months: [PayActualMonth]
+    let totals: PayActualTotals
+}
+
 // MARK: - keep-logging (ALV / pay rate / paycheck split)
 
 struct KeepLoggingStatus: Codable, Sendable {
