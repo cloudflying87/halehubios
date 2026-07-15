@@ -470,6 +470,7 @@ struct PayMonthDetailView: View {
     @State private var showAdd = false
     @State private var editingTrip: PayTrip?
     @State private var pickedPhoto: PhotosPickerItem?
+    @State private var showPhotoPicker = false
     @State private var parsing = false
     @State private var reviewResult: PayScreenshotResult?
     @State private var viewingCard: PayScreenshotRef?
@@ -549,7 +550,9 @@ struct PayMonthDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button { showAdd = true } label: { Label("Add Trip", systemImage: "plus") }
-                    PhotosPicker(selection: $pickedPhoto, matching: .images) {
+                    // NOTE: a PhotosPicker nested inside a Menu silently fails to
+                    // present (SwiftUI bug) — trigger it via a flag + modifier.
+                    Button { showPhotoPicker = true } label: {
                         Label("Import from Screenshot", systemImage: "camera.viewfinder")
                     }
                 } label: {
@@ -558,6 +561,7 @@ struct PayMonthDetailView: View {
                 .disabled(parsing)
             }
         }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $pickedPhoto, matching: .images)
         .onChange(of: pickedPhoto) { Task { await handlePickedPhoto() } }
         .sheet(item: $reviewResult) { result in
             ScreenshotReviewSheet(result: result, monthString: monthString) { trips in
