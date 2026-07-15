@@ -1,5 +1,6 @@
 import PhotosUI
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 // MARK: - Helpers
@@ -118,6 +119,7 @@ struct TripFormFields: View {
     @Binding var green: Double
     @Binding var reroute: Double
     @Binding var type: PayTripType
+    @Binding var tripNumber: String
     @Binding var label: String
 
     private var total: Double {
@@ -130,7 +132,9 @@ struct TripFormFields: View {
             Picker("Type", selection: $type) {
                 ForEach(PayTripType.allCases) { Text($0.label).tag($0) }
             }
-            TextField("Trip # / label (optional)", text: $label)
+            TextField("Trip # (e.g. 7779)", text: $tripNumber)
+                .keyboardType(.numbersAndPunctuation)
+            TextField("Note (optional)", text: $label)
         }
         Section("Additional Pay") {
             HoursMinutesField(title: "Additional pay", value: $additional)
@@ -374,28 +378,31 @@ struct PayHoursView: View {
 final class PayMonthViewModel: ObservableObject {
     @Published var trips: [PayTrip] = []
     @Published var detail: PayMonthDetail?
+    @Published var cards: [PayScreenshotRef] = []
     @Published var isLoading = false
     @Published var error: String?
 
     func load(year: Int, monthNum: Int, token: String) async {
         isLoading = true
         error = nil
+        let m = String(format: "%04d-%02d", year, monthNum)
         do {
-            let m = String(format: "%04d-%02d", year, monthNum)
             trips = try await APIClient.shared.get("/finance/pay/trips/?month=\(m)", token: token)
         } catch {
             self.error = error.localizedDescription
         }
         // Best-effort: keep-logging may be unconfigured/slow; don't block the trip list.
         detail = try? await APIClient.shared.get("/finance/pay/month-detail/?year=\(year)&month=\(monthNum)", token: token)
+        cards = (try? await APIClient.shared.get("/finance/pay/screenshots/?month=\(m)", token: token)) ?? []
         isLoading = false
     }
 
-    func add(month: String, pay: TripPayInput, type: PayTripType, label: String, token: String) async -> Bool {
+    func add(month: String, pay: TripPayInput, type: PayTripType, tripNumber: String, label: String, token: String) async -> Bool {
         do {
             let req = PayTripRequest(month: month, hours: pay.credit, additionalHours: pay.additional,
                                      greenHours: pay.green, rerouteHours: pay.reroute,
-                                     tripType: type.rawValue, label: label.isEmpty ? nil : label)
+                                     tripType: type.rawValue, tripNumber: tripNumber,
+                                     label: label.isEmpty ? nil : label)
             let _: PayTrip = try await APIClient.shared.post("/finance/pay/trips/", body: req, token: token)
             return true
         } catch { self.error = error.localizedDescription; return false }
@@ -407,11 +414,11 @@ final class PayMonthViewModel: ObservableObject {
         } catch { self.error = error.localizedDescription }
     }
 
-    func update(_ trip: PayTrip, pay: TripPayInput, type: PayTripType, label: String, token: String) async -> Bool {
+    func update(_ trip: PayTrip, pay: TripPayInput, type: PayTripType, tripNumber: String, label: String, token: String) async -> Bool {
         do {
             let req = PayTripEditRequest(hours: pay.credit, additionalHours: pay.additional,
                                          greenHours: pay.green, rerouteHours: pay.reroute,
-                                         tripType: type.rawValue, label: label)
+                                         tripType: type.rawValue, tripNumber: tripNumber, label: label)
             let _: PayTrip = try await APIClient.shared.patch("/finance/pay/trips/\(trip.id)/", body: req, token: token)
             return true
         } catch { self.error = error.localizedDescription; return false }
@@ -424,10 +431,10 @@ final class PayMonthViewModel: ObservableObject {
 
     /// Send a pay-register screenshot to the server; Claude vision returns the
     /// parsed trips for review (nothing saved yet).
-    func parseScreenshot(_ imageData: Data, year: Int, token: String) async -> PayScreenshotResult? {
+    func parseScreenshot(_ imageData: Data, month: String, token: String) async -> PayScreenshotResult? {
         do {
             return try await APIClient.shared.uploadData(
-                "/finance/pay/parse-screenshot/?year=\(year)",
+                "/finance/pay/parse-screenshot/?month=\(month)",
                 data: imageData, filename: "card.jpg", fieldName: "image",
                 mimeType: "image/jpeg", token: token
             )
@@ -440,7 +447,7 @@ final class PayMonthViewModel: ObservableObject {
             PayBulkTripRequest(
                 tripDate: $0.date, hours: $0.credit, additionalHours: $0.additional,
                 greenHours: $0.green, rerouteHours: $0.reroute,
-                tripType: $0.tripType, label: $0.label
+                tripType: $0.tripType, tripNumber: $0.tripNumber, label: $0.label
             )
         }
         do {
@@ -462,6 +469,7 @@ struct PayMonthDetailView: View {
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var parsing = false
     @State private var reviewResult: PayScreenshotResult?
+    @State private var viewingCard: PayScreenshotRef?
 
     private var token: String { auth.accessToken ?? "" }
     private var monthString: String { String(format: "%04d-%02d", year, monthNum) }
@@ -510,6 +518,27 @@ struct PayMonthDetailView: View {
                         }
                 }
             }
+            if !vm.cards.isEmpty {
+                Section("Card Images") {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(vm.cards) { card in
+                                Button { viewingCard = card } label: {
+                                    AsyncImage(url: card.url.flatMap(URL.init)) { img in
+                                        img.resizable().scaledToFill()
+                                    } placeholder: {
+                                        ProgressView()
+                                    }
+                                    .frame(width: 90, height: 120)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+            }
         }
         .navigationTitle("\(monthName(monthNum)) \(String(year))")
         .navigationBarTitleDisplayMode(.inline)
@@ -534,16 +563,34 @@ struct PayMonthDetailView: View {
                 return ok
             }
         }
+        .sheet(item: $viewingCard) { card in
+            NavigationStack {
+                ScrollView([.horizontal, .vertical]) {
+                    AsyncImage(url: card.url.flatMap(URL.init)) { img in
+                        img.resizable().scaledToFit()
+                    } placeholder: {
+                        ProgressView()
+                    }
+                }
+                .navigationTitle("Pay Card")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { viewingCard = nil }
+                    }
+                }
+            }
+        }
         .sheet(isPresented: $showAdd) {
-            AddTripSheet(month: monthString) { pay, type, label in
-                let ok = await vm.add(month: monthString, pay: pay, type: type, label: label, token: token)
+            AddTripSheet(month: monthString) { pay, type, tripNumber, label in
+                let ok = await vm.add(month: monthString, pay: pay, type: type, tripNumber: tripNumber, label: label, token: token)
                 if ok { await vm.load(year: year, monthNum: monthNum, token: token) }
                 return ok
             }
         }
         .sheet(item: $editingTrip) { trip in
-            EditTripSheet(trip: trip) { pay, type, label in
-                let ok = await vm.update(trip, pay: pay, type: type, label: label, token: token)
+            EditTripSheet(trip: trip) { pay, type, tripNumber, label in
+                let ok = await vm.update(trip, pay: pay, type: type, tripNumber: tripNumber, label: label, token: token)
                 if ok { await vm.load(year: year, monthNum: monthNum, token: token) }
                 return ok
             }
@@ -560,13 +607,33 @@ struct PayMonthDetailView: View {
         pickedPhoto = nil
         parsing = true
         defer { parsing = false }
-        guard let data = try? await item.loadTransferable(type: Data.self) else {
+        guard let raw = try? await item.loadTransferable(type: Data.self) else {
             vm.error = "Couldn't read that image."
             return
         }
-        if let result = await vm.parseScreenshot(data, year: year, token: token) {
+        // Downsample before upload — a screenshot doesn't need full resolution to
+        // read, and this cuts upload size + vision tokens roughly in half.
+        let data = Self.downsampledJPEG(raw) ?? raw
+        if let result = await vm.parseScreenshot(data, month: monthString, token: token) {
             reviewResult = result
         }
+    }
+
+    /// Resize to a max long edge and re-encode as JPEG. Returns nil if the data
+    /// isn't a decodable image (caller falls back to the original bytes).
+    static func downsampledJPEG(_ data: Data, maxDimension: CGFloat = 1400,
+                                quality: CGFloat = 0.7) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+        let longest = max(image.size.width, image.size.height)
+        guard longest > maxDimension else { return image.jpegData(compressionQuality: quality) }
+        let scale = maxDimension / longest
+        let newSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        let resized = UIGraphicsImageRenderer(size: newSize, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+        return resized.jpegData(compressionQuality: quality)
     }
 
     private func breakdownRow(_ label: String, _ hours: Double, _ color: Color) -> some View {
@@ -588,7 +655,14 @@ struct PayMonthDetailView: View {
         ].filter { $0.1 > 0 }
         return HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(String(format: "%.2f hrs credit", trip.hours)).font(.subheadline)
+                HStack(spacing: 6) {
+                    if !trip.tripNumber.isEmpty {
+                        Text("#\(trip.tripNumber)").font(.subheadline.weight(.semibold))
+                    }
+                    Text(String(format: "%.2f hrs credit", trip.hours))
+                        .font(.subheadline)
+                        .foregroundStyle(trip.tripNumber.isEmpty ? .primary : .secondary)
+                }
                 if !extras.isEmpty {
                     HStack(spacing: 4) {
                         ForEach(extras, id: \.0) { name, val in
@@ -675,7 +749,7 @@ struct PayMonthDetailView: View {
 
 struct EditTripSheet: View {
     let trip: PayTrip
-    let onSave: (TripPayInput, PayTripType, String) async -> Bool
+    let onSave: (TripPayInput, PayTripType, String, String) async -> Bool
 
     @Environment(\.dismiss) private var dismiss
     @State private var credit: Double
@@ -683,10 +757,11 @@ struct EditTripSheet: View {
     @State private var green: Double
     @State private var reroute: Double
     @State private var type: PayTripType
+    @State private var tripNumber: String
     @State private var label: String
     @State private var saving = false
 
-    init(trip: PayTrip, onSave: @escaping (TripPayInput, PayTripType, String) async -> Bool) {
+    init(trip: PayTrip, onSave: @escaping (TripPayInput, PayTripType, String, String) async -> Bool) {
         self.trip = trip
         self.onSave = onSave
         _credit = State(initialValue: trip.hours)
@@ -694,6 +769,7 @@ struct EditTripSheet: View {
         _green = State(initialValue: trip.greenHours)
         _reroute = State(initialValue: trip.rerouteHours)
         _type = State(initialValue: PayTripType(rawValue: trip.tripType) ?? .regular)
+        _tripNumber = State(initialValue: trip.tripNumber)
         _label = State(initialValue: trip.label)
     }
 
@@ -706,7 +782,7 @@ struct EditTripSheet: View {
         NavigationStack {
             Form {
                 TripFormFields(credit: $credit, additional: $additional, green: $green,
-                               reroute: $reroute, type: $type, label: $label)
+                               reroute: $reroute, type: $type, tripNumber: $tripNumber, label: $label)
             }
             .navigationTitle("Edit Trip")
             .navigationBarTitleDisplayMode(.inline)
@@ -714,7 +790,7 @@ struct EditTripSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        Task { saving = true; let ok = await onSave(payload, type, label); saving = false; if ok { dismiss() } }
+                        Task { saving = true; let ok = await onSave(payload, type, tripNumber, label); saving = false; if ok { dismiss() } }
                     }
                     .disabled(saving || payload.totalCredit <= 0)
                 }
@@ -725,7 +801,7 @@ struct EditTripSheet: View {
 
 struct AddTripSheet: View {
     let month: String
-    let onSave: (TripPayInput, PayTripType, String) async -> Bool
+    let onSave: (TripPayInput, PayTripType, String, String) async -> Bool
 
     @Environment(\.dismiss) private var dismiss
     @State private var credit: Double = 0
@@ -733,6 +809,7 @@ struct AddTripSheet: View {
     @State private var green: Double = 0
     @State private var reroute: Double = 0
     @State private var type: PayTripType = .regular
+    @State private var tripNumber = ""
     @State private var label = ""
     @State private var saving = false
 
@@ -745,7 +822,7 @@ struct AddTripSheet: View {
         NavigationStack {
             Form {
                 TripFormFields(credit: $credit, additional: $additional, green: $green,
-                               reroute: $reroute, type: $type, label: $label)
+                               reroute: $reroute, type: $type, tripNumber: $tripNumber, label: $label)
             }
             .navigationTitle("Add Trip")
             .navigationBarTitleDisplayMode(.inline)
@@ -753,7 +830,7 @@ struct AddTripSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        Task { saving = true; let ok = await onSave(payload, type, label); saving = false; if ok { dismiss() } }
+                        Task { saving = true; let ok = await onSave(payload, type, tripNumber, label); saving = false; if ok { dismiss() } }
                     }
                     .disabled(saving || payload.totalCredit <= 0)
                 }
@@ -807,8 +884,9 @@ struct ScreenshotReviewSheet: View {
                     ForEach($trips) { $t in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                TextField("Trip #", text: $t.label)
+                                TextField("Trip #", text: $t.tripNumber)
                                     .font(.subheadline.weight(.semibold))
+                                    .keyboardType(.numbersAndPunctuation)
                                 Spacer()
                                 Picker("", selection: $t.tripType) {
                                     ForEach(PayTripType.allCases) { Text($0.label).tag($0.rawValue) }

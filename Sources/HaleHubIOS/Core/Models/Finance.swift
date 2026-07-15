@@ -387,12 +387,13 @@ struct PayTrip: Codable, Sendable, Identifiable {
     let tripType: String
     let multiplier: Double
     let creditHours: Double       // sum of all components
+    let tripNumber: String        // rotation / pairing number
     let label: String
     let source: String
 
     private enum CodingKeys: String, CodingKey {
         case id, month, tripDate, hours, additionalHours, greenHours, rerouteHours
-        case tripType, multiplier, creditHours, label, source
+        case tripType, multiplier, creditHours, tripNumber, label, source
     }
 
     // Lenient decode: an older backend won't return the new pay-component fields
@@ -410,6 +411,7 @@ struct PayTrip: Codable, Sendable, Identifiable {
         tripType = try c.decodeIfPresent(String.self, forKey: .tripType) ?? "regular"
         multiplier = try c.decodeIfPresent(Double.self, forKey: .multiplier) ?? 1
         creditHours = try c.decodeIfPresent(Double.self, forKey: .creditHours) ?? 0
+        tripNumber = try c.decodeIfPresent(String.self, forKey: .tripNumber) ?? ""
         label = try c.decodeIfPresent(String.self, forKey: .label) ?? ""
         source = try c.decodeIfPresent(String.self, forKey: .source) ?? "manual"
     }
@@ -422,6 +424,7 @@ struct PayTripRequest: Codable, Sendable {
     let greenHours: Double
     let rerouteHours: Double
     let tripType: String
+    let tripNumber: String?
     let label: String?
 }
 
@@ -435,6 +438,7 @@ struct PayTripEditRequest: Codable, Sendable {
     let greenHours: Double
     let rerouteHours: Double
     let tripType: String
+    let tripNumber: String
     let label: String
 }
 
@@ -464,6 +468,7 @@ struct PayImportSummary: Codable, Sendable {
 struct PayParsedTrip: Codable, Sendable, Identifiable {
     var id = UUID()
     let date: String?          // "YYYY-MM-DD"
+    var tripNumber: String
     var label: String
     var tripType: String
     var credit: Double
@@ -478,9 +483,17 @@ struct PayParsedTrip: Codable, Sendable, Identifiable {
     let rerouteHmm: String
 
     private enum CodingKeys: String, CodingKey {
-        case date, label, tripType, credit, additional, green, reroute, creditHours
+        case date, tripNumber, label, tripType, credit, additional, green, reroute, creditHours
         case creditHmm, additionalHmm, greenHmm, rerouteHmm
     }
+}
+
+/// The saved card image returned alongside a parse (and by the list endpoint).
+struct PayScreenshotRef: Codable, Sendable, Identifiable {
+    let id: Int
+    let url: String?
+    let month: String?
+    let createdAt: String?
 }
 
 struct PayScreenshotResult: Codable, Sendable, Identifiable {
@@ -490,9 +503,10 @@ struct PayScreenshotResult: Codable, Sendable, Identifiable {
     let computedTotalCredit: Double
     let totalsMatch: Bool
     let warnings: [String]
+    let screenshot: PayScreenshotRef?
 
     private enum CodingKeys: String, CodingKey {
-        case trips, printedTotalCredit, computedTotalCredit, totalsMatch, warnings
+        case trips, printedTotalCredit, computedTotalCredit, totalsMatch, warnings, screenshot
     }
 }
 
@@ -503,6 +517,7 @@ struct PayBulkTripRequest: Codable, Sendable {
     let greenHours: Double
     let rerouteHours: Double
     let tripType: String
+    let tripNumber: String
     let label: String
 }
 
