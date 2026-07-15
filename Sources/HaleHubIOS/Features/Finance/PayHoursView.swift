@@ -588,14 +588,8 @@ struct PayMonthDetailView: View {
         }
         .sheet(item: $viewingCard) { card in
             NavigationStack {
-                ScrollView([.horizontal, .vertical]) {
-                    AsyncImage(url: card.url.flatMap(URL.init)) { img in
-                        img.resizable().scaledToFit()
-                    } placeholder: {
-                        ProgressView()
-                    }
-                }
-                .navigationTitle("Pay Card")
+                ZoomableImage(url: card.url.flatMap(URL.init))
+                    .navigationTitle("Pay Card")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
@@ -971,6 +965,56 @@ struct ScreenshotReviewSheet: View {
             Text(label).font(.caption2).foregroundStyle(.secondary)
             Text(value.isEmpty ? "0:00" : value).font(.caption2.weight(.medium))
         }
+    }
+}
+
+/// Fits an image to the screen by default; pinch to zoom, drag to pan when
+/// zoomed, double-tap to toggle zoom.
+struct ZoomableImage: View {
+    let url: URL?
+    @State private var scale: CGFloat = 1
+    @State private var steadyScale: CGFloat = 1
+    @State private var offset: CGSize = .zero
+    @State private var steadyOffset: CGSize = .zero
+
+    var body: some View {
+        AsyncImage(url: url) { img in
+            img.resizable().scaledToFit()
+                .scaleEffect(scale)
+                .offset(offset)
+                .gesture(
+                    SimultaneousGesture(
+                        MagnificationGesture()
+                            .onChanged { scale = min(max(1, steadyScale * $0), 6) }
+                            .onEnded { _ in
+                                steadyScale = scale
+                                if scale <= 1 {
+                                    withAnimation { offset = .zero }
+                                    steadyOffset = .zero
+                                }
+                            },
+                        DragGesture()
+                            .onChanged { g in
+                                guard scale > 1 else { return }
+                                offset = CGSize(width: steadyOffset.width + g.translation.width,
+                                                height: steadyOffset.height + g.translation.height)
+                            }
+                            .onEnded { _ in steadyOffset = offset }
+                    )
+                )
+                .onTapGesture(count: 2) {
+                    withAnimation {
+                        if scale > 1 { scale = 1; offset = .zero } else { scale = 3 }
+                    }
+                    steadyScale = scale
+                    steadyOffset = offset
+                }
+        } placeholder: {
+            ProgressView()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
+        .background(Color(.systemBackground))
     }
 }
 
