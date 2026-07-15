@@ -432,6 +432,14 @@ final class PayMonthViewModel: ObservableObject {
         catch { self.error = error.localizedDescription }
     }
 
+    /// Delete a saved card image (does not touch the trips it created).
+    func deleteCard(_ card: PayScreenshotRef, token: String) async {
+        do {
+            try await APIClient.shared.delete("/finance/pay/screenshots/?id=\(card.id)", token: token)
+            cards.removeAll { $0.id == card.id }
+        } catch { self.error = error.localizedDescription }
+    }
+
     /// Send a pay-register screenshot to the server; Claude vision returns the
     /// parsed trips for review (nothing saved yet).
     func parseScreenshot(_ imageData: Data, month: String, token: String) async -> PayScreenshotResult? {
@@ -537,6 +545,11 @@ struct PayMonthDetailView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                 }
                                 .buttonStyle(.plain)
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        Task { await vm.deleteCard(card, token: token) }
+                                    } label: { Label("Delete Image", systemImage: "trash") }
+                                }
                             }
                         }
                         .padding(.vertical, 4)
@@ -585,6 +598,11 @@ struct PayMonthDetailView: View {
                 .navigationTitle("Pay Card")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(role: .destructive) {
+                            Task { await vm.deleteCard(card, token: token); viewingCard = nil }
+                        } label: { Image(systemName: "trash").foregroundStyle(.red) }
+                    }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { viewingCard = nil }
                     }
