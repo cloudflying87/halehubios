@@ -552,8 +552,11 @@ struct PayMonthDetailView: View {
                     Button { showAdd = true } label: { Label("Add Trip", systemImage: "plus") }
                     // NOTE: a PhotosPicker nested inside a Menu silently fails to
                     // present (SwiftUI bug) — trigger it via a flag + modifier.
+                    Button { pasteScreenshot() } label: {
+                        Label("Paste Screenshot", systemImage: "doc.on.clipboard")
+                    }
                     Button { showPhotoPicker = true } label: {
-                        Label("Import from Screenshot", systemImage: "camera.viewfinder")
+                        Label("Import from Photos", systemImage: "photo.on.rectangle")
                     }
                 } label: {
                     if parsing { ProgressView() } else { Image(systemName: "plus") }
@@ -612,12 +615,27 @@ struct PayMonthDetailView: View {
     private func handlePickedPhoto() async {
         guard let item = pickedPhoto else { return }
         pickedPhoto = nil
-        parsing = true
-        defer { parsing = false }
         guard let raw = try? await item.loadTransferable(type: Data.self) else {
             vm.error = "Couldn't read that image."
             return
         }
+        await processImage(raw)
+    }
+
+    /// Paste an image straight from the clipboard — no trip to Photos needed.
+    private func pasteScreenshot() {
+        guard UIPasteboard.general.hasImages,
+              let raw = UIPasteboard.general.image?.jpegData(compressionQuality: 0.9) else {
+            vm.error = "No image on the clipboard. Copy a pay-card screenshot first."
+            return
+        }
+        Task { await processImage(raw) }
+    }
+
+    /// Shared upload path: downsample, then send for parsing/review.
+    private func processImage(_ raw: Data) async {
+        parsing = true
+        defer { parsing = false }
         // Downsample before upload — a screenshot doesn't need full resolution to
         // read, and this cuts upload size + vision tokens roughly in half.
         let data = Self.downsampledJPEG(raw) ?? raw
