@@ -134,6 +134,59 @@ struct SetCategoryActiveRequest: Encodable, Sendable {
     let isActive: Bool
 }
 
+// MARK: - Maintenance Insights (schedule status + full visit timeline)
+
+struct MaintenanceInsightsResponse: Decodable, Sendable {
+    let schedules: [ScheduleInsight]
+    let visits: [MaintenanceVisit]
+    let stats: MaintenanceInsightsStats
+}
+
+struct ScheduleInsight: Decodable, Sendable, Identifiable {
+    let categoryName: String
+    let intervalMiles: Int?
+    let intervalHours: Int?
+    let intervalDays: Int?
+    let lastPerformed: Date?
+    let lastMiles: Int?
+    let isDue: Bool
+    let reason: String?
+    let unit: String
+
+    var id: String { categoryName }
+}
+
+struct MaintenanceVisit: Decodable, Sendable, Identifiable {
+    let date: Date
+    let odometer: Int?
+    let unit: String
+    let items: [MaintenanceVisitItem]
+    let notes: String?
+
+    var id: String { "\(date.timeIntervalSince1970)-\(odometer ?? 0)" }
+}
+
+struct MaintenanceVisitItem: Decodable, Sendable, Identifiable {
+    let category: String
+    let description: String
+
+    var id: String { "\(category)-\(description)" }
+}
+
+struct MaintenanceInsightsStats: Decodable, Sendable {
+    let totalMaintenanceEvents: Int
+    let uncategorizedEvents: Int
+    let firstVisitDate: Date?
+    let lastVisitDate: Date?
+    let importHistory: [MaintenanceImportRecord]
+}
+
+struct MaintenanceImportRecord: Decodable, Sendable {
+    let sourceType: String
+    let recordsImported: Int
+    let importedAt: Date
+}
+
 struct MaintenanceSchedule: Identifiable, Codable, Hashable, Sendable {
     let id: Int
     let categoryId: Int?

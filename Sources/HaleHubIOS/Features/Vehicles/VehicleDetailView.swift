@@ -1323,6 +1323,7 @@ private struct MaintenanceNavLinks: View {
     var body: some View {
         VStack(spacing: 8) {
             scheduleLink
+            summaryLink
             historyLink
         }
         .padding(14)
@@ -1338,6 +1339,20 @@ private struct MaintenanceNavLinks: View {
                 Text("\(scheduleCount)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var summaryLink: some View {
+        NavigationLink(destination: MaintenanceSummaryView(vehicle: vehicle).environmentObject(auth)) {
+            HStack {
+                Label("Maintenance Summary", systemImage: "list.bullet.rectangle")
+                    .font(.headline)
+                Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
