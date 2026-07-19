@@ -956,11 +956,17 @@ struct EditEventSheet: View {
     @State private var notes: String
     @State private var selectedLocationId: Int?
     @State private var locations: [VehicleLocation] = []
+    @State private var serviceItems: [ServiceItem]
+    @State private var categories: [MaintenanceCategory] = []
     @State private var isSaving = false
     @State private var isDeleting = false
     @State private var showDeleteConfirm = false
     @State private var errorMessage: String?
     @State private var savedGasEvent: VehicleEvent?
+
+    var relevantCategories: [MaintenanceCategory] {
+        categories.filter { $0.vehicleTypes?.contains(vehicle.vehicleType) ?? true }
+    }
 
     init(event: VehicleEvent, vehicle: Vehicle, onSaved: @escaping () -> Void, onDeleted: (() -> Void)? = nil) {
         self.event = event
@@ -973,6 +979,11 @@ struct EditEventSheet: View {
         _gallons = State(initialValue: event.gallons.map { String(format: "%.3f", $0) } ?? "")
         _pricePerGallon = State(initialValue: event.pricePerGallon.map { String(format: "%.3f", $0) } ?? "")
         _notes = State(initialValue: event.notes ?? "")
+        let existingItems = (event.maintenanceItems ?? []).map { record in
+            ServiceItem(categoryId: record.categoryId, description: record.description,
+                        cost: record.cost > 0 ? String(format: "%.2f", record.cost) : "")
+        }
+        _serviceItems = State(initialValue: existingItems.isEmpty ? [ServiceItem()] : existingItems)
     }
 
     var body: some View {
@@ -1005,6 +1016,22 @@ struct EditEventSheet: View {
 
                     TextField("Notes (optional)", text: $notes, axis: .vertical)
                         .lineLimit(2...4)
+                }
+
+                if event.eventType == "maintenance" {
+                    Section("Service Items") {
+                        ForEach($serviceItems) { $item in
+                            ServiceItemRow(item: $item, categories: relevantCategories) {
+                                serviceItems.removeAll { $0.id == item.id }
+                            }
+                        }
+                        Button {
+                            serviceItems.append(ServiceItem())
+                        } label: {
+                            Label("Add Another Item", systemImage: "plus.circle")
+                                .font(.subheadline)
+                        }
+                    }
                 }
 
                 if let err = errorMessage {
@@ -1045,10 +1072,18 @@ struct EditEventSheet: View {
             .task {
                 if event.eventType == "outing" {
                     await loadLocations()
+                } else if event.eventType == "maintenance" {
+                    await loadCategories()
                 }
             }
         } // end else
         } // end NavigationStack
+    }
+
+    private func loadCategories() async {
+        guard let token = auth.accessToken else { return }
+        let path = "/vehicles/maintenance-categories/?vehicle_type=\(vehicle.vehicleType)"
+        categories = (try? await APIClient.shared.get(path, token: token)) ?? []
     }
 
     private var eventTypeTitle: String {
@@ -1100,6 +1135,18 @@ struct EditEventSheet: View {
         body.notes = notes.isEmpty ? nil : notes
         if event.eventType == "outing" {
             body.locationName = locations.first(where: { $0.id == selectedLocationId })?.name ?? ""
+        }
+        if event.eventType == "maintenance" {
+            let items = serviceItems.compactMap { item -> MaintenanceItemInput? in
+                guard let catId = item.categoryId else { return nil }
+                return MaintenanceItemInput(
+                    categoryId: catId,
+                    description: item.description,
+                    cost: Double(item.cost) ?? 0
+                )
+            }
+            body.maintenanceItems = items
+            body.maintenanceCategoryId = items.first?.categoryId
         }
 
         do {

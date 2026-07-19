@@ -216,6 +216,7 @@ struct MaintenanceScheduleUpdateRequest: Encodable, Sendable {
 
 struct MaintenanceItemRecord: Identifiable, Codable, Hashable, Sendable {
     let id: Int
+    let categoryId: Int?
     let categoryName: String?
     let description: String
     let cost: Double
@@ -292,6 +293,8 @@ struct EditEventRequest: Encodable, Sendable {
     var gallons: Double?
     var pricePerGallon: Double?
     var notes: String?
+    var maintenanceCategoryId: Int?
+    var maintenanceItems: [MaintenanceItemInput]?
     var locationName: String?
 }
 
