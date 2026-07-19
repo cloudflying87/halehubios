@@ -203,11 +203,13 @@ struct VehicleDetailView: View {
                                     }
                                     .padding(.top, 4)
                                     ForEach(monthEvents) { event in
-                                        EventCard(event: event, vehicle: vehicle) {
-                                            editingEvent = event
-                                        } onDelete: {
-                                            Task { await deleteEvent(event) }
-                                        }
+                                        EventCard(
+                                            event: event,
+                                            vehicle: vehicle,
+                                            onTap: { detailEvent = event },
+                                            onEdit: { editingEvent = event },
+                                            onDelete: { Task { await deleteEvent(event) } }
+                                        )
                                     }
                                 }
                             }
@@ -777,10 +779,14 @@ struct EventCard: View {
     let event: VehicleEvent
     let vehicle: Vehicle
     let onTap: () -> Void
+    var onEdit: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
 
     @State private var swipeOffset: CGFloat = 0
-    private let deleteRevealWidth: CGFloat = 76
+    private let buttonWidth: CGFloat = 76
+    private var revealWidth: CGFloat {
+        buttonWidth * CGFloat((onEdit != nil ? 1 : 0) + (onDelete != nil ? 1 : 0))
+    }
 
     var accentColor: Color {
         switch event.eventType {
@@ -801,62 +807,67 @@ struct EventCard: View {
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            // Delete button revealed by swipe
-            if onDelete != nil {
-                Button(role: .destructive) {
-                    withAnimation(.spring(response: 0.25)) { swipeOffset = 0 }
-                    onDelete?()
-                } label: {
-                    Image(systemName: "trash.fill")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.white)
-                        .frame(width: deleteRevealWidth)
-                        .frame(maxHeight: .infinity)
-                }
-                .background(Color.red, in: RoundedRectangle(cornerRadius: 10))
-                // Slide in from trailing edge as card moves left
-                .offset(x: deleteRevealWidth + swipeOffset)
-            }
-
-            // Card content
-            cardContent
-                .contextMenu {
-                    Button("Edit", systemImage: "pencil") { onTap() }
-                    if onDelete != nil {
-                        Divider()
-                        Button("Delete", systemImage: "trash", role: .destructive) {
-                            withAnimation(.spring(response: 0.25)) { swipeOffset = 0 }
-                            onDelete?()
-                        }
+            // Edit + Delete buttons revealed by swipe
+            HStack(spacing: 0) {
+                if let onEdit {
+                    Button {
+                        withAnimation(.spring(response: 0.25)) { swipeOffset = 0 }
+                        onEdit()
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(.white)
+                            .frame(width: buttonWidth)
+                            .frame(maxHeight: .infinity)
                     }
-                } preview: {
-                    expandedCardContent
-                        .frame(minWidth: 300)
-                        .padding(4)
+                    .background(Color.blue)
                 }
+                if let onDelete {
+                    Button(role: .destructive) {
+                        withAnimation(.spring(response: 0.25)) { swipeOffset = 0 }
+                        onDelete()
+                    } label: {
+                        Image(systemName: "trash.fill")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(.white)
+                            .frame(width: buttonWidth)
+                            .frame(maxHeight: .infinity)
+                    }
+                    .background(Color.red)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            // Slide in from trailing edge as card moves left
+            .offset(x: revealWidth + swipeOffset)
+
+            // Card content — tap opens the summary sheet; swipe left reveals edit/delete
+            cardContent
                 .offset(x: swipeOffset)
                 .simultaneousGesture(
-                    DragGesture(minimumDistance: 12, coordinateSpace: .local)
+                    DragGesture(minimumDistance: 20, coordinateSpace: .local)
                         .onChanged { g in
-                            // Only respond to mostly-horizontal drags
-                            guard abs(g.translation.width) > abs(g.translation.height) else { return }
+                            // Require a clearly horizontal drag before claiming it, so this
+                            // doesn't compete with the enclosing ScrollView's vertical pan.
+                            guard abs(g.translation.width) > abs(g.translation.height) * 2 else { return }
                             let t = g.translation.width
                             if t < 0 {
-                                swipeOffset = max(t, onDelete != nil ? -deleteRevealWidth : 0)
+                                swipeOffset = max(t, revealWidth > 0 ? -revealWidth : 0)
                             } else {
                                 swipeOffset = min(0, swipeOffset + t)
                             }
                         }
                         .onEnded { g in
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                swipeOffset = (g.translation.width < -36 && onDelete != nil)
-                                    ? -deleteRevealWidth : 0
+                                swipeOffset = (g.translation.width < -36 && revealWidth > 0)
+                                    ? -revealWidth : 0
                             }
                         }
                 )
                 .onTapGesture {
                     if swipeOffset != 0 {
                         withAnimation(.spring(response: 0.25)) { swipeOffset = 0 }
+                    } else {
+                        onTap()
                     }
                 }
         }
@@ -915,60 +926,6 @@ struct EventCard: View {
         .padding(10)
         .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
         .contentShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    private var expandedCardContent: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: event.eventIcon)
-                .font(.subheadline)
-                .foregroundStyle(accentColor)
-                .frame(width: 28, height: 28)
-                .background(accentColor.opacity(0.12), in: Circle())
-
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(eventTitle).font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Text(event.date, style: .date).font(.caption).foregroundStyle(.secondary)
-                }
-                HStack(spacing: 10) {
-                    if let mpg = event.milespergallon {
-                        Text(String(format: "%.1f MPG", mpg)).font(.caption).foregroundStyle(.secondary)
-                    }
-                    if let gph = event.gallonsperhour {
-                        Text(String(format: "%.2f GPH", gph)).font(.caption).foregroundStyle(.secondary)
-                    }
-                    if let cost = event.totalCost {
-                        Text(String(format: "$%.2f", cost)).font(.caption).foregroundStyle(.secondary)
-                    }
-                    if let reading = odometerText {
-                        Text(reading).font(.caption).foregroundStyle(.tertiary)
-                    }
-                }
-                if let items = event.maintenanceItems, !items.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(items) { item in
-                            HStack {
-                                Text(item.categoryName ?? "Service")
-                                if !item.description.isEmpty {
-                                    Text("· \(item.description)").foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                if item.cost > 0 {
-                                    Text(String(format: "$%.2f", item.cost))
-                                }
-                            }
-                            .font(.caption)
-                        }
-                    }
-                }
-                if let notes = event.notes, !notes.isEmpty {
-                    Text(notes).font(.caption).foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(14)
-        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
     }
 
     var eventTitle: String {
