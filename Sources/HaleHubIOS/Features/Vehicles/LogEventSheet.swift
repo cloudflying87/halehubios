@@ -229,7 +229,8 @@ struct LogEventSheet: View {
 
     private func loadCategories() async {
         guard let token = auth.accessToken else { return }
-        categories = (try? await APIClient.shared.get("/vehicles/maintenance-categories/", token: token)) ?? []
+        let path = "/vehicles/maintenance-categories/?vehicle_type=\(vehicle.vehicleType)"
+        categories = (try? await APIClient.shared.get(path, token: token)) ?? []
     }
 
     private func loadLocations() async {

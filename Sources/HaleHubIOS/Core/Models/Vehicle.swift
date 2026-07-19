@@ -115,10 +115,23 @@ struct MaintenanceCategory: Identifiable, Codable, Sendable {
     let name: String
     let description: String?
     let vehicleTypes: [String]?
+    let boatEngineTypes: [String]?
+    let isActive: Bool?
 }
 
 struct CreateMaintenanceCategoryRequest: Encodable, Sendable {
     let name: String
+}
+
+struct UpdateMaintenanceCategoryRequest: Encodable, Sendable {
+    let name: String
+    let description: String
+    let vehicleTypes: [String]
+    let boatEngineTypes: [String]
+}
+
+struct SetCategoryActiveRequest: Encodable, Sendable {
+    let isActive: Bool
 }
 
 struct MaintenanceSchedule: Identifiable, Codable, Hashable, Sendable {

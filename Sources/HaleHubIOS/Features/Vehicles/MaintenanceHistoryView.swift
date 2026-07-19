@@ -96,9 +96,11 @@ struct MaintenanceHistoryView: View {
 
     private func loadCategories() async {
         guard let token = auth.accessToken else { return }
-        categories = (try? await APIClient.shared.get(
-            "/vehicles/maintenance-categories/", token: token
-        )) ?? []
+        var path = "/vehicles/maintenance-categories/"
+        if let type = vehicle?.vehicleType {
+            path += "?vehicle_type=\(type)"
+        }
+        categories = (try? await APIClient.shared.get(path, token: token)) ?? []
     }
 
     private func loadEvents() async {

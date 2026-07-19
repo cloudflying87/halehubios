@@ -77,6 +77,11 @@ struct MaintenanceScheduleManagerView: View {
                     Image(systemName: "plus")
                 }
             }
+            ToolbarItem(placement: .secondaryAction) {
+                NavigationLink(destination: ManageMaintenanceCategoriesView().environmentObject(auth)) {
+                    Label("Manage Maintenance Types", systemImage: "list.bullet.clipboard")
+                }
+            }
         }
         .refreshable { await load() }
         .task {
@@ -110,7 +115,8 @@ struct MaintenanceScheduleManagerView: View {
 
     private func loadCategories() async {
         guard let token = auth.accessToken else { return }
-        categories = (try? await APIClient.shared.get("/vehicles/maintenance-categories/", token: token)) ?? []
+        let path = "/vehicles/maintenance-categories/?vehicle_type=\(vehicle.vehicleType)"
+        categories = (try? await APIClient.shared.get(path, token: token)) ?? []
     }
 
     private func load() async {
