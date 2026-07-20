@@ -189,32 +189,21 @@ class ShareViewController: UIViewController {
 
     @objc private func openTapped() {
         if let id = importedRecipeId {
-            // Handoff: the app reads this on next activation and navigates to the
-            // recipe — reliable even when the responder-chain openURL is a no-op
-            // (it is on iOS 18). The deep-link attempt below foregrounds the app
-            // immediately when it works.
+            // Handoff fallback: the app also reads this on next activation and
+            // navigates to the recipe, in case extensionContext.open below doesn't
+            // foreground the app for some reason.
             UserDefaults(suiteName: appGroupId)?.set(id, forKey: "halehub_pending_recipe_id")
-            if let url = URL(string: "halehub://recipes/\(id)") { openHostApp(url) }
+            if let url = URL(string: "halehub://recipes/\(id)") {
+                // Share Extensions run in their own process with no UIApplication —
+                // NSExtensionContext.open is the supported way to hand a URL off to
+                // the containing app (UIApplication.shared.open isn't available here).
+                extensionContext?.open(url, completionHandler: nil)
+            }
         }
         extensionContext?.completeRequest(returningItems: nil)
     }
 
     @objc private func doneTapped() {
         extensionContext?.completeRequest(returningItems: nil)
-    }
-
-    /// Open the containing app from the extension by walking the responder chain to
-    /// UIApplication and invoking openURL: (the supported technique here — the direct
-    /// UIApplication.open API is unavailable in app extensions).
-    private func openHostApp(_ url: URL) {
-        let selector = NSSelectorFromString("openURL:")
-        var responder: UIResponder? = self
-        while let r = responder {
-            if r.responds(to: selector) {
-                r.perform(selector, with: url)
-                return
-            }
-            responder = r.next
-        }
     }
 }
