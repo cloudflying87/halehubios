@@ -31,7 +31,13 @@ struct LogEventSheet: View {
     private let eventTypes = ["gas", "maintenance", "outing"]
 
     var relevantCategories: [MaintenanceCategory] {
-        categories.filter { $0.vehicleTypes?.contains(vehicle.vehicleType) ?? true }
+        categories.filter { cat in
+            guard cat.vehicleTypes?.contains(vehicle.vehicleType) ?? true else { return false }
+            if vehicle.vehicleType == "boat", let boatTypes = cat.boatEngineTypes, !boatTypes.isEmpty {
+                return boatTypes.contains(vehicle.boatEngineType ?? "")
+            }
+            return true
+        }
     }
 
     var serviceTotal: Double {
@@ -229,7 +235,10 @@ struct LogEventSheet: View {
 
     private func loadCategories() async {
         guard let token = auth.accessToken else { return }
-        let path = "/vehicles/maintenance-categories/?vehicle_type=\(vehicle.vehicleType)"
+        var path = "/vehicles/maintenance-categories/?vehicle_type=\(vehicle.vehicleType)"
+        if vehicle.vehicleType == "boat", let boatEngineType = vehicle.boatEngineType, !boatEngineType.isEmpty {
+            path += "&boat_engine_type=\(boatEngineType)"
+        }
         categories = (try? await APIClient.shared.get(path, token: token)) ?? []
     }
 

@@ -14,6 +14,7 @@ struct VehicleEditSheet: View {
     @State private var vin: String = ""
     @State private var licensePlate: String = ""
     @State private var plateState: String = ""
+    @State private var boatEngineType: String = ""
     @State private var tracksRegistration = false
     @State private var registrationDate = Date()
     @State private var saving = false
@@ -37,6 +38,16 @@ struct VehicleEditSheet: View {
                     Picker("State / Province", selection: $plateState) {
                         Text("—").tag("")
                         ForEach(VehicleEditSheet.plateRegions, id: \.self) { Text($0).tag($0) }
+                    }
+                }
+                if vehicle.vehicleType == "boat" {
+                    Section("Engine") {
+                        Picker("Engine type", selection: $boatEngineType) {
+                            Text("—").tag("")
+                            ForEach(VehicleEditSheet.boatEngineTypes, id: \.value) { opt in
+                                Text(opt.label).tag(opt.value)
+                            }
+                        }
                     }
                 }
                 Section {
@@ -73,6 +84,7 @@ struct VehicleEditSheet: View {
         vin = vehicle.vin ?? ""
         licensePlate = vehicle.licensePlate ?? ""
         plateState = vehicle.plateState ?? ""
+        boatEngineType = vehicle.boatEngineType ?? ""
         if let raw = vehicle.registrationExpires, let d = Self.parseYMD(raw) {
             tracksRegistration = true
             registrationDate = d
@@ -87,6 +99,7 @@ struct VehicleEditSheet: View {
             vin: vin.trimmingCharacters(in: .whitespaces),
             licensePlate: licensePlate.trimmingCharacters(in: .whitespaces),
             plateState: plateState,
+            boatEngineType: vehicle.vehicleType == "boat" ? boatEngineType : nil,
             registrationExpires: tracksRegistration ? Self.ymd(registrationDate) : ""
         )
         do {
@@ -121,6 +134,13 @@ struct VehicleEditSheet: View {
         "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
         "AB", "BC", "MB", "NB", "NL", "NS", "ON", "PE", "QC", "SK",
     ]
+
+    struct EngineTypeOption { let value: String; let label: String }
+    static let boatEngineTypes: [EngineTypeOption] = [
+        EngineTypeOption(value: "inboard", label: "Inboard"),
+        EngineTypeOption(value: "outboard", label: "Outboard"),
+        EngineTypeOption(value: "io", label: "Inboard/Outboard (I/O)"),
+    ]
 }
 
 struct VehicleEditRequest: Encodable, Sendable {
@@ -128,5 +148,22 @@ struct VehicleEditRequest: Encodable, Sendable {
     let vin: String
     let licensePlate: String
     let plateState: String
+    /// nil for non-boat vehicles — omitted from the request entirely rather
+    /// than sent as null, since the API rejects null for this field.
+    let boatEngineType: String?
     let registrationExpires: String  // "YYYY-MM-DD", or "" to clear
+
+    enum CodingKeys: String, CodingKey {
+        case name, vin, licensePlate, boatEngineType, plateState, registrationExpires
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encode(vin, forKey: .vin)
+        try container.encode(licensePlate, forKey: .licensePlate)
+        try container.encode(plateState, forKey: .plateState)
+        try container.encodeIfPresent(boatEngineType, forKey: .boatEngineType)
+        try container.encode(registrationExpires, forKey: .registrationExpires)
+    }
 }

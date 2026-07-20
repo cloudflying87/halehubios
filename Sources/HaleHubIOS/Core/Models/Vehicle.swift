@@ -7,6 +7,7 @@ struct Vehicle: Identifiable, Codable, Sendable {
     let model: String?
     let year: Int?
     let vehicleType: String
+    let boatEngineType: String?
     let status: String
     let isActive: Bool
     let photoUrl: String?
@@ -148,7 +149,7 @@ struct ScheduleInsight: Decodable, Sendable, Identifiable {
     let intervalHours: Int?
     let intervalDays: Int?
     let lastPerformed: Date?
-    let lastMiles: Int?
+    let lastValue: Int?
     let isDue: Bool
     let reason: String?
     let unit: String
@@ -158,7 +159,7 @@ struct ScheduleInsight: Decodable, Sendable, Identifiable {
 
 struct MaintenanceVisit: Decodable, Sendable, Identifiable {
     let date: Date
-    let odometer: Int?
+    let odometer: Double?
     let unit: String
     let items: [MaintenanceVisitItem]
     let notes: String?

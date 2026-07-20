@@ -113,7 +113,7 @@ private struct ScheduleInsightRow: View {
             Text(intervalText).font(.caption).foregroundStyle(.secondary)
             if let last = insight.lastPerformed {
                 Text("Last: \(last.formatted(date: .abbreviated, time: .omitted))"
-                     + (insight.lastMiles.map { " · \($0.formatted()) \(insight.unit)" } ?? ""))
+                     + (insight.lastValue.map { " · \($0.formatted()) \(insight.unit)" } ?? ""))
                     .font(.caption2).foregroundStyle(.tertiary)
             } else {
                 Text("Never performed").font(.caption2).foregroundStyle(.tertiary)
