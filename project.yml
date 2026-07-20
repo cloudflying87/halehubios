@@ -98,3 +98,13 @@ schemes:
       config: Debug
     archive:
       config: Release
+      # Runs before every archive so a bad regen can't ship silently — see
+      # docs/SHARE_EXTENSION.md. Exits non-zero (via `set -e`) if the Share
+      # Extension, its entitlements, or the shared scheme are missing after
+      # a fresh `xcodegen generate`, which fails this pre-action and blocks
+      # the archive.
+      preActions:
+        - script: |
+            "${SRCROOT}/scripts/verify_project.sh"
+          name: Verify Project (Share Extension survives regen)
+          settingsTarget: HaleHubIOS

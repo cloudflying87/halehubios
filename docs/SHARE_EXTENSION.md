@@ -46,6 +46,23 @@ it too was dropped on regeneration.
 
 ## Verify it's really in a build
 
+`verify_project.sh` is now wired in as an **Archive pre-action** on the
+`HaleHubIOS` scheme (`schemes.HaleHubIOS.archive.preActions` in `project.yml`),
+so it runs automatically every time you do Product → Archive — no separate
+manual step. If the Share Extension, its entitlements, or the shared scheme
+are missing after a fresh regen, the script exits non-zero and the archive
+should stop before it wastes your time.
+
+This was wired up without a Mac in the loop to test it, so **the first time
+you archive after pulling this change, confirm it actually ran**: Xcode's
+Report Navigator (⌘9) → the archive build → look for a "Verify Project" step
+before compilation starts, and make sure a failing check really blocks the
+archive rather than just logging a warning. If it doesn't block, treat this
+as unverified and keep doing the manual check below until it's confirmed.
+
+Manual check (still useful for a plain debug build, or if the pre-action
+turns out not to be enforced):
+
 ```sh
 xcodegen generate
 xcodebuild -project HaleHubIOS.xcodeproj -scheme HaleHubIOS \
