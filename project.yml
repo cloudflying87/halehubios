@@ -41,6 +41,12 @@ targets:
       path: Sources/HaleHubIOS/Info.plist
       properties:
         CFBundleName: HaleHub
+        # XcodeGen regenerates this Info.plist every run; without these it resets
+        # CFBundleVersion to the default "1", which mismatches the extension (69)
+        # and is rejected on upload. Point them at the build settings so a
+        # `bump_build.sh` bump (CURRENT_PROJECT_VERSION) actually reaches the app.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen:
           UIColorName: ""
         UISupportedInterfaceOrientations:

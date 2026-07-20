@@ -91,5 +91,23 @@
    <ArchiveAction
       buildConfiguration = "Release"
       revealArchiveInOrganizer = "YES">
+      <PreActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Verify Project (Share Extension survives regen)"
+               scriptText = "&quot;${SRCROOT}/scripts/verify_project.sh&quot;&#10;">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "11DA12F89A26FC90FF2634A3"
+                     BuildableName = "HaleHubIOS.app"
+                     BlueprintName = "HaleHubIOS"
+                     ReferencedContainer = "container:HaleHubIOS.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PreActions>
    </ArchiveAction>
 </Scheme>
