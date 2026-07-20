@@ -188,19 +188,28 @@ class ShareViewController: UIViewController {
     }
 
     @objc private func openTapped() {
-        if let id = importedRecipeId {
-            // Handoff fallback: the app also reads this on next activation and
-            // navigates to the recipe, in case extensionContext.open below doesn't
-            // foreground the app for some reason.
-            UserDefaults(suiteName: appGroupId)?.set(id, forKey: "halehub_pending_recipe_id")
-            if let url = URL(string: "halehub://recipes/\(id)") {
-                // Share Extensions run in their own process with no UIApplication —
-                // NSExtensionContext.open is the supported way to hand a URL off to
-                // the containing app (UIApplication.shared.open isn't available here).
-                extensionContext?.open(url, completionHandler: nil)
+        guard let id = importedRecipeId, let url = URL(string: "halehub://recipes/\(id)") else {
+            extensionContext?.completeRequest(returningItems: nil)
+            return
+        }
+        // Handoff fallback: the app also reads this on next activation and
+        // navigates to the recipe, in case extensionContext.open below doesn't
+        // foreground the app for some reason.
+        UserDefaults(suiteName: appGroupId)?.set(id, forKey: "halehub_pending_recipe_id")
+
+        // Share Extensions run in their own process with no UIApplication —
+        // NSExtensionContext.open is the supported way to hand a URL off to the
+        // containing app. completeRequest must wait for open's completion —
+        // firing it immediately after (fire-and-forget) can tear the extension
+        // down before the system finishes the app-switch handoff.
+        extensionContext?.open(url) { [weak self] success in
+            if !success {
+                NSLog("HaleHub ShareExtension: extensionContext.open failed for \(url)")
+            }
+            DispatchQueue.main.async {
+                self?.extensionContext?.completeRequest(returningItems: nil)
             }
         }
-        extensionContext?.completeRequest(returningItems: nil)
     }
 
     @objc private func doneTapped() {
