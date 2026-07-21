@@ -65,6 +65,11 @@ struct BabysittersListView: View {
                         } label: {
                             Label("Weekly Report", systemImage: "chart.bar.doc.horizontal")
                         }
+                        NavigationLink {
+                            PaymentHistoryView()
+                        } label: {
+                            Label("Payment History", systemImage: "dollarsign.circle")
+                        }
                     }
                     Section("Babysitters") {
                         ForEach(vm.babysitters) { sitter in

@@ -14,7 +14,6 @@ struct SessionFormSheet: View {
     @State private var date = Date()
     @State private var startTime = Date()
     @State private var endTime = Date()
-    @State private var isPaid = false
     @State private var notes = ""
     @State private var isSaving = false
     @State private var error: String?
@@ -41,9 +40,13 @@ struct SessionFormSheet: View {
                     Text("Hours are rounded to the nearest 15 minutes.")
                 }
                 Section {
-                    Toggle("Paid", isOn: $isPaid)
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(1...4)
+                    if let s = session, s.isPaid {
+                        Text("Paid — edit via the sitter's Payments section to change payment status.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 if let error {
                     Section { Text(error).foregroundStyle(.red) }
@@ -84,7 +87,6 @@ struct SessionFormSheet: View {
             return
         }
         babysitterId = s.babysitter
-        isPaid = s.isPaid
         notes = s.notes
         if let d = BabysitterFormat.ymdDate(s.date) { date = d }
         startTime = parseTime(s.startTime) ?? startTime
@@ -106,7 +108,6 @@ struct SessionFormSheet: View {
             date: BabysitterFormat.ymdString(date),
             startTime: BabysitterFormat.hmString(startTime),
             endTime: BabysitterFormat.hmString(endTime),
-            isPaid: isPaid,
             notes: notes
         )
         do {

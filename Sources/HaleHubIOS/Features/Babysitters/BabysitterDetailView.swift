@@ -3,10 +3,14 @@ import SwiftUI
 @MainActor
 class BabysitterDetailViewModel: ObservableObject {
     @Published var sessions: [BabysittingSession] = []
+    @Published var payments: [Payment] = []
     @Published var report: SitterReport?
     @Published var isLoading = false
     @Published var error: String?
     @Published var banner: String?
+
+    /// Payment id → Payment, for looking up "paid via" details per session row.
+    var paymentById: [String: Payment] { Dictionary(uniqueKeysWithValues: payments.map { ($0.id, $0) }) }
 
     func load(babysitterId: String, token: String) async {
         isLoading = true
@@ -14,9 +18,12 @@ class BabysitterDetailViewModel: ObservableObject {
         do {
             async let sessionsResp: PaginatedResponse<BabysittingSession> =
                 APIClient.shared.get("/babysitters/sessions/?babysitter=\(babysitterId)", token: token)
+            async let paymentsResp: PaginatedResponse<Payment> =
+                APIClient.shared.get("/babysitters/payments/?babysitter=\(babysitterId)", token: token)
             async let reportResp: SitterReport =
                 APIClient.shared.get("/babysitters/\(babysitterId)/report/", token: token)
             sessions = try await sessionsResp.results
+            payments = try await paymentsResp.results
             report = try await reportResp
         } catch is CancellationError {
         } catch {
@@ -25,13 +32,9 @@ class BabysitterDetailViewModel: ObservableObject {
         isLoading = false
     }
 
-    func togglePaid(_ session: BabysittingSession, token: String, babysitterId: String) async {
+    func voidPayment(_ payment: Payment, token: String, babysitterId: String) async {
         do {
-            let _: BabysittingSession = try await APIClient.shared.patch(
-                "/babysitters/sessions/\(session.id)/",
-                body: PaidUpdateRequest(isPaid: !session.isPaid),
-                token: token
-            )
+            try await APIClient.shared.delete("/babysitters/payments/\(payment.id)/", token: token)
             await load(babysitterId: babysitterId, token: token)
         } catch {
             self.error = error.localizedDescription
@@ -78,6 +81,7 @@ struct BabysitterDetailView: View {
     @StateObject private var vm = BabysitterDetailViewModel()
     @State private var showLog = false
     @State private var showEdit = false
+    @State private var showRecordPayment = false
     @State private var editingSession: BabysittingSession?
 
     private var canEdit: Bool { auth.currentUser?.can("babysitters", edit: true) ?? false }
@@ -100,6 +104,11 @@ struct BabysitterDetailView: View {
                 if canEdit {
                     Button { showLog = true } label: {
                         Label("Log Session", systemImage: "clock.badge.plus")
+                    }
+                    if vm.sessions.contains(where: { !$0.isPaid }) {
+                        Button { showRecordPayment = true } label: {
+                            Label("Record Payment", systemImage: "dollarsign.circle")
+                        }
                     }
                 }
                 if let text = vm.report?.reportText, !text.isEmpty {
@@ -130,7 +139,7 @@ struct BabysitterDetailView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(vm.sessions) { session in
-                        SessionRow(session: session)
+                        SessionRow(session: session, payment: session.payment.flatMap { vm.paymentById[$0] })
                             .contentShape(Rectangle())
                             .onTapGesture { if canEdit { editingSession = session } }
                             .swipeActions(edge: .trailing) {
@@ -138,15 +147,19 @@ struct BabysitterDetailView: View {
                                     Button(role: .destructive) {
                                         Task { await vm.delete(session, token: token, babysitterId: babysitter.id) }
                                     } label: { Label("Delete", systemImage: "trash") }
-                                    Button {
-                                        Task { await vm.togglePaid(session, token: token, babysitterId: babysitter.id) }
-                                    } label: {
-                                        Label(session.isPaid ? "Unpay" : "Paid",
-                                              systemImage: session.isPaid ? "xmark.circle" : "checkmark.circle")
-                                    }
-                                    .tint(session.isPaid ? .gray : .green)
                                 }
                             }
+                    }
+                }
+            }
+
+            // Payments
+            if !vm.payments.isEmpty {
+                Section("Payments") {
+                    ForEach(vm.payments) { payment in
+                        PaymentDisclosureRow(payment: payment, canEdit: canEdit) {
+                            Task { await vm.voidPayment(payment, token: token, babysitterId: babysitter.id) }
+                        }
                     }
                 }
             }
@@ -183,6 +196,12 @@ struct BabysitterDetailView: View {
             BabysitterFormSheet(babysitter: babysitter) { }
                 .environmentObject(auth)
         }
+        .sheet(isPresented: $showRecordPayment) {
+            RecordPaymentSheet(babysitter: babysitter, unpaidSessions: vm.sessions.filter { !$0.isPaid }) {
+                Task { await vm.load(babysitterId: babysitter.id, token: token) }
+            }
+            .environmentObject(auth)
+        }
         .sheet(item: $editingSession) { session in
             SessionFormSheet(session: session, defaultBabysitterId: babysitter.id) {
                 Task { await vm.load(babysitterId: babysitter.id, token: token) }
@@ -196,6 +215,7 @@ struct BabysitterDetailView: View {
 
 private struct SessionRow: View {
     let session: BabysittingSession
+    let payment: Payment?
 
     var body: some View {
         HStack {
@@ -211,6 +231,64 @@ private struct SessionRow: View {
                 Text(session.isPaid ? "Paid" : "Unpaid")
                     .font(.caption2)
                     .foregroundStyle(session.isPaid ? .green : .orange)
+                if let payment {
+                    Text("\(payment.methodDisplay)\(payment.checkNumber.isEmpty ? "" : " #\(payment.checkNumber)") · \(payment.dateDisplay)")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+}
+
+/// One payment, expandable to show which sessions it covers — answers
+/// "how much is each check, and which sessions go with it."
+struct PaymentDisclosureRow: View {
+    let payment: Payment
+    var showBabysitterName = false
+    var canEdit = false
+    var onVoid: (() -> Void)? = nil
+
+    @State private var expanded = false
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $expanded) {
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(payment.sessions) { s in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(s.dateDisplay).font(.subheadline)
+                            Text("\(s.timeRange) · \(s.durationDisplay)")
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(s.amountDisplay).font(.subheadline)
+                    }
+                }
+                if !payment.notes.isEmpty {
+                    Text(payment.notes).font(.caption).foregroundStyle(.secondary)
+                }
+                if canEdit, let onVoid {
+                    Button(role: .destructive) { onVoid() } label: {
+                        Label("Void Payment", systemImage: "xmark.circle")
+                    }
+                    .font(.caption)
+                }
+            }
+            .padding(.top, 4)
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    if showBabysitterName, let name = payment.babysitterName {
+                        Text(name).font(.subheadline.weight(.medium))
+                    }
+                    Text(payment.dateDisplay).font(.caption).foregroundStyle(.secondary)
+                    Text("\(payment.methodDisplay)\(payment.checkNumber.isEmpty ? "" : " #\(payment.checkNumber)") · \(payment.sessionCount) session\(payment.sessionCount == 1 ? "" : "s")")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                Spacer()
+                Text(payment.amountDisplay).font(.headline)
             }
         }
     }

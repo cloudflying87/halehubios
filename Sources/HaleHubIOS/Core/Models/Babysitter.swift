@@ -33,6 +33,7 @@ struct BabysittingSession: Identifiable, Codable, Hashable, Sendable {
     let durationDisplay: String?
     let isPaid: Bool
     let paidAt: Date?
+    let payment: String?            // payment id this session was paid with, if any
     let source: String?
     let externalUid: String?
     let notes: String
@@ -106,6 +107,43 @@ struct WeeklyReport: Codable, Sendable {
     var weekLabel: String { BabysitterFormat.weekRange(weekStart, weekEnd) }
 }
 
+// MARK: - Payments
+
+/// A recorded payment (check/cash/etc) covering one or more sessions.
+/// GET /api/babysitters/payments/ (paginated) and /<id>/; POST to record one.
+struct Payment: Identifiable, Codable, Hashable, Sendable {
+    let id: String
+    let babysitter: String
+    let babysitterName: String?
+    let amount: Double
+    let datePaid: String       // "YYYY-MM-DD"
+    let method: String         // check | cash | venmo | zelle | other
+    let checkNumber: String
+    let notes: String
+    let sessionCount: Int
+    let sessions: [ReportSession]
+    let createdAt: Date?
+
+    var amountDisplay: String { BabysitterFormat.money(amount) }
+    var dateDisplay: String { BabysitterFormat.dateShort(datePaid) }
+    var methodDisplay: String { Payment.methodLabels[method] ?? method.capitalized }
+
+    static let methodLabels: [String: String] = [
+        "check": "Check", "cash": "Cash", "venmo": "Venmo", "zelle": "Zelle", "other": "Other",
+    ]
+    static let methods = ["check", "cash", "venmo", "zelle", "other"]
+}
+
+struct RecordPaymentRequest: Encodable, Sendable {
+    let babysitter: String
+    let sessionIds: [String]
+    let amount: Double
+    let datePaid: String
+    let method: String
+    let checkNumber: String
+    let notes: String
+}
+
 // MARK: - Request bodies (snake_cased by APIClient's encoder)
 
 struct BabysitterRequest: Encodable, Sendable {
@@ -122,12 +160,7 @@ struct SessionRequest: Encodable, Sendable {
     let date: String         // "YYYY-MM-DD"
     let startTime: String    // "HH:MM"
     let endTime: String      // "HH:MM"
-    let isPaid: Bool
     let notes: String
-}
-
-struct PaidUpdateRequest: Encodable, Sendable {
-    let isPaid: Bool
 }
 
 struct SendReportResponse: Decodable, Sendable {
