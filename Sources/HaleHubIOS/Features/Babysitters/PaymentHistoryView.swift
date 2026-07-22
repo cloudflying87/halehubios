@@ -39,6 +39,7 @@ class PaymentHistoryViewModel: ObservableObject {
 struct PaymentHistoryView: View {
     @EnvironmentObject var auth: AuthManager
     @StateObject private var vm = PaymentHistoryViewModel()
+    @State private var editingPayment: Payment?
 
     private var canEdit: Bool { auth.currentUser?.can("babysitters", edit: true) ?? false }
     private var token: String { auth.accessToken ?? "" }
@@ -66,15 +67,27 @@ struct PaymentHistoryView: View {
             } else {
                 List {
                     ForEach(vm.payments) { payment in
-                        PaymentDisclosureRow(payment: payment, showBabysitterName: true, canEdit: canEdit) {
-                            Task { await vm.void(payment, token: token) }
-                        }
+                        PaymentDisclosureRow(
+                            payment: payment,
+                            showBabysitterName: true,
+                            canEdit: canEdit,
+                            onEdit: { editingPayment = payment },
+                            onVoid: {
+                                Task { await vm.void(payment, token: token) }
+                            }
+                        )
                     }
                 }
             }
         }
         .navigationTitle("Payment History")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $editingPayment) { payment in
+            EditPaymentSheet(payment: payment) {
+                Task { await vm.load(token: token) }
+            }
+            .environmentObject(auth)
+        }
         .task { await vm.load(token: token) }
         .refreshable { await vm.load(token: token) }
     }

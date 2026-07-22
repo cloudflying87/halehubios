@@ -28,6 +28,7 @@
 		347123154D1CEE54F7B39557 /* GetPageContent.js in Resources */ = {isa = PBXBuildFile; fileRef = F97CF817022C9CA05252E839 /* GetPageContent.js */; };
 		348B353619531848D975D852 /* TodosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F970A2EEDACCE75FCA8ECF3 /* TodosView.swift */; };
 		355D2C2EF25FC21016FC94B2 /* SessionFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46696FD761C2764EE5DCED0B /* SessionFormSheet.swift */; };
+		BAB5100000000000000A0003 /* EditPaymentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB5200000000000000B0003 /* EditPaymentSheet.swift */; };
 		3D9A70283B1418D66C2EB770 /* Vehicle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9E73A2B5915D0510398991 /* Vehicle.swift */; };
 		3F50CD98FA91662D30597592 /* TotesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C4CCC6D185F3EE25128D029 /* TotesListView.swift */; };
 		4024F5BF62140807257E8FCA /* EditToteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E0D226A300933A7846E042 /* EditToteSheet.swift */; };
@@ -188,6 +189,7 @@
 		45ACFCECF85237B26C0F6F99 /* ToteDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToteDetailView.swift; sourceTree = "<group>"; };
 		46245FF3D4EDB0C2E41CE2D8 /* ArchiveHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveHubView.swift; sourceTree = "<group>"; };
 		46696FD761C2764EE5DCED0B /* SessionFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionFormSheet.swift; sourceTree = "<group>"; };
+		BAB5200000000000000B0003 /* EditPaymentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditPaymentSheet.swift; sourceTree = "<group>"; };
 		477883832BA76706913499AA /* Chores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chores.swift; sourceTree = "<group>"; };
 		4A4007424790D9C4CD3E4E10 /* ShoppingListDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListDetailView.swift; sourceTree = "<group>"; };
 		4C6603A1B4CEB94E3C970DF7 /* QRCodeCreateSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeCreateSheet.swift; sourceTree = "<group>"; };
@@ -564,6 +566,7 @@
 				0AF34A9658BE5F58FED61D92 /* RecordBabysitterPaymentSheet.swift */,
 				46696FD761C2764EE5DCED0B /* SessionFormSheet.swift */,
 				541A551D9FCE91A75817E161 /* WeeklyReportView.swift */,
+				BAB5200000000000000B0003 /* EditPaymentSheet.swift */,
 			);
 			path = Babysitters;
 			sourceTree = "<group>";
@@ -768,6 +771,7 @@
 				73E45A55E51229F7FB3D456A /* CreateReadingPlanSheet.swift in Sources */,
 				6B9745F7E8ADD1F8F0B67D7E /* CreateToteSheet.swift in Sources */,
 				A7995CAA9F344111B8C5C271 /* EditReadingEntrySheet.swift in Sources */,
+				BAB5100000000000000A0003 /* EditPaymentSheet.swift in Sources */,
 				4024F5BF62140807257E8FCA /* EditToteSheet.swift in Sources */,
 				4923EC86319B973A01CAC6A0 /* FamilyIncomeView.swift in Sources */,
 				8B6ED2837A457F2220C99BE7 /* Finance.swift in Sources */,

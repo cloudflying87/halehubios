@@ -50,6 +50,18 @@ class BabysitterDetailViewModel: ObservableObject {
         }
     }
 
+    /// Reverts a paid session to unpaid, detaching it from its payment (voiding
+    /// the payment too if it was the only session on it).
+    func unmarkPaid(_ session: BabysittingSession, token: String, babysitterId: String) async {
+        do {
+            let _: BabysittingSession = try await APIClient.shared.postEmpty(
+                "/babysitters/sessions/\(session.id)/unmark-paid/", token: token)
+            await load(babysitterId: babysitterId, token: token)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
     func sendReport(babysitterId: String, token: String) async {
         do {
             let resp: SendReportResponse = try await APIClient.shared.postEmpty(
@@ -83,6 +95,7 @@ struct BabysitterDetailView: View {
     @State private var showEdit = false
     @State private var showRecordPayment = false
     @State private var editingSession: BabysittingSession?
+    @State private var editingPayment: Payment?
 
     private var canEdit: Bool { auth.currentUser?.can("babysitters", edit: true) ?? false }
     private var token: String { auth.accessToken ?? "" }
@@ -147,6 +160,14 @@ struct BabysitterDetailView: View {
                                     Button(role: .destructive) {
                                         Task { await vm.delete(session, token: token, babysitterId: babysitter.id) }
                                     } label: { Label("Delete", systemImage: "trash") }
+                                    if session.isPaid {
+                                        Button {
+                                            Task { await vm.unmarkPaid(session, token: token, babysitterId: babysitter.id) }
+                                        } label: {
+                                            Label("Remove Paid", systemImage: "xmark.circle")
+                                        }
+                                        .tint(.orange)
+                                    }
                                 }
                             }
                     }
@@ -157,9 +178,14 @@ struct BabysitterDetailView: View {
             if !vm.payments.isEmpty {
                 Section("Payments") {
                     ForEach(vm.payments) { payment in
-                        PaymentDisclosureRow(payment: payment, canEdit: canEdit) {
-                            Task { await vm.voidPayment(payment, token: token, babysitterId: babysitter.id) }
-                        }
+                        PaymentDisclosureRow(
+                            payment: payment,
+                            canEdit: canEdit,
+                            onEdit: { editingPayment = payment },
+                            onVoid: {
+                                Task { await vm.voidPayment(payment, token: token, babysitterId: babysitter.id) }
+                            }
+                        )
                     }
                 }
             }
@@ -208,6 +234,12 @@ struct BabysitterDetailView: View {
             }
             .environmentObject(auth)
         }
+        .sheet(item: $editingPayment) { payment in
+            EditPaymentSheet(payment: payment) {
+                Task { await vm.load(babysitterId: babysitter.id, token: token) }
+            }
+            .environmentObject(auth)
+        }
         .task { await vm.load(babysitterId: babysitter.id, token: token) }
         .refreshable { await vm.load(babysitterId: babysitter.id, token: token) }
     }
@@ -247,6 +279,7 @@ struct PaymentDisclosureRow: View {
     let payment: Payment
     var showBabysitterName = false
     var canEdit = false
+    var onEdit: (() -> Void)? = nil
     var onVoid: (() -> Void)? = nil
 
     @State private var expanded = false
@@ -268,9 +301,18 @@ struct PaymentDisclosureRow: View {
                 if !payment.notes.isEmpty {
                     Text(payment.notes).font(.caption).foregroundStyle(.secondary)
                 }
-                if canEdit, let onVoid {
-                    Button(role: .destructive) { onVoid() } label: {
-                        Label("Void Payment", systemImage: "xmark.circle")
+                if canEdit {
+                    HStack {
+                        if let onEdit {
+                            Button { onEdit() } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                        }
+                        if let onVoid {
+                            Button(role: .destructive) { onVoid() } label: {
+                                Label("Void Payment", systemImage: "xmark.circle")
+                            }
+                        }
                     }
                     .font(.caption)
                 }

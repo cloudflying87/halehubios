@@ -144,6 +144,16 @@ struct RecordPaymentRequest: Encodable, Sendable {
     let notes: String
 }
 
+/// PATCH /api/babysitters/payments/<id>/ — correct amount/date/method/check#/notes.
+/// Which sessions it covers isn't editable here — void and re-record instead.
+struct UpdatePaymentRequest: Encodable, Sendable {
+    let amount: Double
+    let datePaid: String
+    let method: String
+    let checkNumber: String
+    let notes: String
+}
+
 // MARK: - Request bodies (snake_cased by APIClient's encoder)
 
 struct BabysitterRequest: Encodable, Sendable {
