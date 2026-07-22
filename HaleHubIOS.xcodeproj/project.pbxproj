@@ -28,8 +28,6 @@
 		347123154D1CEE54F7B39557 /* GetPageContent.js in Resources */ = {isa = PBXBuildFile; fileRef = F97CF817022C9CA05252E839 /* GetPageContent.js */; };
 		348B353619531848D975D852 /* TodosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F970A2EEDACCE75FCA8ECF3 /* TodosView.swift */; };
 		355D2C2EF25FC21016FC94B2 /* SessionFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46696FD761C2764EE5DCED0B /* SessionFormSheet.swift */; };
-		BAB5100000000000000A0001 /* RecordPaymentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB5200000000000000B0001 /* RecordPaymentSheet.swift */; };
-		BAB5100000000000000A0002 /* PaymentHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB5200000000000000B0002 /* PaymentHistoryView.swift */; };
 		3D9A70283B1418D66C2EB770 /* Vehicle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9E73A2B5915D0510398991 /* Vehicle.swift */; };
 		3F50CD98FA91662D30597592 /* TotesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C4CCC6D185F3EE25128D029 /* TotesListView.swift */; };
 		4024F5BF62140807257E8FCA /* EditToteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E0D226A300933A7846E042 /* EditToteSheet.swift */; };
@@ -83,6 +81,7 @@
 		9E9EB4E09BF2F3FFBA7731FF /* YNABSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC3D9AC231338809128BC418 /* YNABSettingsView.swift */; };
 		A41369B443BB0A6708655C85 /* Chores.swift in Sources */ = {isa = PBXBuildFile; fileRef = 477883832BA76706913499AA /* Chores.swift */; };
 		A7995CAA9F344111B8C5C271 /* EditReadingEntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFBB869E1D2A6DFE615F97A9 /* EditReadingEntrySheet.swift */; };
+		A88FE644BE573C2CA8F29BD0 /* PaymentHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29F82CB1B5CF7760179FA865 /* PaymentHistoryView.swift */; };
 		A94D98CBBDCCC001230A0FC1 /* AddReadingEntrySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D0F8FA6169AFB6A1408AC1 /* AddReadingEntrySheet.swift */; };
 		A9D2FFBFE877D843C3A6F456 /* ReadingDayDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1979192C8C8DBC508631A28E /* ReadingDayDetailView.swift */; };
 		B14F46530706653C689340C6 /* ToteScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12C5A8D410A7C7F5827EFDD /* ToteScannerView.swift */; };
@@ -114,6 +113,7 @@
 		E79F9DE6885716372DBD1E87 /* JewelryReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F697A53718B2B7DEBA2B583D /* JewelryReportView.swift */; };
 		E939161D079481F668443B56 /* ReadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 040BCD9171AD5B0D521CFD48 /* ReadingView.swift */; };
 		E9733113892531EFE86616F3 /* BudgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE31BE0E85DE259F0A660148 /* BudgetView.swift */; };
+		EE0663233C716129EA9E8A57 /* RecordBabysitterPaymentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AF34A9658BE5F58FED61D92 /* RecordBabysitterPaymentSheet.swift */; };
 		EE86143E461A223FEAE7B248 /* JewelryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F007CF9D818D8CA07D7381 /* JewelryListView.swift */; };
 		EEAB2FADBDA87D90CA2F7687 /* CompoundInterestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 264657A8853B85BCCFCEA2EA /* CompoundInterestView.swift */; };
 		F214BB93900F9435AFB1FABD /* PayHoursView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BE5CA180AF589D00D69FB1 /* PayHoursView.swift */; };
@@ -152,6 +152,7 @@
 		026B9CBC27B5BDAB71949F45 /* LogEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogEventSheet.swift; sourceTree = "<group>"; };
 		040BCD9171AD5B0D521CFD48 /* ReadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingView.swift; sourceTree = "<group>"; };
 		082F8360E610399CB9791E01 /* ShoppingListsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListsView.swift; sourceTree = "<group>"; };
+		0AF34A9658BE5F58FED61D92 /* RecordBabysitterPaymentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordBabysitterPaymentSheet.swift; sourceTree = "<group>"; };
 		0BF696F77373A167292BC317 /* CacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheManager.swift; sourceTree = "<group>"; };
 		0C309AC162DA76ACDF7A95C8 /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LocalAuthentication.framework; path = System/Library/Frameworks/LocalAuthentication.framework; sourceTree = SDKROOT; };
 		0C93425E6A35DBEE8FE9ACBA /* ResourcesHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourcesHubView.swift; sourceTree = "<group>"; };
@@ -173,6 +174,7 @@
 		2205FEF5EA7067B8FBEC4D93 /* MaintenanceSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaintenanceSummaryView.swift; sourceTree = "<group>"; };
 		264657A8853B85BCCFCEA2EA /* CompoundInterestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompoundInterestView.swift; sourceTree = "<group>"; };
 		26CF0181480A7ED66F4D253B /* Tote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tote.swift; sourceTree = "<group>"; };
+		29F82CB1B5CF7760179FA865 /* PaymentHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentHistoryView.swift; sourceTree = "<group>"; };
 		2AA1D7CF6070F458F822E505 /* HaleNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HaleNotification.swift; sourceTree = "<group>"; };
 		2C0BDCC39EA7A484AD3C2BB4 /* PantryItemEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PantryItemEditSheet.swift; sourceTree = "<group>"; };
 		2C6C02CCFAF46EE2033790D8 /* PartsLookupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartsLookupView.swift; sourceTree = "<group>"; };
@@ -186,8 +188,6 @@
 		45ACFCECF85237B26C0F6F99 /* ToteDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToteDetailView.swift; sourceTree = "<group>"; };
 		46245FF3D4EDB0C2E41CE2D8 /* ArchiveHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveHubView.swift; sourceTree = "<group>"; };
 		46696FD761C2764EE5DCED0B /* SessionFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionFormSheet.swift; sourceTree = "<group>"; };
-		BAB5200000000000000B0001 /* RecordPaymentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordPaymentSheet.swift; sourceTree = "<group>"; };
-		BAB5200000000000000B0002 /* PaymentHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentHistoryView.swift; sourceTree = "<group>"; };
 		477883832BA76706913499AA /* Chores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chores.swift; sourceTree = "<group>"; };
 		4A4007424790D9C4CD3E4E10 /* ShoppingListDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListDetailView.swift; sourceTree = "<group>"; };
 		4C6603A1B4CEB94E3C970DF7 /* QRCodeCreateSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeCreateSheet.swift; sourceTree = "<group>"; };
@@ -560,10 +560,10 @@
 				5D8A1FB545D374BC2BCF8D91 /* BabysitterFormSheet.swift */,
 				C711302466B7A8CAF98FD834 /* BabysitterPortalView.swift */,
 				F4650938A2EFD112FBDE9BB8 /* BabysittersListView.swift */,
+				29F82CB1B5CF7760179FA865 /* PaymentHistoryView.swift */,
+				0AF34A9658BE5F58FED61D92 /* RecordBabysitterPaymentSheet.swift */,
 				46696FD761C2764EE5DCED0B /* SessionFormSheet.swift */,
 				541A551D9FCE91A75817E161 /* WeeklyReportView.swift */,
-				BAB5200000000000000B0001 /* RecordPaymentSheet.swift */,
-				BAB5200000000000000B0002 /* PaymentHistoryView.swift */,
 			);
 			path = Babysitters;
 			sourceTree = "<group>";
@@ -809,7 +809,7 @@
 				89A04B5E9B416B66376FBC9E /* PartsLookupView.swift in Sources */,
 				F214BB93900F9435AFB1FABD /* PayHoursView.swift in Sources */,
 				81719BA372725504BFD85067 /* PaychecksView.swift in Sources */,
-				BAB5100000000000000A0002 /* PaymentHistoryView.swift in Sources */,
+				A88FE644BE573C2CA8F29BD0 /* PaymentHistoryView.swift in Sources */,
 				5CCB5B17B30F93AED9AA0484 /* QRBatchSheet.swift in Sources */,
 				FEF7F2DD496245122391D452 /* QRCode.swift in Sources */,
 				D134B3EE71C1CE50594C9311 /* QRCodeCreateSheet.swift in Sources */,
@@ -826,7 +826,7 @@
 				92CB91D03662E6106C02EED7 /* RecipesListView.swift in Sources */,
 				70570EDAB2447292C0FE276F /* RecipesViewModel.swift in Sources */,
 				895166E0A0007B83BDCB9FF6 /* ReconciliationView.swift in Sources */,
-				BAB5100000000000000A0001 /* RecordPaymentSheet.swift in Sources */,
+				EE0663233C716129EA9E8A57 /* RecordBabysitterPaymentSheet.swift in Sources */,
 				E5F537F0BD6951338006BB07 /* Resource.swift in Sources */,
 				DF6FD95B813D135A81B599C7 /* ResourceDetailView.swift in Sources */,
 				94D27B0D068B8688771F729B /* ResourceEditorSheet.swift in Sources */,

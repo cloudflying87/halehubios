@@ -197,7 +197,7 @@ struct BabysitterDetailView: View {
                 .environmentObject(auth)
         }
         .sheet(isPresented: $showRecordPayment) {
-            RecordPaymentSheet(babysitter: babysitter, unpaidSessions: vm.sessions.filter { !$0.isPaid }) {
+            RecordBabysitterPaymentSheet(babysitter: babysitter, unpaidSessions: vm.sessions.filter { !$0.isPaid }) {
                 Task { await vm.load(babysitterId: babysitter.id, token: token) }
             }
             .environmentObject(auth)

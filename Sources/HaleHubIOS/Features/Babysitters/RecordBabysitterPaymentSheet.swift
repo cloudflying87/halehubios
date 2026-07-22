@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Pick unpaid sessions and record the check/cash/etc that pays for them —
 /// the counterpart to the web "Record Payment" page.
-struct RecordPaymentSheet: View {
+struct RecordBabysitterPaymentSheet: View {
     @EnvironmentObject var auth: AuthManager
     @Environment(\.dismiss) private var dismiss
 
